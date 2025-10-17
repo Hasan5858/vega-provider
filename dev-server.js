@@ -70,6 +70,21 @@ class DevServer {
       }
     });
 
+    // Serve data files
+    this.app.get("/dist/data/:file", (req, res) => {
+      const { file } = req.params;
+      const filePath = path.join(this.distDir, "data", file);
+
+      if (fs.existsSync(filePath)) {
+        res.sendFile(filePath);
+      } else {
+        res.status(404).json({
+          error: `Data file not found: ${file}`,
+          hint: "Make sure to run build first",
+        });
+      }
+    });
+
     // Build endpoint - trigger rebuild
     this.app.post("/build", (req, res) => {
       try {
@@ -115,6 +130,7 @@ class DevServer {
         availableEndpoints: [
           "GET /manifest.json",
           "GET /dist/:provider/:file",
+          "GET /dist/data/:file",
           "POST /build",
           "GET /status",
           "GET /providers",

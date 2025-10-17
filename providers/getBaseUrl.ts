@@ -1,29 +1,37 @@
-// 1 hour
+const modflixData = require('./modflixData');
+
+// 1 hour cache time
 const expireTime = 60 * 60 * 1000;
 
-export const getBaseUrl = async (providerValue: string) => {
+// In-memory cache for base URLs
+const urlCache = new Map<string, { url: string; timestamp: number }>();
+
+export const getBaseUrl = async (providerValue: string): Promise<string> => {
   try {
-    let baseUrl = "";
-    const cacheKey = "CacheBaseUrl" + providerValue;
-    const timeKey = "baseUrlTime" + providerValue;
+    const cacheKey = providerValue;
+    const now = Date.now();
+    
+    // Check cache first
+    const cached = urlCache.get(cacheKey);
+    if (cached && (now - cached.timestamp) < expireTime) {
+      return cached.url;
+    }
 
-    // const cachedUrl = cacheStorageService.getString(cacheKey);
-    // const cachedTime = cacheStorageService.getObject<number>(timeKey);
+    // Get URL from local modflix data
+    const providerData = modflixData[providerValue];
+    if (!providerData) {
+      console.warn(`Provider '${providerValue}' not found in modflix data`);
+      return "";
+    }
 
-    // if (cachedUrl && cachedTime && Date.now() - cachedTime < expireTime) {
-    //   baseUrl = cachedUrl;
-    // } else {
-    const baseUrlRes = await fetch(
-      "https://himanshu8443.github.io/providers/modflix.json"
-    );
-    const baseUrlData = await baseUrlRes.json();
-    baseUrl = baseUrlData[providerValue].url;
-    // cacheStorageService.setString(cacheKey, baseUrl);
-    // cacheStorageService.setObject(timeKey, Date.now());
-    // }
+    const baseUrl = providerData.url;
+    
+    // Cache the result
+    urlCache.set(cacheKey, { url: baseUrl, timestamp: now });
+    
     return baseUrl;
   } catch (error) {
-    console.error(`Error fetching baseUrl: ${providerValue}`, error);
+    console.error(`Error getting baseUrl for provider: ${providerValue}`, error);
     return "";
   }
 };

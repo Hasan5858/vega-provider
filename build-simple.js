@@ -186,6 +186,43 @@ class ProviderBuilder {
   }
 
   /**
+   * Copy data files to dist directory
+   */
+  copyDataFiles() {
+    log.build("Copying data files...");
+    
+    const dataSrcDir = path.join(__dirname, "data");
+    const dataDistDir = path.join(DIST_DIR, "data");
+    
+    if (fs.existsSync(dataSrcDir)) {
+      // Create data dist directory
+      if (!fs.existsSync(dataDistDir)) {
+        fs.mkdirSync(dataDistDir, { recursive: true });
+      }
+      
+      // Copy all files from data directory
+      const files = fs.readdirSync(dataSrcDir);
+      let copiedCount = 0;
+      
+      for (const file of files) {
+        const srcFile = path.join(dataSrcDir, file);
+        const destFile = path.join(dataDistDir, file);
+        
+        if (fs.statSync(srcFile).isFile()) {
+          fs.copyFileSync(srcFile, destFile);
+          copiedCount++;
+        }
+      }
+      
+      if (copiedCount > 0) {
+        log.success(`  Copied ${copiedCount} data files`);
+      }
+    } else {
+      log.warning("  No data directory found");
+    }
+  }
+
+  /**
    * Organize compiled files by provider
    */
   organizeFiles() {
@@ -256,6 +293,7 @@ class ProviderBuilder {
     }
 
     this.organizeFiles();
+    this.copyDataFiles();
 
     // Add minification step (skip if SKIP_MINIFY is set)
     if (!process.env.SKIP_MINIFY) {
