@@ -32,8 +32,26 @@ export const getStream = async function ({
       url = $('strong:contains("INSTANT")').parent().attr("href") || url;
     }
 
-    // fastilinks
+    // w4links.skin - redirects to fastilinks.online
+    if (url.includes("w4links.skin")) {
+      console.log("w4links.skin detected, following redirect...");
+      const w4linksRes = await axios.get(url, { headers });
+      const w4linksData = w4linksRes.data;
+      const $w4 = cheerio.load(w4linksData);
+      
+      // Look for fastilinks.online redirect
+      const fastilinksRedirect = $w4('a[href*="fastilinks.online"]').attr("href");
+      if (fastilinksRedirect) {
+        console.log("Found fastilinks.online redirect:", fastilinksRedirect);
+        url = fastilinksRedirect;
+      } else {
+        console.log("No fastilinks.online redirect found in w4links.skin");
+      }
+    }
+
+    // fastilinks (both fastilinks.skin and fastilinks.online)
     if (url.includes("fastilinks")) {
+      console.log("Processing fastilinks URL:", url);
       const fastilinksRes = await axios.get(url, { headers });
       const fastilinksData = fastilinksRes.data;
       const $$ = cheerio.load(fastilinksData);
@@ -41,6 +59,14 @@ export const getStream = async function ({
         'input[name="_csrf_token_645a83a41868941e4692aa31e7235f2"]'
       ).attr("value");
       console.log("fastilinksKey", fastilinksKey);
+      
+      if (!fastilinksKey) {
+        console.log("No CSRF token found, checking for other patterns...");
+        // Try to find any CSRF token
+        const anyCsrfToken = $$('input[name*="csrf"]').attr("value");
+        console.log("Any CSRF token found:", anyCsrfToken);
+      }
+      
       const fastilinksFormData = new FormData();
       fastilinksFormData.append(
         "_csrf_token_645a83a41868941e4692aa31e7235f2",
@@ -58,12 +84,32 @@ export const getStream = async function ({
         body: fastilinksFormData,
       });
       const fastilinksHtml = await fastilinksRes2.text();
-      // console.log('fastilinksHtml', fastilinksHtml);
+      console.log("fastilinks response status:", fastilinksRes2.status);
+      console.log("fastilinks response length:", fastilinksHtml.length);
+      
       const $$$ = cheerio.load(fastilinksHtml);
-      const fastilinksLink =
-        $$$('a:contains("mediafire")').attr("href") ||
-        $$$('a:contains("photolinx")').attr("href");
-      console.log("fastilinksLink", fastilinksLink);
+      // Try photolinx first, then mediafire (since mediafire links often expire)
+      const photolinxLink = $$$('a:contains("photolinx")').attr("href");
+      const mediafireLink = $$$('a:contains("mediafire")').attr("href");
+      
+      console.log("photolinxLink", photolinxLink);
+      console.log("mediafireLink", mediafireLink);
+      
+      // Prefer photolinx over mediafire since mediafire links often expire
+      const fastilinksLink = photolinxLink || mediafireLink;
+      console.log("fastilinksLink (selected)", fastilinksLink);
+      
+      // Also check for any download links
+      const allLinks = $$$('a[href]');
+      console.log("Total links found:", allLinks.length);
+      allLinks.each((i, el) => {
+        const href = $$$(el).attr("href");
+        const text = $$$(el).text();
+        if (href && (href.includes("mediafire") || href.includes("photolinx") || href.includes("download"))) {
+          console.log(`Link ${i}: "${text}" -> ${href}`);
+        }
+      });
+      
       url = fastilinksLink || url;
     }
     console.log("world4uGetStream", type, url);
@@ -74,7 +120,7 @@ export const getStream = async function ({
       console.log("photolinxBaseUrl", photolinxBaseUrl);
       // const photolinxBaseUrl = url.split('/').slice(0, 3).join('/');
       const photolinxRes = await fetch(
-        "https://photolinx.space/download/SzbPKzt6YMO",
+        url,
         {
           headers: {
             accept:
@@ -151,6 +197,14 @@ export const getStream = async function ({
     }
 
     const res = await fetch(url, { headers: headers });
+    if (!res.ok) {
+      console.log(`Failed to fetch URL: ${url}, Status: ${res.status}`);
+      // If this is a mediafire link that failed, try to find alternative links
+      if (url.includes("mediafire")) {
+        console.log("Mediafire link failed, returning empty array");
+      }
+      return [];
+    }
     const html = await res.text();
     const streamLinks: Stream[] = [];
     let data = { download: "" };
@@ -168,9 +222,10 @@ export const getStream = async function ({
       data = await streamRes.json();
     } catch (err) {
       console.log(
-        "error in world4uGetStream",
+        "error in world4uGetStream key extraction",
         err instanceof Error ? err.message : err
       );
+      console.log("URL that failed:", url);
     }
 
     // console.log('streamRes', streamRes);
@@ -181,6 +236,7 @@ export const getStream = async function ({
       $(".input.popsok").attr("href") ||
       url;
     console.log("mediafireUrl", mediafireUrl);
+    console.log("HTML content preview:", html.substring(0, 500));
     if (mediafireUrl) {
       const directUrl = await fetch(mediafireUrl, {
         headers: {

@@ -220,6 +220,17 @@ class ProviderBuilder {
     } else {
       log.warning("  No data directory found");
     }
+    
+    // Copy modflixData.js file to dist root
+    const modflixDataSrc = path.join(PROVIDERS_DIR, "modflixData.js");
+    const modflixDataDest = path.join(DIST_DIR, "modflixData.js");
+    
+    if (fs.existsSync(modflixDataSrc)) {
+      fs.copyFileSync(modflixDataSrc, modflixDataDest);
+      log.success("  Copied modflixData.js");
+    } else {
+      log.warning("  modflixData.js not found");
+    }
   }
 
   /**

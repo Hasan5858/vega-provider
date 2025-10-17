@@ -1,4 +1,4 @@
-const modflixData = require('./modflixData');
+const modflixData = require('./modflixData.js');
 
 // 1 hour cache time
 const expireTime = 60 * 60 * 1000;
