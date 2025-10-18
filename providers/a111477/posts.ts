@@ -231,7 +231,7 @@ async function posts({
 
         // ✅ Extract real movie title and year from directory name for OMDB search
         // Directory names are like: "(500) Days of Summer (2009)" or "'Twas the Night Before Christmas (1974)"
-        // We need to extract just the movie title without the year for OMDB API
+        // Or TV shows: "Show.Name.S04E01-E05.1080p.WEB-DL"
         let omdbSearchTitle = cleanTitle;
         
         // Try to extract movie title and year
@@ -240,11 +240,22 @@ async function posts({
         if (yearMatch) {
           omdbSearchTitle = yearMatch[1].trim();
         } else {
-          // If no year pattern, use full title but remove common file extensions
+          // First remove season/episode patterns (can have dots or spaces before)
+          // Patterns: S01E05, S01-E05, S01.E05, etc.
           omdbSearchTitle = cleanTitle
+            .replace(/[\s\.]*(S\d{2}|Season\s*\d+)[\.\s]*(E\d{2}|Episode\s*\d+)?.*$/i, '') // Remove season/episode and everything after
+            .replace(/[\s\.]*(BATCH|COMPLETE|Collection|Series).*$/i, '') // Remove batch/complete/collection labels
+            .replace(/[\s\.]*\d{3,4}p.*$/i, '') // Remove resolution info (720p, 1080p, etc.)
+            .replace(/[\s\.]*WEB-DL.*$/i, '') // Remove quality info
+            .replace(/[\s\.]*\[.*\].*$/i, '') // Remove bracketed info
             .replace(/\.[a-zA-Z0-9]+$/, '') // Remove file extensions
-            .replace(/\s*S\d{2}E\d{2}.*$/, '') // Remove season/episode info
             .trim();
+          
+          // Convert dots to spaces for better OMDB matching (show.name.2020 -> show name 2020)
+          omdbSearchTitle = omdbSearchTitle.replace(/\./g, ' ').trim();
+          
+          // Remove extra spaces
+          omdbSearchTitle = omdbSearchTitle.replace(/\s+/g, ' ').trim();
         }
 
         // ✅ Create better placeholder with gradient and title
