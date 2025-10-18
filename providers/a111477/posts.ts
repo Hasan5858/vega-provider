@@ -231,7 +231,7 @@ async function posts({
 
         // ✅ Return immediately with placeholder image, add OMDB URL for lazy-loading
         const placeholderImage = `https://via.placeholder.com/300x450/1a1a1a/ffffff?text=${encodeURIComponent(cleanTitle.substring(0, 30))}`;
-        const omdbUrl = `http://www.omdbapi.com/?apikey=trilogy&t=${encodeURIComponent(cleanTitle)}&type=movie`;
+        const omdbUrl = `https://www.omdbapi.com/?apikey=trilogy&t=${encodeURIComponent(cleanTitle)}&type=movie`;
         
         const image = placeholderImage;
 
