@@ -2,33 +2,34 @@ import { Post, ProviderContext } from "../types";
 import axios from "axios";
 
 // Helper function to fetch movie poster from OMDB API
-async function getMoviePoster(title: string): Promise<string> {
-  // Clean the title for better matching
-  const cleanTitle = title
-    .replace(/[#\$]/g, '') // Remove special characters
-    .replace(/\([^)]*\)/g, '') // Remove year in parentheses
-    .replace(/\s+/g, ' ') // Normalize spaces
-    .trim();
-  
-  try {
-    const searchUrl = `http://www.omdbapi.com/?apikey=trilogy&t=${encodeURIComponent(cleanTitle)}`;
-    const response = await axios.get(searchUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      }
-    });
-    
-    if (response.data && response.data.Response === 'True' && response.data.Poster && response.data.Poster !== 'N/A') {
-      return response.data.Poster;
-    }
-  } catch (error) {
-    console.log(`Error fetching poster for "${title}":`, error instanceof Error ? error.message : error);
-  }
-  
-  // Fallback to placeholder if API fails
-  const imageTitle = cleanTitle.length > 30 ? cleanTitle.slice(0, 30) : cleanTitle;
-  return `https://via.placeholder.com/200x300/2c2c2c/ffffff.png?text=${encodeURIComponent(imageTitle)}`;
-}
+// DISABLED: This was causing massive performance issues (100+ minutes load time)
+// async function getMoviePoster(title: string): Promise<string> {
+//   // Clean the title for better matching
+//   const cleanTitle = title
+//     .replace(/[#\$]/g, '') // Remove special characters
+//     .replace(/\([^)]*\)/g, '') // Remove year in parentheses
+//     .replace(/\s+/g, ' ') // Normalize spaces
+//     .trim();
+//   
+//   try {
+//     const searchUrl = `http://www.omdbapi.com/?apikey=trilogy&t=${encodeURIComponent(cleanTitle)}`;
+//     const response = await axios.get(searchUrl, {
+//       headers: {
+//         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+//       }
+//     });
+//     
+//     if (response.data && response.data.Response === 'True' && response.data.Poster && response.data.Poster !== 'N/A') {
+//       return response.data.Poster;
+//     }
+//   } catch (error) {
+//     console.log(`Error fetching poster for "${title}":`, error instanceof Error ? error.message : error);
+//   }
+//   
+//   // Fallback to placeholder if API fails
+//   const imageTitle = cleanTitle.length > 30 ? cleanTitle.slice(0, 30) : cleanTitle;
+//   return `https://via.placeholder.com/200x300/2c2c2c/ffffff.png?text=${encodeURIComponent(imageTitle)}`;
+// }
 
 export const getPosts = async function ({
   filter,
@@ -228,8 +229,9 @@ async function posts({
         const cleanTitle = title.replace(/\/$/, ""); // Remove trailing slash
         const fullLink = url.endsWith('/') ? url + link : url + '/' + link;
 
-        // Get real movie poster from OMDB API
-        const image = await getMoviePoster(cleanTitle);
+        // ✅ FIX: Use a simple placeholder image instead of calling OMDB API
+        // This makes it instant instead of taking 100+ minutes!
+        const image = `https://via.placeholder.com/300x450/1a1a1a/ffffff?text=${encodeURIComponent(cleanTitle)}`;
 
         catalog.push({
           title: cleanTitle,
