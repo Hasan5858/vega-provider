@@ -179,6 +179,10 @@ const modflixData = {
     "joya9tv": {
         "name": "joya9tv1",
         "url": "https://joya9tv1.com"
+    },
+    "a111477": {
+        "name": "A.111477",
+        "url": "https://a.111477.xyz"
     }
 };
 

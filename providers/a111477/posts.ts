@@ -38,18 +38,22 @@ export const getPosts = async function ({
 }: {
   filter: string;
   page: number;
-  providerValue: string;
   signal: AbortSignal;
   providerContext: ProviderContext;
 }): Promise<Post[]> {
-  const { axios, cheerio } = providerContext;
-  const baseUrl = "https://a.111477.xyz";
+  const { axios, cheerio, getBaseUrl } = providerContext;
+  const baseUrl = await getBaseUrl("a111477");
   if (page > 1) {
     return [];
   }
-  const url = `${baseUrl}${filter}`;
-  const result = await posts({ baseUrl, url, signal, axios, cheerio });
-  return result.slice(0, 50); // Limit only for getPosts
+  try {
+    const url = `${baseUrl}${filter}`;
+    const result = await posts({ baseUrl, url, signal, axios, cheerio });
+    return result.slice(0, 50); // Limit only for getPosts
+  } catch (error) {
+    console.error("Error in getPosts:", error);
+    return [];
+  }
 };
 
 export const getSearchPosts = async function ({
@@ -60,34 +64,34 @@ export const getSearchPosts = async function ({
 }: {
   searchQuery: string;
   page: number;
-  providerValue: string;
   signal: AbortSignal;
   providerContext: ProviderContext;
 }): Promise<Post[]> {
-  const { axios, cheerio } = providerContext;
-  const baseUrl = "https://a.111477.xyz";
+  const { axios, cheerio, getBaseUrl } = providerContext;
+  const baseUrl = await getBaseUrl("a111477");
   if (page > 1) {
     return [];
   }
 
-  // Search through both movies and TV shows directories
-  const moviesPosts = await posts({
-    baseUrl,
-    url: `${baseUrl}/movies/`,
-    signal,
-    axios,
-    cheerio,
-  });
-  const tvsPosts = await posts({
-    baseUrl,
-    url: `${baseUrl}/tvs/`,
-    signal,
-    axios,
-    cheerio,
-  });
+  try {
+    // Search through both movies and TV shows directories
+    const moviesPosts = await posts({
+      baseUrl,
+      url: `${baseUrl}/movies/`,
+      signal,
+      axios,
+      cheerio,
+    });
+    const tvsPosts = await posts({
+      baseUrl,
+      url: `${baseUrl}/tvs/`,
+      signal,
+      axios,
+      cheerio,
+    });
 
-  // Combine all posts
-  const allPosts = [...moviesPosts, ...tvsPosts];
+    // Combine all posts
+    const allPosts = [...moviesPosts, ...tvsPosts];
 
   // Filter posts based on search query with improved matching
   const filteredPosts = allPosts.filter((post) => {
@@ -144,6 +148,10 @@ export const getSearchPosts = async function ({
   });
 
   return filteredPosts;
+  } catch (error) {
+    console.error("Error in getSearchPosts:", error);
+    return [];
+  }
 };
 
 async function posts({
@@ -173,6 +181,12 @@ async function posts({
         'Pragma': 'no-cache'
       }
     });
+    
+    if (!res.data) {
+      console.log('No data received from', url);
+      return [];
+    }
+    
     const data = res.data;
     const $ = cheerio.load(data);
     const catalog: Post[] = [];
