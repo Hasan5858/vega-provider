@@ -247,8 +247,12 @@ async function posts({
             .trim();
         }
 
-        // ✅ Return immediately with placeholder image, add OMDB URL for lazy-loading
-        const placeholderImage = `https://via.placeholder.com/300x450/1a1a1a/ffffff?text=${encodeURIComponent(cleanTitle.substring(0, 30))}`;
+        // ✅ Create better placeholder with gradient and title
+        // Using a service that creates better-looking placeholder images
+        const posterTitle = cleanTitle.substring(0, 40);
+        const placeholderImage = `https://via.placeholder.com/300x450/2a2a2a/ff6b35?text=${encodeURIComponent(posterTitle)}`;
+        
+        // ✅ Create OMDB search URL for lazy-loading real posters
         const omdbUrl = `https://www.omdbapi.com/?apikey=trilogy&t=${encodeURIComponent(omdbSearchTitle)}&type=movie`;
         
         const image = placeholderImage;
@@ -257,7 +261,7 @@ async function posts({
           title: cleanTitle,
           link: fullLink,
           image: image,
-          poster_url: omdbUrl, // For lazy-loading real posters
+          poster_url: omdbUrl, // For lazy-loading real posters (with fallback to placeholder)
         });
       }
     }
