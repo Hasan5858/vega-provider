@@ -1,4 +1,34 @@
 import { Post, ProviderContext } from "../types";
+import axios from "axios";
+
+// Helper function to fetch movie poster from OMDB API
+async function getMoviePoster(title: string): Promise<string> {
+  // Clean the title for better matching
+  const cleanTitle = title
+    .replace(/[#\$]/g, '') // Remove special characters
+    .replace(/\([^)]*\)/g, '') // Remove year in parentheses
+    .replace(/\s+/g, ' ') // Normalize spaces
+    .trim();
+  
+  try {
+    const searchUrl = `http://www.omdbapi.com/?apikey=trilogy&t=${encodeURIComponent(cleanTitle)}`;
+    const response = await axios.get(searchUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    });
+    
+    if (response.data && response.data.Response === 'True' && response.data.Poster && response.data.Poster !== 'N/A') {
+      return response.data.Poster;
+    }
+  } catch (error) {
+    console.log(`Error fetching poster for "${title}":`, error instanceof Error ? error.message : error);
+  }
+  
+  // Fallback to placeholder if API fails
+  const imageTitle = cleanTitle.length > 30 ? cleanTitle.slice(0, 30) : cleanTitle;
+  return `https://via.placeholder.com/200x300/2c2c2c/ffffff.png?text=${encodeURIComponent(imageTitle)}`;
+}
 
 export const getPosts = async function ({
   filter,
@@ -148,8 +178,9 @@ async function posts({
     const catalog: Post[] = [];
 
     // Parse the directory listing
-    $("table tbody tr").each((i, element) => {
-      const $row = $(element);
+    const rows = $("table tbody tr");
+    for (let i = 0; i < rows.length; i++) {
+      const $row = $(rows[i]);
       const linkElement = $row.find("td:first-child a");
       const title = linkElement.text().trim();
       const link = linkElement.attr("href");
@@ -165,14 +196,8 @@ async function posts({
         const cleanTitle = title.replace(/\/$/, ""); // Remove trailing slash
         const fullLink = url.endsWith('/') ? url + link : url + '/' + link;
 
-        // Generate a placeholder image based on title
-        const imageTitle =
-          cleanTitle.length > 30
-            ? cleanTitle.slice(0, 30).replace(/\./g, " ")
-            : cleanTitle.replace(/\./g, " ");
-        const image = `https://placehold.jp/23/000000/ffffff/200x400.png?text=${encodeURIComponent(
-          imageTitle
-        )}&css=%7B%22background%22%3A%22%20-webkit-gradient(linear%2C%20left%20bottom%2C%20left%20top%2C%20from(%233f3b3b)%2C%20to(%23000000))%22%2C%22text-transform%22%3A%22%20capitalize%22%7D`;
+        // Get real movie poster from OMDB API
+        const image = await getMoviePoster(cleanTitle);
 
         catalog.push({
           title: cleanTitle,
@@ -180,7 +205,7 @@ async function posts({
           image: image,
         });
       }
-    });
+    }
 
     // Only limit for regular getPosts, not for search
     return catalog;
