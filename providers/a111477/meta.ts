@@ -1,34 +1,4 @@
 import { EpisodeLink, Info, Link, ProviderContext } from "../types";
-import axios from "axios";
-
-// Helper function to fetch movie poster from OMDB API
-async function getMoviePoster(title: string): Promise<string> {
-  // Clean the title for better matching
-  const cleanTitle = title
-    .replace(/[#\$]/g, '') // Remove special characters
-    .replace(/\([^)]*\)/g, '') // Remove year in parentheses
-    .replace(/\s+/g, ' ') // Normalize spaces
-    .trim();
-  
-  try {
-    const searchUrl = `http://www.omdbapi.com/?apikey=trilogy&t=${encodeURIComponent(cleanTitle)}`;
-    const response = await axios.get(searchUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      }
-    });
-    
-    if (response.data && response.data.Response === 'True' && response.data.Poster && response.data.Poster !== 'N/A') {
-      return response.data.Poster;
-    }
-  } catch (error) {
-    console.log(`Error fetching poster for "${title}":`, error instanceof Error ? error.message : error);
-  }
-  
-  // Fallback to placeholder if API fails
-  const imageTitle = cleanTitle.length > 30 ? cleanTitle.slice(0, 30) : cleanTitle;
-  return `https://via.placeholder.com/300x450/2c2c2c/ffffff.png?text=${encodeURIComponent(imageTitle)}`;
-}
 
 export const getMeta = async function ({
   link,
@@ -40,19 +10,7 @@ export const getMeta = async function ({
   try {
     const { axios, cheerio } = providerContext;
     const url = link;
-    
-    // Add a small delay to prevent rate limiting
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    const res = await axios.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache'
-      }
-    });
+    const res = await axios.get(url);
     const data = res.data;
     const $ = cheerio.load(data);
 
@@ -83,7 +41,7 @@ export const getMeta = async function ({
         if (itemTitle.endsWith("/")) {
           const cleanTitle = itemTitle.replace(/\/$/, "");
           links.push({
-            episodesLink: link.endsWith('/') ? link + itemLink : link + '/' + itemLink,
+            episodesLink: link + itemLink,
             title: cleanTitle,
           });
         }
@@ -121,13 +79,12 @@ export const getMeta = async function ({
       ? "series"
       : "movie";
 
-    // Get real movie poster from OMDB API
-    const image = await getMoviePoster(title);
-
     return {
       title: title,
       synopsis: `Content from 111477.xyz directory`,
-      image: image,
+      image: `https://placehold.jp/23/000000/ffffff/300x450.png?text=${encodeURIComponent(
+        title
+      )}&css=%7B%22background%22%3A%22%20-webkit-gradient(linear%2C%20left%20bottom%2C%20left%20top%2C%20from(%233f3b3b)%2C%20to(%23000000))%22%2C%22text-transform%22%3A%22%20capitalize%22%7D`,
       imdbId: "",
       type: type,
       linkList: links,
