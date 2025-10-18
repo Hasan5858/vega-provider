@@ -10,7 +10,19 @@ export const getMeta = async function ({
   try {
     const { axios, cheerio } = providerContext;
     const url = link;
-    const res = await axios.get(url);
+    
+    // Add a small delay to prevent rate limiting
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    const res = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    });
     const data = res.data;
     const $ = cheerio.load(data);
 
@@ -41,7 +53,7 @@ export const getMeta = async function ({
         if (itemTitle.endsWith("/")) {
           const cleanTitle = itemTitle.replace(/\/$/, "");
           links.push({
-            episodesLink: link + itemLink,
+            episodesLink: link.endsWith('/') ? link + itemLink : link + '/' + itemLink,
             title: cleanTitle,
           });
         }

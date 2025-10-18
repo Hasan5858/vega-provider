@@ -130,7 +130,19 @@ async function posts({
   cheerio: ProviderContext["cheerio"];
 }): Promise<Post[]> {
   try {
-    const res = await axios.get(url, { signal });
+    // Add a small delay to prevent rate limiting
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    const res = await axios.get(url, { 
+      signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    });
     const data = res.data;
     const $ = cheerio.load(data);
     const catalog: Post[] = [];
@@ -151,7 +163,7 @@ async function posts({
         title.endsWith("/")
       ) {
         const cleanTitle = title.replace(/\/$/, ""); // Remove trailing slash
-        const fullLink = url + link;
+        const fullLink = url.endsWith('/') ? url + link : url + '/' + link;
 
         // Generate a placeholder image based on title
         const imageTitle =
