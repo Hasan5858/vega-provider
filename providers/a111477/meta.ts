@@ -99,13 +99,20 @@ export const getMeta = async function ({
         itemTitle !== "../" &&
         itemTitle !== "Parent Directory"
       ) {
-        const fullLink = itemLink;
+        // Construct full URL - handle both relative and absolute URLs
+        const fullLink = itemLink.startsWith('http') 
+          ? itemLink 
+          : (link.endsWith('/') ? link + itemLink : link + '/' + itemLink);
 
         // If it's a directory (ends with /)
         if (itemTitle.endsWith("/")) {
           const cleanTitle = itemTitle.replace(/\/$/, "");
+          const episodeLinkUrl = itemLink.startsWith('http')
+            ? itemLink
+            : (link.endsWith('/') ? link + itemLink : link + '/' + itemLink);
+          
           links.push({
-            episodesLink: link.endsWith('/') ? link + itemLink : link + '/' + itemLink,
+            episodesLink: episodeLinkUrl,
             title: cleanTitle,
           });
         }
@@ -127,8 +134,16 @@ export const getMeta = async function ({
     // If there are direct video files, add them as a direct link group
     if (directLinks.length > 0) {
       links.push({
-        title: title + " (Direct Files)",
+        title: directLinks.length === 1 ? directLinks[0].title : title + " (Direct Files)",
         directLinks: directLinks,
+      });
+    }
+
+    // If no links found (neither directories nor direct files), create a fallback
+    if (links.length === 0 && directLinks.length === 0) {
+      links.push({
+        title: title,
+        directLinks: [],
       });
     }
 
