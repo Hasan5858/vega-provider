@@ -45,7 +45,7 @@
     "version": "1.4",
     "icon": "",
     "type": "global",
-    "disabled": false
+    "disabled": true
   },
   {
     "display_name": "KatMoviesHd",
