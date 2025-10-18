@@ -229,9 +229,27 @@ async function posts({
         const cleanTitle = title.replace(/\/$/, ""); // Remove trailing slash
         const fullLink = url.endsWith('/') ? url + link : url + '/' + link;
 
+        // ✅ Extract real movie title and year from directory name for OMDB search
+        // Directory names are like: "(500) Days of Summer (2009)" or "'Twas the Night Before Christmas (1974)"
+        // We need to extract just the movie title without the year for OMDB API
+        let omdbSearchTitle = cleanTitle;
+        
+        // Try to extract movie title and year
+        // Pattern: "Title (YYYY)" -> extract just "Title"
+        const yearMatch = cleanTitle.match(/^(.+?)\s*\(\d{4}\)$/);
+        if (yearMatch) {
+          omdbSearchTitle = yearMatch[1].trim();
+        } else {
+          // If no year pattern, use full title but remove common file extensions
+          omdbSearchTitle = cleanTitle
+            .replace(/\.[a-zA-Z0-9]+$/, '') // Remove file extensions
+            .replace(/\s*S\d{2}E\d{2}.*$/, '') // Remove season/episode info
+            .trim();
+        }
+
         // ✅ Return immediately with placeholder image, add OMDB URL for lazy-loading
         const placeholderImage = `https://via.placeholder.com/300x450/1a1a1a/ffffff?text=${encodeURIComponent(cleanTitle.substring(0, 30))}`;
-        const omdbUrl = `https://www.omdbapi.com/?apikey=trilogy&t=${encodeURIComponent(cleanTitle)}&type=movie`;
+        const omdbUrl = `https://www.omdbapi.com/?apikey=trilogy&t=${encodeURIComponent(omdbSearchTitle)}&type=movie`;
         
         const image = placeholderImage;
 
