@@ -229,14 +229,17 @@ async function posts({
         const cleanTitle = title.replace(/\/$/, ""); // Remove trailing slash
         const fullLink = url.endsWith('/') ? url + link : url + '/' + link;
 
-        // ✅ FIX: Use a simple placeholder image instead of calling OMDB API
-        // This makes it instant instead of taking 100+ minutes!
-        const image = `https://via.placeholder.com/300x450/1a1a1a/ffffff?text=${encodeURIComponent(cleanTitle)}`;
+        // ✅ Return immediately with placeholder image, add OMDB URL for lazy-loading
+        const placeholderImage = `https://via.placeholder.com/300x450/1a1a1a/ffffff?text=${encodeURIComponent(cleanTitle.substring(0, 30))}`;
+        const omdbUrl = `http://www.omdbapi.com/?apikey=trilogy&t=${encodeURIComponent(cleanTitle)}&type=movie`;
+        
+        const image = placeholderImage;
 
         catalog.push({
           title: cleanTitle,
           link: fullLink,
           image: image,
+          poster_url: omdbUrl, // For lazy-loading real posters
         });
       }
     }

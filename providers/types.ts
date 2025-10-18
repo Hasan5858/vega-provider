@@ -13,6 +13,7 @@ export interface Post {
   link: string;
   image: string;
   provider?: string;
+  poster_url?: string; // OMDB URL for lazy-loading real posters
 }
 
 export type TextTracks = {
