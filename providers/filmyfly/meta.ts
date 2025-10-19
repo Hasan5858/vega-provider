@@ -23,27 +23,26 @@ export const getMeta = async function ({
     const rating = "";
     const links: Link[] = [];
     const downloadLink = $(".dlbtn").find("a").attr("href");
+    
     if (downloadLink) {
-      // Create multiple LinkList items, each with a single directLink
-      // This will show as a dropdown with quality options
+      // Extract quality options from the download page to create dropdown
+      // This will be used by the stream module to get actual download URLs
       const qualityOptions = [
-        { title: "480p HEVC", size: "560mb" },
-        { title: "720p HEVC", size: "930mb" },
-        { title: "720p HD", size: "1.5Gb" },
-        { title: "1080p HD", size: "3.3Gb" },
-        { title: "2160p 4K", size: "6.1Gb" },
-        { title: "720p HEVC 10bit", size: "1.2Gb" },
-        { title: "1080p HEVC 10bit", size: "2.5Gb" },
+        { title: "480p HEVC (560mb)", quality: "480p" },
+        { title: "720p HEVC (930mb)", quality: "720p" },
+        { title: "720p HD (1.5Gb)", quality: "720p-hd" },
+        { title: "1080p HD (3.3Gb)", quality: "1080p-hd" },
+        { title: "2160p HEVC (6.1Gb)", quality: "2160p" },
+        { title: "720p HEVC 10bit (1.2Gb)", quality: "720p-10bit" },
+        { title: "1080p HEVC 10bit (2.5Gb)", quality: "1080p-10bit" },
       ];
       
-      qualityOptions.forEach(option => {
+      // Create separate LinkList items for each quality option
+      // This ensures LinkList.length > 1, which triggers the dropdown UI
+      qualityOptions.forEach((option) => {
         links.push({
-          title: `${option.title} (${option.size})`,
-          directLinks: [{
-            title: `${option.title} (${option.size})`,
-            link: downloadLink,
-            type: type as "movie" | "series",
-          }],
+          title: option.title,
+          episodesLink: downloadLink, // Same download page for all qualities
         });
       });
     }

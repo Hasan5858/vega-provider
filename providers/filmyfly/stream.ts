@@ -15,7 +15,7 @@ export const getStream = async function ({
     const data = res.data;
     const $ = providerContext.cheerio.load(data);
     const streams: Stream[] = [];
-    const elements = $('a[href*="download"], a[href*="file"]').toArray();
+    const elements = $(".button2,.button1,.button3,.button4,.button").toArray();
     const promises = elements.map(async (element) => {
       const title = $(element).text();
       let link = $(element).attr("href");
