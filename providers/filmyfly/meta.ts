@@ -24,23 +24,49 @@ export const getMeta = async function ({
     const links: Link[] = [];
     const downloadLink = $(".dlbtn").find("a").attr("href");
     if (downloadLink) {
-      // For FilmyFly, we'll create multiple LinkList items for different qualities
-      // This will make the UI show a dropdown instead of a flat list
-      const qualityOptions = [
-        { title: "480p HEVC", quality: "480p" },
-        { title: "720p HEVC", quality: "720p" },
-        { title: "1080p HD", quality: "1080p" },
-        { title: "2160p 4K", quality: "2160p" },
-        { title: "720p HEVC 10bit", quality: "720p-10bit" },
-        { title: "1080p HEVC 10bit", quality: "1080p-10bit" },
+      // Create a single LinkList item with directLinks for all qualities
+      // This will show as a dropdown with quality options
+      const directLinks: Link["directLinks"] = [
+        {
+          title: "480p HEVC (560mb)",
+          link: downloadLink,
+          type: type as "movie" | "series",
+        },
+        {
+          title: "720p HEVC (930mb)",
+          link: downloadLink,
+          type: type as "movie" | "series",
+        },
+        {
+          title: "720p HD (1.5Gb)",
+          link: downloadLink,
+          type: type as "movie" | "series",
+        },
+        {
+          title: "1080p HD (3.3Gb)",
+          link: downloadLink,
+          type: type as "movie" | "series",
+        },
+        {
+          title: "2160p 4K (6.1Gb)",
+          link: downloadLink,
+          type: type as "movie" | "series",
+        },
+        {
+          title: "720p HEVC 10bit (1.2Gb)",
+          link: downloadLink,
+          type: type as "movie" | "series",
+        },
+        {
+          title: "1080p HEVC 10bit (2.5Gb)",
+          link: downloadLink,
+          type: type as "movie" | "series",
+        },
       ];
       
-      qualityOptions.forEach(option => {
-        links.push({
-          title: `${title} - ${option.title}`,
-          episodesLink: downloadLink,
-          quality: option.quality as any,
-        });
+      links.push({
+        title: title,
+        directLinks: directLinks,
       });
     }
     return {
