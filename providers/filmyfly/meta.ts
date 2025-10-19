@@ -15,14 +15,11 @@ export const getMeta = async function ({
     const $ = cheerio.load(data);
     const type = url.includes("tvshows") ? "series" : "movie";
     const imdbId = "";
-    const title = $('.fname:contains("Name")').find(".colora").text().trim();
+    // Updated selectors to match current website structure
+    const title = $('.fname').filter((i, el) => $(el).text().includes('Name:')).find(".colora").text().trim();
     const image = $(".ss").find("img").attr("src") || "";
-    const synopsis = $('.fname:contains("Description")')
-      .find(".colorg")
-      .text()
-      .trim();
-    const tags =
-      $('.fname:contains("Genre")').find(".colorb").text().split(",") || [];
+    const synopsis = $('.fname').filter((i, el) => $(el).text().includes('Description:')).find(".colorg").text().trim();
+    const tags = $('.fname').filter((i, el) => $(el).text().includes('Genre:')).find(".colorb").text().split(",") || [];
     const rating = "";
     const links: Link[] = [];
     const downloadLink = $(".dlbtn").find("a").attr("href");

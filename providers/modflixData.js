@@ -138,7 +138,7 @@ const modflixData = {
     },
     "filmyfly": {
         "name": "flimyfly",
-        "url": "https://filmyfly.republican"
+        "url": "https://filmyfly.deals"
     },
     "4khdhub": {
         "name": "4khdhub",
