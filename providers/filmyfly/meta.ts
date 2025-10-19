@@ -24,49 +24,27 @@ export const getMeta = async function ({
     const links: Link[] = [];
     const downloadLink = $(".dlbtn").find("a").attr("href");
     if (downloadLink) {
-      // Create a single LinkList item with directLinks for all qualities
+      // Create multiple LinkList items, each with a single directLink
       // This will show as a dropdown with quality options
-      const directLinks: Link["directLinks"] = [
-        {
-          title: "480p HEVC (560mb)",
-          link: downloadLink,
-          type: type as "movie" | "series",
-        },
-        {
-          title: "720p HEVC (930mb)",
-          link: downloadLink,
-          type: type as "movie" | "series",
-        },
-        {
-          title: "720p HD (1.5Gb)",
-          link: downloadLink,
-          type: type as "movie" | "series",
-        },
-        {
-          title: "1080p HD (3.3Gb)",
-          link: downloadLink,
-          type: type as "movie" | "series",
-        },
-        {
-          title: "2160p 4K (6.1Gb)",
-          link: downloadLink,
-          type: type as "movie" | "series",
-        },
-        {
-          title: "720p HEVC 10bit (1.2Gb)",
-          link: downloadLink,
-          type: type as "movie" | "series",
-        },
-        {
-          title: "1080p HEVC 10bit (2.5Gb)",
-          link: downloadLink,
-          type: type as "movie" | "series",
-        },
+      const qualityOptions = [
+        { title: "480p HEVC", size: "560mb" },
+        { title: "720p HEVC", size: "930mb" },
+        { title: "720p HD", size: "1.5Gb" },
+        { title: "1080p HD", size: "3.3Gb" },
+        { title: "2160p 4K", size: "6.1Gb" },
+        { title: "720p HEVC 10bit", size: "1.2Gb" },
+        { title: "1080p HEVC 10bit", size: "2.5Gb" },
       ];
       
-      links.push({
-        title: title,
-        directLinks: directLinks,
+      qualityOptions.forEach(option => {
+        links.push({
+          title: `${option.title} (${option.size})`,
+          directLinks: [{
+            title: `${option.title} (${option.size})`,
+            link: downloadLink,
+            type: type as "movie" | "series",
+          }],
+        });
       });
     }
     return {
