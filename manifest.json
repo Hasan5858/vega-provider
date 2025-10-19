@@ -224,14 +224,6 @@
     "disabled": false
   },
   {
-    "display_name": "FlixHQ",
-    "value": "flixhq",
-    "version": "1.0",
-    "icon": "",
-    "type": "english",
-    "disabled": false
-  },
-  {
     "display_name": "Primewire",
     "value": "primewire",
     "version": "1.0",

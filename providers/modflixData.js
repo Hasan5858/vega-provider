@@ -78,7 +78,7 @@ const modflixData = {
     },
     "consumet": {
         "name": "consumet",
-        "url": "https://api-consumet-org-nine-kappa.vercel.app"
+        "url": "https://api.consumet.org"
     },
     "nfMirror": {
         "name": "nfMirror",
