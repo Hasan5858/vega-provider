@@ -9,25 +9,25 @@ async function extractKmhdLink(
     const res = await axios.get(katlink);
     const data = res.data;
     
-    // Extract upload_links: get hubdrive_res ID
-    const uploadLinksMatch = data.match(/upload_links:\s*{[^}]*?hubdrive_res:"([^"]+)"/);
-    if (!uploadLinksMatch || !uploadLinksMatch[1]) {
-      console.error("Failed to extract hubdrive_res ID from upload_links");
+    // Extract the new 1xplayer pattern
+    const chibiPathMatch = data.match(/"PUBLIC_CHIBI_PATH":"([^"]+)"/);
+    if (!chibiPathMatch || !chibiPathMatch[1]) {
+      console.error("Failed to extract PUBLIC_CHIBI_PATH from data");
       return null;
     }
-    const hubdriveId = uploadLinksMatch[1];
+    const baseUrl = chibiPathMatch[1];
     
-    // Extract links: get hubdrive_res base URL
-    const linksMatch = data.match(/hubdrive_res:\s*{[^}]*?link:\s*"([^"]+)"/);
-    if (!linksMatch || !linksMatch[1]) {
-      console.error("Failed to extract hubdrive base URL from links");
+    // Extract file ID from the original link
+    const fileIdMatch = katlink.match(/\/file\/([^\/]+)$/);
+    if (!fileIdMatch || !fileIdMatch[1]) {
+      console.error("Failed to extract file ID from link");
       return null;
     }
-    const hubdriveBaseUrl = linksMatch[1];
+    const fileId = fileIdMatch[1];
     
-    // Construct final hubdrive link
-    const finalLink = hubdriveBaseUrl + hubdriveId;
-    console.log("Extracted hubdrive link:", finalLink);
+    // Construct final streaming link
+    const finalLink = `${baseUrl}/${fileId}`;
+    console.log("Extracted 1xplayer link:", finalLink);
     return finalLink;
   } catch (error: any) {
     console.error("Error in extractKmhdLink:", error.message);

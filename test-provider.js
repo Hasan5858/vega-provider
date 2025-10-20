@@ -55,7 +55,7 @@ const functionParams = {
       providerContext,
     },
     prompts: {
-      filter: "Enter filter (e.g., '/category/popular' or '' for latest): ",
+      filter: "Enter filter (e.g., '/category/popular' or press Enter for latest): ",
       page: "Enter page number (default: 1): ",
     },
   },
@@ -118,7 +118,7 @@ const functionParams = {
 // Sample values for quick testing
 const sampleValues = {
   getPosts: {
-    filter: "",
+    filter: "(empty for latest posts)",
     page: "1",
   },
   getSearchPosts: {
@@ -167,7 +167,8 @@ async function getParameters(functionName, providerName) {
       console.log(`Using sample value: ${sampleValue}`);
     }
 
-    if (!value && paramDef.required.includes(paramName)) {
+    // Special handling for filter parameter - empty string is valid for "latest" posts
+    if (!value && paramDef.required.includes(paramName) && paramName !== 'filter') {
       console.log(`❌ ${paramName} is required!`);
       process.exit(1);
     }

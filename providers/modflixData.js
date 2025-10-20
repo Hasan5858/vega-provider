@@ -50,7 +50,7 @@ const modflixData = {
     },
     "kat": {
         "name": "katmovieshd",
-        "url": "https://katmoviehd.run"
+        "url": "https://katmoviehd.observer/"
     },
     "dc": {
         "name": "dramacool",
