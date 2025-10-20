@@ -30,7 +30,8 @@ export async function getStream({
   signal: AbortSignal;
   providerContext: ProviderContext;
 }) {
-  const { axios, cheerio } = providerContext;
+  const { axios, cheerio, extractors } = providerContext;
+  const { hubcloudExtracter } = extractors;
 
   try {
     const streamLinks: Stream[] = [];
@@ -62,7 +63,30 @@ export async function getStream({
       }
     });
 
-    return streamLinks;
+    // If no streams found, try hubcloudExtracter as fallback
+    if (streamLinks.length === 0) {
+      try {
+        const hubcloudStreams = await hubcloudExtracter(link, signal);
+        return hubcloudStreams;
+      } catch (hubcloudError: any) {
+        console.log("hubcloudExtracter fallback failed:", hubcloudError.message);
+      }
+    }
+
+    // For each stream, try to extract direct links using hubcloudExtracter
+    const directStreams: Stream[] = [];
+    for (const stream of streamLinks) {
+      try {
+        // Try to extract direct links from the stream URL
+        const directLinks = await hubcloudExtracter(stream.link, signal);
+        directStreams.push(...directLinks);
+      } catch (extractError: any) {
+        // If extraction fails, keep the original link as fallback
+        directStreams.push(stream);
+      }
+    }
+
+    return directStreams.length > 0 ? directStreams : streamLinks;
   } catch (error: any) {
     console.log("getStream error: ", error.message);
     return [];
