@@ -39,14 +39,14 @@
     "type": "global",
     "disabled": true
   },
-        {
+  {
             "display_name": "KatMoviesHd",
             "value": "katmovies",
             "version": "1.8",
             "icon": "",
             "type": "global",
             "disabled": false
-        },
+  },
   {
     "display_name": "MoviesMod",
     "value": "mod",
