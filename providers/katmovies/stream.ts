@@ -213,6 +213,16 @@ async function extractKmhdLink(
   providerContext: ProviderContext
 ) {
   const { axios } = providerContext;
+  
+  // Debug logging that survives minification
+  const debugLog = (message: string, data?: any) => {
+    if (typeof window !== 'undefined' && window.console) {
+      window.console.log(`[KATMOVIE EXTRACT] ${message}`, data || '');
+    }
+  };
+  
+  debugLog('Starting extractKmhdLink', { katlink });
+  
   try {
     // Step 1: Get the initial links page
     console.log("Getting initial links page:", katlink);
@@ -341,9 +351,19 @@ async function extractKmhdLink(
         // Try different servers in order of preference
         const serverOrder = ['hubdrive_res', 'gdflix_res', 'katdrive_res', 'clicknupload_res', 'ffast_res', 'fichier_res'];
         
+        debugLog('Trying server URLs', { serverOrder, uploadLinks, serverLinks });
+        
         for (const serverKey of serverOrder) {
+          debugLog(`Checking ${serverKey}`, { 
+            hasUploadLink: !!uploadLinks[serverKey], 
+            uploadLink: uploadLinks[serverKey],
+            hasServerLink: !!serverLinks[serverKey],
+            serverLink: serverLinks[serverKey]
+          });
+          
           if (uploadLinks[serverKey] && uploadLinks[serverKey] !== 'None' && serverLinks[serverKey]) {
             const serverUrl = serverLinks[serverKey].link + uploadLinks[serverKey];
+            debugLog(`Found ${serverKey} link`, { serverUrl });
             console.log(`Found ${serverKey} link:`, serverUrl);
             return serverUrl;
           }
@@ -398,14 +418,27 @@ export const getStream = async function ({
   const { axios, cheerio, extractors } = providerContext;
   const { hubcloudExtracter, gdFlixExtracter } = extractors;
   const streamLinks: Stream[] = [];
+  
+  // Debug logging that survives minification
+  const debugLog = (message: string, data?: any) => {
+    if (typeof window !== 'undefined' && window.console) {
+      window.console.log(`[KATMOVIE DEBUG] ${message}`, data || '');
+    }
+  };
+  
+  debugLog('Starting stream extraction', { link });
   console.log("katGetStream", link);
   try {
     if (link.includes("gdflix")) {
       return await gdFlixExtracter(link, signal);
     }
     if (link.includes("kmhd")) {
+      debugLog('Processing kmhd link, calling extractKmhdLink');
       const hubcloudLink = await extractKmhdLink(link, providerContext);
+      debugLog('extractKmhdLink result', { hubcloudLink });
+      
       if (!hubcloudLink) {
+        debugLog('extractKmhdLink returned null/undefined');
         console.error("Failed to extract hubcloud link from kmhd");
         return [];
       }
@@ -413,8 +446,11 @@ export const getStream = async function ({
       // Check the type of server and handle accordingly
       if (hubcloudLink.includes("hubcloud.ink")) {
         // Use hubcloudExtractor for HubCloud links
+        debugLog('HubCloud URL detected, using hubcloudExtractor', { hubcloudLink });
         console.log("HubCloud URL detected, using hubcloudExtractor");
-        return await hubcloudExtracter(hubcloudLink, signal);
+        const result = await hubcloudExtracter(hubcloudLink, signal);
+        debugLog('hubcloudExtracter result', { count: result.length, streams: result });
+        return result;
       } else if (hubcloudLink.includes("1xplayer.com")) {
         console.log("1xplayer URL detected, scraping for direct playable URL");
         try {
