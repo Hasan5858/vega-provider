@@ -308,17 +308,41 @@ export async function getStream({
       const text = $(el).text().trim();
       
       if (href) {
-        const server = getServerName(href);
-        const fileType = getFileType(href, server);
+        // Filter out irrelevant options - only include actual video quality options
+        const isVideoQuality = /(\d+p|hd|sd|4k|1080|720|480|360|240)/i.test(text) || 
+                              /(links?|download|watch|stream)/i.test(text) ||
+                              /(mb|gb|tb)/i.test(text);
         
-        // For cloud storage services, we need to extract the actual video URL
-        // For now, let's use the hubcloudExtracter to get direct links
-        streamLinks.push({
-          server: server,
-          link: href,
-          type: fileType,
-          quality: "1080" // Default quality, could be enhanced to detect from text
-        });
+        // Skip irrelevant options like IMDb ratings, language tags, etc.
+        const isIrrelevant = /(imdb|rating|score|\d+\.\d+\/10)/i.test(text) ||
+                            /^(hindi|english|tamil|telugu|bengali|korean|turkish)$/i.test(text) ||
+                            /(share|telegram|whatsapp|facebook|twitter)/i.test(text) ||
+                            /(how to download|click to)/i.test(text) ||
+                            text.length < 3; // Skip very short text
+        
+        if (isVideoQuality && !isIrrelevant) {
+          const server = getServerName(href);
+          const fileType = getFileType(href, server);
+          
+          // Extract quality from text (e.g., "480p Links [436MB]" -> "480")
+          let quality: "360" | "480" | "720" | "1080" | "2160" = "1080"; // Default
+          const qualityMatch = text.match(/(\d+)p/i);
+          if (qualityMatch) {
+            const qualityNum = parseInt(qualityMatch[1]);
+            if (qualityNum <= 360) quality = "360";
+            else if (qualityNum <= 480) quality = "480";
+            else if (qualityNum <= 720) quality = "720";
+            else if (qualityNum <= 1080) quality = "1080";
+            else if (qualityNum >= 2160) quality = "2160";
+          }
+          
+          streamLinks.push({
+            server: server,
+            link: href,
+            type: fileType,
+            quality: quality
+          });
+        }
       }
     });
 
@@ -356,10 +380,21 @@ export async function getStream({
       }
     }
 
-    // --- Remove duplicates based on link ---
-    const uniqueStreams = streamLinks.filter((stream, index, self) => 
-      index === self.findIndex(s => s.link === stream.link)
-    );
+    // --- Remove duplicates and filter for valid video quality options ---
+    const uniqueStreams = streamLinks
+      .filter((stream, index, self) => 
+        index === self.findIndex(s => s.link === stream.link)
+      )
+      .filter(stream => {
+        // Only include streams with valid quality indicators
+        const validQualities = ['360', '480', '720', '1080', '2160'];
+        return validQualities.some(q => 
+          stream.quality === q || 
+          stream.server.toLowerCase().includes('cloud') ||
+          stream.link.includes('.mkv') || 
+          stream.link.includes('.mp4')
+        );
+      });
 
     // Debug: Show final results
     if (typeof window !== 'undefined' && window.console) {

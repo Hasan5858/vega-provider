@@ -205,7 +205,7 @@ async function fetchPosts({
       process.stdout.write(`🔍 DEBUG - Sample posts: ${catalog.slice(0, 3).map(p => p.title).join(', ')}\n`);
     }
 
-    return catalog.slice(0, 100);
+    return catalog.slice(0, 20); // Reduced from 100 to 20 for faster loading
   } catch (err) {
     console.error(
       "HDMovie2 fetchPosts error:",
