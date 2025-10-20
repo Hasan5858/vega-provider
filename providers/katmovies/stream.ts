@@ -225,6 +225,7 @@ async function extractKmhdLink(
   
   try {
     // Step 1: Get the initial links page
+    debugLog('Step 1: Getting initial links page', { katlink });
     console.log("Getting initial links page:", katlink);
     const initialResponse = await axios.get(katlink, {
       headers: {
@@ -234,7 +235,14 @@ async function extractKmhdLink(
     });
 
     // Check if we need to unlock
+    debugLog('Step 1 complete', { 
+      status: initialResponse.status, 
+      redirectUrl: initialResponse.request.res.responseUrl,
+      isLocked: initialResponse.request.res.responseUrl?.includes('/locked')
+    });
+    
     if (initialResponse.request.res.responseUrl?.includes('/locked')) {
+      debugLog('Step 2: Links are locked, attempting to unlock');
       console.log("Links are locked, attempting to unlock...");
       
       // Step 2: Extract unlock form data
@@ -242,7 +250,10 @@ async function extractKmhdLink(
       const form = $locked('form');
       const action = form.attr('action');
       
+      debugLog('Step 2: Form extraction', { action, hasForm: !!form.length });
+      
       if (!action) {
+        debugLog('Step 2: No unlock form found');
         console.error("No unlock form found");
         return null;
       }
@@ -401,6 +412,11 @@ async function extractKmhdLink(
     console.error("No valid streaming link found");
     return null;
   } catch (error: any) {
+    debugLog('Error in extractKmhdLink', { 
+      error: error.message, 
+      stack: error.stack,
+      name: error.name 
+    });
     console.error("Error in extractKmhdLink:", error.message);
     return null;
   }
