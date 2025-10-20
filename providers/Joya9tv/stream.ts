@@ -30,10 +30,11 @@ export async function getStream({
   providerContext: ProviderContext;
 }) {
   const { axios, cheerio, extractors } = providerContext;
-  const { hubcloudExtracter } = extractors;
+  const { hubcloudExtracter, gdFlixExtracter } = extractors;
   try {
     const streamLinks: Stream[] = [];
-    console.log("dotlink", link);
+    console.log("Joya9tv getStream - processing link:", link?.substring(0, 80));
+    
     if (type === "movie") {
       // vlink
       const dotlinkRes = await fetch(`${link}`, { headers });
@@ -42,6 +43,7 @@ export async function getStream({
       const vlink = dotlinkText.match(/<a\s+href="([^"]*cloud\.[^"]*)"/i) || [];
       // console.log('vLink', vlink[1]);
       link = vlink[1];
+      console.log("Joya9tv getStream - extracted vlink:", link?.substring(0, 80));
 
       // filepress link
       try {
@@ -57,29 +59,15 @@ export async function getStream({
           ?.split("/")
           .slice(0, -2)
           .join("/");
+        console.log("Joya9tv getStream - found filepress link");
         // console.log('filepressID', filepressID);
         // console.log('filepressBaseUrl', filepressBaseUrl);
-        const filepressTokenRes = await axios.post(
-          filepressBaseUrl + "/api/file/downlaod/",
-          {
-            id: filepressID,
-            method: "indexDownlaod",
-            captchaValue: null,
-          },
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Referer: filepressBaseUrl,
-            },
-          }
-        );
-        // console.log('filepressTokenRes', filepressTokenRes.data);
-        if (filepressTokenRes.data?.status) {
-          const filepressToken = filepressTokenRes.data?.data;
-          const filepressStreamLink = await axios.post(
-            filepressBaseUrl + "/api/file/downlaod2/",
+        
+        if (filepressBaseUrl && filepressID) {
+          const filepressTokenRes = await axios.post(
+            filepressBaseUrl + "/api/file/downlaod/",
             {
-              id: filepressToken,
+              id: filepressID,
               method: "indexDownlaod",
               captchaValue: null,
             },
@@ -90,24 +78,77 @@ export async function getStream({
               },
             }
           );
-          // console.log('filepressStreamLink', filepressStreamLink.data);
-          streamLinks.push({
-            server: "filepress",
-            link: filepressStreamLink.data?.data?.[0],
-            type: "mkv",
-          });
+          // console.log('filepressTokenRes', filepressTokenRes.data);
+          if (filepressTokenRes.data?.status) {
+            const filepressToken = filepressTokenRes.data?.data;
+            const filepressStreamLink = await axios.post(
+              filepressBaseUrl + "/api/file/downlaod2/",
+              {
+                id: filepressToken,
+                method: "indexDownlaod",
+                captchaValue: null,
+              },
+              {
+                headers: {
+                  "Content-Type": "application/json",
+                  Referer: filepressBaseUrl,
+                },
+              }
+            );
+            // console.log('filepressStreamLink', filepressStreamLink.data);
+            if (filepressStreamLink.data?.data?.[0]) {
+              streamLinks.push({
+                server: "filepress",
+                link: filepressStreamLink.data?.data?.[0],
+                type: "mkv",
+              });
+              console.log("Joya9tv getStream - filepress link added");
+            }
+          }
         }
       } catch (error) {
-        console.log("filepress error: ");
-        // console.error(error);
+        console.log("Joya9tv getStream - filepress extraction failed:", error instanceof Error ? error.message : String(error));
+        // Continue to hubcloud extraction
       }
     }
 
-    return await hubcloudExtracter(link, signal);
+    // Extract hubcloud/gdflix links
+    if (link) {
+      console.log("Joya9tv getStream - extracting from:", link?.substring(0, 80));
+      
+      let extractedLinks: Stream[] = [];
+      
+      // Try hubcloud first
+      if (link.includes("hubcloud")) {
+        extractedLinks = await hubcloudExtracter(link, signal);
+        console.log("Joya9tv getStream - extracted", extractedLinks.length, "links from hubcloud");
+      }
+      // Try gdflix if link contains gdflix or if hubcloud failed
+      else if (link.includes("gdflix") || extractedLinks.length === 0) {
+        console.log("Joya9tv getStream - trying gdflix extractor");
+        extractedLinks = await gdFlixExtracter(link, signal);
+        console.log("Joya9tv getStream - extracted", extractedLinks.length, "links from gdflix");
+      }
+      
+      if (extractedLinks.length > 0) {
+        streamLinks.push(...extractedLinks);
+      } else {
+        console.log("Joya9tv getStream - extraction failed, returning intermediate link as fallback");
+        // Fallback: return the intermediate link as-is
+        streamLinks.push({
+          server: "hubcloud/gdflix",
+          link: link,
+          type: "mkv",
+        });
+      }
+    }
+
+    console.log("Joya9tv getStream - returning", streamLinks.length, "total stream links");
+    return streamLinks;
   } catch (error: any) {
-    console.log("getStream error: ", error);
-    if (error.message.includes("Aborted")) {
-    } else {
+    console.log("Joya9tv getStream - error:", error?.message || String(error));
+    if (error.message?.includes("Aborted")) {
+      console.log("Joya9tv getStream - request was aborted");
     }
     return [];
   }

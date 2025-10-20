@@ -56,10 +56,6 @@ const modflixData = {
         "name": "dramacool",
         "url": "https://dramacool.org.ro"
     },
-    "dooflix": {
-        "name": "dooflix",
-        "url": "https://dooflixpanel.com"
-    },
     "autoEmbed": {
         "name": "autoEmbed",
         "url": "https://autoembed.cc"
@@ -99,10 +95,6 @@ const modflixData = {
     "vadapav": {
         "name": "vadapav",
         "url": "https://vadapav.mov"
-    },
-    "cinemaLuxe": {
-        "name": "cinemaLuxe",
-        "url": "https://cinemalux.cyou"
     },
     "showbox": {
         "name": "showbox",

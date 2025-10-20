@@ -38,7 +38,8 @@ export const getEpisodes = function ({
                 const href = anchor.attr("href")?.trim();
                 
                 // Only include links for hubcloud and gdflix as requested
-                if (href && (href.includes("hubcloud.one") || href.includes("gdflix.dev"))) {
+                // Fixed: support hubcloud.fit, hubcloud.one, and all gdflix domains
+                if (href && (href.includes("hubcloud") || href.includes("gdflix"))) {
                     // Clean up the title to be just "Episode X 480p"
                     episodes.push({ 
                         title: title.replace(/ Links$/i, ''), 

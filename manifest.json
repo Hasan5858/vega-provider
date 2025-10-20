@@ -8,14 +8,6 @@
     "disabled": false
   },
   {
-    "display_name": "MultiStream",
-    "value": "autoEmbed",
-    "version": "1.4",
-    "icon": "",
-    "type": "global",
-    "disabled": false
-  },
-  {
     "display_name": "MoviesDrive",
     "value": "drive",
     "version": "1.4",
@@ -232,14 +224,6 @@
     "disabled": false
   },
   {
-    "display_name": "HiAnime",
-    "value": "hiAnime",
-    "version": "1.0",
-    "icon": "",
-    "type": "english",
-    "disabled": true
-  },
-  {
     "display_name": "Animetsu",
     "value": "animetsu",
     "version": "1.1",
@@ -306,7 +290,7 @@
   {
     "display_name": "Joya9tv",
     "value": "Joya9tv",
-    "version": "1.0",
+    "version": "1.1",
     "icon": "",
     "type": "india",
     "disabled": false

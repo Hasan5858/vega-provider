@@ -24,23 +24,32 @@ export async function hubcloudExtracter(link: string, signal: AbortSignal) {
       vLinkRedirect[1] ||
       $vLink('.fa-file-download.fa-lg').parent().attr('href') ||
       link;
+    
     console.log('vcloudLink', vcloudLink);
+    console.log('vLinkText length:', vLinkText.length);
+    
     if (vcloudLink?.startsWith('/')) {
       vcloudLink = `${baseUrl}${vcloudLink}`;
       console.log('New vcloudLink', vcloudLink);
     }
+    
     const vcloudRes = await fetch(vcloudLink, {
       headers,
       signal,
       redirect: 'follow',
     });
     const $ = cheerio.load(await vcloudRes.text());
+    
     // console.log('vcloudRes', $.text());
 
     const linkClass = $('.btn-success.btn-lg.h6,.btn-danger,.btn-secondary');
+    console.log('Found download buttons:', linkClass.length);
+    
     for (const element of linkClass) {
       const itm = $(element);
       let link = itm.attr('href') || '';
+      console.log('Processing link:', link?.substring(0, 60) + '...');
+      
       if (link?.includes('.dev') && !link?.includes('/?id=')) {
         streamLinks.push({server: 'Cf Worker', link: link, type: 'mkv'});
       }
@@ -76,6 +85,7 @@ export async function hubcloudExtracter(link: string, signal: AbortSignal) {
         });
       }
     }
+    console.log('streamLinks extracted:', streamLinks.length);
     console.log('streamLinks', streamLinks);
     return streamLinks;
   } catch (error) {
