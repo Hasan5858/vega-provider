@@ -15,6 +15,38 @@ export const catalog = [
     title: "4K Movies",
     filter: "movies-by-quality/2160p",
   },
+  {
+    title: "Bollywood",
+    filter: "bollywood/",
+  },
+  {
+    title: "Hindi Dubbed",
+    filter: "hindi-dubbed-movies/",
+  },
+  {
+    title: "Zee5",
+    filter: "web-series/zee5-originals/",
+  },
+  {
+    title: "MX Player",
+    filter: "web-series/mx-original/",
+  },
+  {
+    title: "Hotstar",
+    filter: "web-series/disney-plus-hotstar/",
+  },
+  {
+    title: "SonyLIV",
+    filter: "web-series/sonyliv/",
+  },
+  {
+    title: "Jio Studios",
+    filter: "web-series/jio-studios/",
+  },
+  {
+    title: "Bengali",
+    filter: "bengali/",
+  },
 ];
 
 export const genres = [
