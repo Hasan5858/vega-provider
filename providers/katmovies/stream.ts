@@ -18,7 +18,6 @@ async function extractDirectFileUrl(
 ): Promise<string | null> {
   const { axios, cheerio } = providerContext;
   try {
-    console.log("Extracting direct file URL from:", url);
     const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -35,7 +34,6 @@ async function extractDirectFileUrl(
       const directLink = downloadLinks.first().attr('href');
       if (directLink) {
         const fullUrl = directLink.startsWith('http') ? directLink : `${url.split('/').slice(0, 3).join('/')}${directLink}`;
-        console.log("Found direct download link:", fullUrl);
         return fullUrl;
       }
     }
@@ -55,7 +53,6 @@ async function extractDirectFileUrl(
         const directUrl = matches[1];
         if (directUrl) {
           const fullUrl = directUrl.startsWith('http') ? directUrl : `${url.split('/').slice(0, 3).join('/')}${directUrl}`;
-          console.log("Found direct URL in script:", fullUrl);
           return fullUrl;
         }
       }
@@ -63,11 +60,9 @@ async function extractDirectFileUrl(
     
     // For some services, the URL might already be direct
     if (url.includes('.mp4') || url.includes('.mkv') || url.includes('.avi') || url.includes('.mov') || url.includes('.wmv') || url.includes('.flv') || url.includes('.webm')) {
-      console.log("URL appears to be direct file link");
       return url;
     }
     
-    console.log("No direct file URL found");
     return null;
     
   } catch (error) {
@@ -82,7 +77,6 @@ async function scrape1xplayerDirectUrl(
 ): Promise<string | null> {
   const { axios, cheerio } = providerContext;
   try {
-    console.log("Scraping 1xplayer URL:", url);
     const response = await axios.get(url, { 
       timeout: 10000,
       headers: {
@@ -90,7 +84,6 @@ async function scrape1xplayerDirectUrl(
       }
     });
     
-    console.log(`1xplayer page status: ${response.status}, content-type: ${response.headers['content-type']}`);
     
     const $ = cheerio.load(response.data);
     
@@ -101,21 +94,17 @@ async function scrape1xplayerDirectUrl(
     const videoSrc = $('video source').attr('src');
     if (videoSrc) {
       directUrl = videoSrc.startsWith('http') ? videoSrc : `${url.split('/').slice(0, 3).join('/')}${videoSrc}`;
-      console.log("Found video source:", directUrl);
       return directUrl;
     }
     
     // Pattern 2: Look for iframe sources
     const iframeElements = $('iframe');
-    console.log(`Found ${iframeElements.length} iframe elements`);
     
     for (let i = 0; i < iframeElements.length; i++) {
       const iframeSrc = $(iframeElements[i]).attr('src');
       if (iframeSrc) {
-        console.log(`Iframe ${i + 1} src: ${iframeSrc}`);
         if (iframeSrc.includes('player') || iframeSrc.includes('embed')) {
           try {
-            console.log("Following iframe redirect:", iframeSrc);
             const iframeResponse = await axios.get(iframeSrc, { 
               timeout: 10000,
               headers: {
@@ -126,11 +115,9 @@ async function scrape1xplayerDirectUrl(
             const iframeVideoSrc = $iframe('video source').attr('src');
             if (iframeVideoSrc) {
               directUrl = iframeVideoSrc.startsWith('http') ? iframeVideoSrc : `${iframeSrc.split('/').slice(0, 3).join('/')}${iframeVideoSrc}`;
-              console.log("Found iframe video source:", directUrl);
               return directUrl;
             }
           } catch (iframeError: any) {
-            console.log(`Iframe ${i + 1} error:`, iframeError.message);
           }
         }
       }
@@ -138,7 +125,6 @@ async function scrape1xplayerDirectUrl(
     
     // Pattern 3: Look for JavaScript variables containing URLs
     const scriptContent = response.data;
-    console.log(`Script content length: ${scriptContent.length}`);
     
     const urlPatterns = [
       /file:\s*["']([^"']+\.(mp4|mkv|avi|mov|wmv|flv|webm))["']/i,
@@ -158,7 +144,6 @@ async function scrape1xplayerDirectUrl(
       const match = scriptContent.match(pattern);
       if (match && match[1]) {
         directUrl = match[1].startsWith('http') ? match[1] : `${url.split('/').slice(0, 3).join('/')}${match[1]}`;
-        console.log(`Found URL in script (pattern ${i + 1}):`, directUrl);
         return directUrl;
       }
     }
@@ -169,37 +154,31 @@ async function scrape1xplayerDirectUrl(
                    $('[data-file]').attr('data-file');
     if (dataUrl) {
       directUrl = dataUrl.startsWith('http') ? dataUrl : `${url.split('/').slice(0, 3).join('/')}${dataUrl}`;
-      console.log("Found data URL:", directUrl);
       return directUrl;
     }
     
     // Pattern 5: Look for any link that might be a video file
     const videoLinks = $('a[href*=".mp4"], a[href*=".mkv"], a[href*=".avi"], a[href*=".mov"], a[href*=".wmv"], a[href*=".flv"], a[href*=".webm"]');
-    console.log(`Found ${videoLinks.length} video links`);
     
     if (videoLinks.length > 0) {
       const videoLink = videoLinks.first().attr('href');
       if (videoLink) {
         directUrl = videoLink.startsWith('http') ? videoLink : `${url.split('/').slice(0, 3).join('/')}${videoLink}`;
-        console.log("Found video link:", directUrl);
         return directUrl;
       }
     }
     
     // Pattern 6: Look for any URLs in the page that might be video files
     const allLinks = $('a[href]');
-    console.log(`Found ${allLinks.length} total links`);
     
     for (let i = 0; i < Math.min(allLinks.length, 10); i++) {
       const href = $(allLinks[i]).attr('href');
       if (href && (href.includes('.mp4') || href.includes('.mkv') || href.includes('.avi') || href.includes('.mov') || href.includes('.wmv') || href.includes('.flv') || href.includes('.webm'))) {
         directUrl = href.startsWith('http') ? href : `${url.split('/').slice(0, 3).join('/')}${href}`;
-        console.log(`Found video file link:`, directUrl);
         return directUrl;
       }
     }
     
-    console.log("No direct playable URL found in 1xplayer page");
     return null;
     
   } catch (error) {
@@ -214,19 +193,10 @@ async function extractKmhdLink(
 ) {
   const { axios } = providerContext;
   
-  // Debug logging that survives minification
-  const debugLog = (message: string, data?: any) => {
-    if (typeof window !== 'undefined' && window.console) {
-      window.console.log(`[KATMOVIE EXTRACT] ${message}`, data || '');
-    }
-  };
   
-  debugLog('Starting extractKmhdLink', { katlink });
   
   try {
     // Step 1: Get the initial links page
-    debugLog('Step 1: Getting initial links page', { katlink });
-    console.log("Getting initial links page:", katlink);
     const initialResponse = await axios.get(katlink, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -240,31 +210,16 @@ async function extractKmhdLink(
                        initialResponse.request?.responseURL || 
                        initialResponse.config?.url;
     
-    debugLog('Step 1 complete', { 
-      status: initialResponse.status, 
-      redirectUrl: responseUrl,
-      isLocked: responseUrl?.includes('/locked'),
-      responseStructure: {
-        hasRequest: !!initialResponse.request,
-        hasRes: !!initialResponse.request?.res,
-        hasResponseURL: !!initialResponse.request?.responseURL,
-        hasConfig: !!initialResponse.config
-      }
-    });
     
     if (responseUrl?.includes('/locked')) {
-      debugLog('Step 2: Links are locked, attempting to unlock');
-      console.log("Links are locked, attempting to unlock...");
       
       // Step 2: Extract unlock form data
       const $locked = cheerio.load(initialResponse.data);
       const form = $locked('form');
       const action = form.attr('action');
       
-      debugLog('Step 2: Form extraction', { action, hasForm: !!form.length });
       
       if (!action) {
-        debugLog('Step 2: No unlock form found');
         console.error("No unlock form found");
         return null;
       }
@@ -272,8 +227,6 @@ async function extractKmhdLink(
       // Step 3: Submit unlock form
         // Use the exact action as-is since it works
         const unlockUrl = `https://links.kmhd.net/locked${action}`;
-      debugLog('Step 3: Submitting unlock form', { unlockUrl });
-      console.log("Submitting unlock form:", unlockUrl);
       
       const unlockResponse = await axios.post(unlockUrl, {}, {
         headers: {
@@ -286,8 +239,6 @@ async function extractKmhdLink(
       });
       
       // Step 4: Get the unlocked page
-      debugLog('Step 4: Getting unlocked page');
-      console.log("Getting unlocked page...");
       
       // Get the unlock response URL safely
       const unlockResponseUrl = unlockResponse.request?.res?.responseURL || 
@@ -309,7 +260,6 @@ async function extractKmhdLink(
       // Extract upload_links using simple regex
       const uploadLinksMatch = unlockedData.match(/upload_links:\{([^}]+)\}/);
       if (uploadLinksMatch) {
-        console.log("Found upload_links!");
         const uploadLinksStr = uploadLinksMatch[1];
         
         // Parse upload links manually
@@ -382,25 +332,15 @@ async function extractKmhdLink(
         // Try different servers in order of preference
         const serverOrder = ['hubdrive_res', 'gdflix_res', 'katdrive_res', 'clicknupload_res', 'ffast_res', 'fichier_res'];
         
-        debugLog('Trying server URLs', { serverOrder, uploadLinks, serverLinks });
         
         for (const serverKey of serverOrder) {
-          debugLog(`Checking ${serverKey}`, { 
-            hasUploadLink: !!uploadLinks[serverKey], 
-            uploadLink: uploadLinks[serverKey],
-            hasServerLink: !!serverLinks[serverKey],
-            serverLink: serverLinks[serverKey]
-          });
           
           if (uploadLinks[serverKey] && uploadLinks[serverKey] !== 'None' && serverLinks[serverKey]) {
             const serverUrl = serverLinks[serverKey].link + uploadLinks[serverKey];
-            debugLog(`Found ${serverKey} link`, { serverUrl });
-            console.log(`Found ${serverKey} link:`, serverUrl);
             return serverUrl;
           }
         }
         
-        console.log("No server URLs found, will try 1xplayer fallback");
       }
       
       // Fallback: Look for 1xplayer pattern
@@ -410,7 +350,6 @@ async function extractKmhdLink(
         const fileIdMatch = katlink.match(/\/file\/([^\/]+)$/);
         if (fileIdMatch && fileIdMatch[1]) {
           const finalLink = `${baseUrl}/${fileIdMatch[1]}`;
-          console.log("Fallback 1xplayer link:", finalLink);
           return finalLink;
         }
       }
@@ -423,7 +362,6 @@ async function extractKmhdLink(
         const fileIdMatch = katlink.match(/\/file\/([^\/]+)$/);
         if (fileIdMatch && fileIdMatch[1]) {
           const finalLink = `${baseUrl}/${fileIdMatch[1]}`;
-          console.log("Direct 1xplayer link:", finalLink);
           return finalLink;
         }
       }
@@ -432,11 +370,6 @@ async function extractKmhdLink(
     console.error("No valid streaming link found");
     return null;
   } catch (error: any) {
-    debugLog('Error in extractKmhdLink', { 
-      error: error.message, 
-      stack: error.stack,
-      name: error.name 
-    });
     console.error("Error in extractKmhdLink:", error.message);
     return null;
   }
@@ -455,26 +388,14 @@ export const getStream = async function ({
   const { hubcloudExtracter, gdFlixExtracter } = extractors;
   const streamLinks: Stream[] = [];
   
-  // Debug logging that survives minification
-  const debugLog = (message: string, data?: any) => {
-    if (typeof window !== 'undefined' && window.console) {
-      window.console.log(`[KATMOVIE DEBUG] ${message}`, data || '');
-    }
-  };
   
-  debugLog('Starting stream extraction', { link });
-  console.log("katGetStream", link);
   try {
     if (link.includes("gdflix")) {
       return await gdFlixExtracter(link, signal);
     }
     if (link.includes("kmhd")) {
-      debugLog('Processing kmhd link, calling extractKmhdLink');
       const hubcloudLink = await extractKmhdLink(link, providerContext);
-      debugLog('extractKmhdLink result', { hubcloudLink });
-      
       if (!hubcloudLink) {
-        debugLog('extractKmhdLink returned null/undefined');
         console.error("Failed to extract hubcloud link from kmhd");
         return [];
       }
@@ -482,17 +403,12 @@ export const getStream = async function ({
       // Check the type of server and handle accordingly
       if (hubcloudLink.includes("hubcloud.ink")) {
         // Use hubcloudExtractor for HubCloud links
-        debugLog('HubCloud URL detected, using hubcloudExtractor', { hubcloudLink });
-        console.log("HubCloud URL detected, using hubcloudExtractor");
         const result = await hubcloudExtracter(hubcloudLink, signal);
-        debugLog('hubcloudExtracter result', { count: result.length, streams: result });
         return result;
       } else if (hubcloudLink.includes("1xplayer.com")) {
-        console.log("1xplayer URL detected, scraping for direct playable URL");
         try {
           const directUrl = await scrape1xplayerDirectUrl(hubcloudLink, providerContext);
           if (directUrl) {
-            console.log("Found direct playable URL:", directUrl);
             return [{
               server: "1xPlayer",
               link: directUrl,
@@ -500,20 +416,16 @@ export const getStream = async function ({
               quality: "1080"
             }];
           } else {
-            console.log("No direct playable URL found from 1xplayer, trying hubcloudExtractor");
             // Try using hubcloudExtractor as fallback for 1xplayer URLs
             try {
               const hubcloudStreams = await hubcloudExtracter(hubcloudLink, signal);
               if (hubcloudStreams.length > 0) {
-                console.log("Found streams via hubcloudExtractor:", hubcloudStreams.length);
                 return hubcloudStreams;
               }
             } catch (hubcloudError: any) {
-              console.log("hubcloudExtractor also failed:", hubcloudError.message);
             }
             
             // Final fallback - return the original URL
-            console.log("All extraction methods failed, returning original 1xplayer URL");
             return [{
               server: "1xPlayer",
               link: hubcloudLink,
@@ -522,7 +434,6 @@ export const getStream = async function ({
             }];
           }
         } catch (error) {
-          console.log("Error scraping 1xplayer URL:", error);
           return [{
             server: "1xPlayer",
             link: hubcloudLink,
@@ -532,11 +443,9 @@ export const getStream = async function ({
         }
       } else if (hubcloudLink.includes("gd.kmhd.net") || hubcloudLink.includes("katdrive.eu") || hubcloudLink.includes("clicknupload.click") || hubcloudLink.includes("fuckingfast.net") || hubcloudLink.includes("1fichier.com")) {
         // These are direct file hosting services, try to extract direct links
-        console.log("File hosting service detected:", hubcloudLink);
         try {
           const directUrl = await extractDirectFileUrl(hubcloudLink, providerContext);
           if (directUrl) {
-            console.log("Found direct file URL:", directUrl);
             return [{
               server: getServerName(hubcloudLink),
               link: directUrl,
@@ -544,7 +453,6 @@ export const getStream = async function ({
               quality: "1080"
             }];
           } else {
-            console.log("No direct file URL found, returning original");
             return [{
               server: getServerName(hubcloudLink),
               link: hubcloudLink,
@@ -553,7 +461,6 @@ export const getStream = async function ({
             }];
           }
         } catch (error) {
-          console.log("Error extracting direct file URL:", error);
           return [{
             server: getServerName(hubcloudLink),
             link: hubcloudLink,
@@ -568,7 +475,6 @@ export const getStream = async function ({
     const streams = await hubcloudExtracter(link, signal);
     return streams;
   } catch (error: any) {
-    console.log("katgetStream error: ", error);
     return [];
   }
 };
