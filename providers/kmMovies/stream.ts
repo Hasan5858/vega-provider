@@ -65,11 +65,13 @@ export async function getStream({
 
     // If no streams found, try hubcloudExtracter as fallback
     if (streamLinks.length === 0) {
+      console.log("🎬 No download-button links found, trying hubcloudExtracter fallback");
       try {
         const hubcloudStreams = await hubcloudExtracter(link, signal);
+        console.log("🎬 hubcloudExtracter returned:", hubcloudStreams.length, "streams");
         return hubcloudStreams;
       } catch (hubcloudError: any) {
-        console.log("hubcloudExtracter fallback failed:", hubcloudError.message);
+        console.log("🎬 hubcloudExtracter fallback failed:", hubcloudError.message);
       }
     }
 
@@ -86,9 +88,11 @@ export async function getStream({
       }
     }
 
-    return directStreams.length > 0 ? directStreams : streamLinks;
+    const finalStreams = directStreams.length > 0 ? directStreams : streamLinks;
+    console.log("🎬 kmMovies getStream returning:", finalStreams.length, "streams");
+    return finalStreams;
   } catch (error: any) {
-    console.log("getStream error: ", error.message);
+    console.log("🎬 kmMovies getStream error: ", error.message);
     return [];
   }
 }
