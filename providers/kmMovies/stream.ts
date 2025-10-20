@@ -30,8 +30,7 @@ export async function getStream({
   signal: AbortSignal;
   providerContext: ProviderContext;
 }) {
-  const { axios, cheerio, extractors } = providerContext;
-  const { hubcloudExtracter } = extractors;
+  const { axios, cheerio } = providerContext;
 
   try {
     const streamLinks: Stream[] = [];
@@ -42,9 +41,7 @@ export async function getStream({
 
     const ALLOWED_SERVERS = ["ONE CLICK", "ZIP-ZAP", "ULTRA FAST", "SKYDROP"];
     
-    // --- Scrape all <a class="download-button"> links
-    const downloadLinks: { server: string; link: string }[] = [];
-    
+    // --- Scrape all <a class="download-button"> links and return them directly
     $("a.download-button").each((_, el) => {
       const btn = $(el);
       const href = btn.attr("href")?.trim();
@@ -58,33 +55,16 @@ export async function getStream({
       );
 
       if (href && isAllowed) {
-        downloadLinks.push({
+        console.log(`Found download link for ${serverName}:`, href);
+        streamLinks.push({
           server: serverName,
           link: href,
+          type: "mkv",
         });
       }
     });
 
-    console.log("Found download links:", downloadLinks.length);
-
-    // Extract streams from each download link using hubcloudExtracter
-    for (const dlLink of downloadLinks) {
-      try {
-        console.log(`Extracting streams from ${dlLink.server}:`, dlLink.link);
-        const extractedStreams = await hubcloudExtracter(dlLink.link, signal);
-        
-        if (extractedStreams && extractedStreams.length > 0) {
-          console.log(`Successfully extracted ${extractedStreams.length} streams from ${dlLink.server}`);
-          streamLinks.push(...extractedStreams);
-        } else {
-          console.log(`No streams extracted from ${dlLink.server}`);
-        }
-      } catch (extractError: any) {
-        console.log(`Failed to extract from ${dlLink.server}:`, extractError.message);
-      }
-    }
-
-    console.log("Total streams extracted:", streamLinks.length);
+    console.log("Total download links found:", streamLinks.length);
     return streamLinks;
   } catch (error: any) {
     console.log("getStream error: ", error.message);
