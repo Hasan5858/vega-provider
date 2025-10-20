@@ -63,9 +63,20 @@ async function fetchPosts({
 }): Promise<Post[]> {
   try {
     const baseUrl = await providerContext.getBaseUrl("katfix");
-    console.log("🔍 DEBUG - Base URL received:", baseUrl);
-    console.log("🔍 DEBUG - Base URL type:", typeof baseUrl);
-    console.log("🔍 DEBUG - Base URL length:", baseUrl ? baseUrl.length : 'undefined');
+    
+    // Debug logging that survives minification
+    if (typeof window !== 'undefined' && window.console) {
+      window.console.log("🔍 DEBUG - Base URL received:", baseUrl);
+      window.console.log("🔍 DEBUG - Base URL type:", typeof baseUrl);
+      window.console.log("🔍 DEBUG - Base URL length:", baseUrl ? baseUrl.length : 'undefined');
+    }
+    
+    // Fallback for Node.js environment
+    if (typeof process !== 'undefined' && process.stdout) {
+      process.stdout.write(`🔍 DEBUG - Base URL: ${baseUrl}\n`);
+      process.stdout.write(`🔍 DEBUG - Type: ${typeof baseUrl}\n`);
+      process.stdout.write(`🔍 DEBUG - Length: ${baseUrl ? baseUrl.length : 'undefined'}\n`);
+    }
     let url: string;
 
     // --- Build URL for category filter or search query
@@ -84,7 +95,27 @@ async function fetchPosts({
     }
 
     const { axios, cheerio } = providerContext;
+    
+    // Debug the constructed URL
+    if (typeof window !== 'undefined' && window.console) {
+      window.console.log("🔍 DEBUG - Constructed URL:", url);
+    }
+    if (typeof process !== 'undefined' && process.stdout) {
+      process.stdout.write(`🔍 DEBUG - Constructed URL: ${url}\n`);
+    }
+    
     const res = await axios.get(url, { headers: defaultHeaders, signal });
+    
+    // Debug the response
+    if (typeof window !== 'undefined' && window.console) {
+      window.console.log("🔍 DEBUG - Response status:", res.status);
+      window.console.log("🔍 DEBUG - Response data length:", res.data ? res.data.length : 'no data');
+    }
+    if (typeof process !== 'undefined' && process.stdout) {
+      process.stdout.write(`🔍 DEBUG - Response status: ${res.status}\n`);
+      process.stdout.write(`🔍 DEBUG - Response data length: ${res.data ? res.data.length : 'no data'}\n`);
+    }
+    
     const $ = cheerio.load(res.data || "");
 
     const resolveUrl = (href: string) =>
@@ -106,6 +137,22 @@ async function fetchPosts({
       ".latest-movies",
       ".movie-item",
     ].join(",");
+
+    // Debug: Check how many elements each selector finds
+    if (typeof window !== 'undefined' && window.console) {
+      window.console.log("🔍 DEBUG - Testing selectors:");
+      POST_SELECTORS.split(',').forEach(selector => {
+        const count = $(selector).length;
+        window.console.log(`  ${selector}: ${count} elements`);
+      });
+    }
+    if (typeof process !== 'undefined' && process.stdout) {
+      process.stdout.write("🔍 DEBUG - Testing selectors:\n");
+      POST_SELECTORS.split(',').forEach(selector => {
+        const count = $(selector).length;
+        process.stdout.write(`  ${selector}: ${count} elements\n`);
+      });
+    }
 
     $(POST_SELECTORS).each((_, el) => {
       const card = $(el);
@@ -135,6 +182,16 @@ async function fetchPosts({
       seen.add(link);
       catalog.push({ title, link, image });
     });
+
+    // Debug: Show final results
+    if (typeof window !== 'undefined' && window.console) {
+      window.console.log("🔍 DEBUG - Final catalog length:", catalog.length);
+      window.console.log("🔍 DEBUG - Sample posts:", catalog.slice(0, 3).map(p => p.title));
+    }
+    if (typeof process !== 'undefined' && process.stdout) {
+      process.stdout.write(`🔍 DEBUG - Final catalog length: ${catalog.length}\n`);
+      process.stdout.write(`🔍 DEBUG - Sample posts: ${catalog.slice(0, 3).map(p => p.title).join(', ')}\n`);
+    }
 
     return catalog.slice(0, 100);
   } catch (err) {
