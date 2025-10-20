@@ -62,7 +62,13 @@ async function fetchPosts({
   providerContext: ProviderContext;
 }): Promise<Post[]> {
   try {
-    const baseUrl = await providerContext.getBaseUrl("katfix");
+    // Get base URL from provider context, with fallback to hardcoded URL
+    let baseUrl = await providerContext.getBaseUrl("katfix");
+    
+    // If base URL is empty or undefined, use hardcoded fallback
+    if (!baseUrl || baseUrl.trim() === '') {
+      baseUrl = 'https://katmoviefix.cards';
+    }
     
     // Debug logging that survives minification
     if (typeof window !== 'undefined' && window.console) {
