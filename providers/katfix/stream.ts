@@ -84,10 +84,11 @@ async function extractDirectVideoUrl(link: string, server: string, axios: any, c
 
     // Special handling for fastcdn-dl.pages.dev URLs - extract the actual video URL from query parameter
     if (finalUrl.includes('fastcdn-dl.pages.dev')) {
-      const urlParams = new URL(finalUrl);
-      const encodedUrl = urlParams.searchParams.get('url');
-      if (encodedUrl) {
-        try {
+      try {
+        // Extract URL parameter manually since URLSearchParams might not be available
+        const urlMatch = finalUrl.match(/[?&]url=([^&]+)/);
+        if (urlMatch && urlMatch[1]) {
+          const encodedUrl = urlMatch[1];
           const decodedUrl = decodeURIComponent(encodedUrl);
           // Check if the decoded URL is a direct video file
           const videoExtensions = /\.(mp4|mkv|avi|mov|wmv|flv|webm|m4v|m3u8)$/i;
@@ -99,9 +100,9 @@ async function extractDirectVideoUrl(link: string, server: string, axios: any, c
               quality: "1080"
             }];
           }
-        } catch (error) {
-          // If decoding fails, continue with other methods
         }
+      } catch (error) {
+        // If decoding fails, continue with other methods
       }
     }
 
@@ -141,10 +142,11 @@ async function extractDirectVideoUrl(link: string, server: string, axios: any, c
         
         // Special handling for fastcdn-dl.pages.dev URLs
         if (fullUrl.includes('fastcdn-dl.pages.dev')) {
-          const urlParams = new URL(fullUrl);
-          const encodedUrl = urlParams.searchParams.get('url');
-          if (encodedUrl) {
-            try {
+          try {
+            // Extract URL parameter manually since URLSearchParams might not be available
+            const urlMatch = fullUrl.match(/[?&]url=([^&]+)/);
+            if (urlMatch && urlMatch[1]) {
+              const encodedUrl = urlMatch[1];
               const decodedUrl = decodeURIComponent(encodedUrl);
               // Check if the decoded URL is a direct video file
               const videoExtensions = /\.(mp4|mkv|avi|mov|wmv|flv|webm|m4v|m3u8)$/i;
@@ -157,9 +159,9 @@ async function extractDirectVideoUrl(link: string, server: string, axios: any, c
                 });
                 return; // Skip adding the original URL
               }
-            } catch (error) {
-              // If decoding fails, continue with original URL
             }
+          } catch (error) {
+            // If decoding fails, continue with original URL
           }
         }
         
