@@ -9,23 +9,26 @@ async function extractKmhdLink(
     const res = await axios.get(katlink);
     const data = res.data;
     
-    const hubDriveResMatch = data.match(/hubdrive_res:\s*"([^"]+)"/);
-    if (!hubDriveResMatch || !hubDriveResMatch[1]) {
-      console.error("Failed to extract hubDriveRes from katlink");
+    // Extract upload_links: get hubdrive_res ID
+    const uploadLinksMatch = data.match(/upload_links:\s*{[^}]*?hubdrive_res:"([^"]+)"/);
+    if (!uploadLinksMatch || !uploadLinksMatch[1]) {
+      console.error("Failed to extract hubdrive_res ID from upload_links");
       return null;
     }
-    const hubDriveRes = hubDriveResMatch[1];
+    const hubdriveId = uploadLinksMatch[1];
     
-    const hubDriveLinkMatch = data.match(
-      /hubdrive_res\s*:\s*{[^}]*?link\s*:\s*"([^"]+)"/
-    );
-    if (!hubDriveLinkMatch || !hubDriveLinkMatch[1]) {
-      console.error("Failed to extract hubDriveLink from katlink");
+    // Extract links: get hubdrive_res base URL
+    const linksMatch = data.match(/hubdrive_res:\s*{[^}]*?link:\s*"([^"]+)"/);
+    if (!linksMatch || !linksMatch[1]) {
+      console.error("Failed to extract hubdrive base URL from links");
       return null;
     }
-    const hubDriveLink = hubDriveLinkMatch[1];
+    const hubdriveBaseUrl = linksMatch[1];
     
-    return hubDriveLink + hubDriveRes;
+    // Construct final hubdrive link
+    const finalLink = hubdriveBaseUrl + hubdriveId;
+    console.log("Extracted hubdrive link:", finalLink);
+    return finalLink;
   } catch (error: any) {
     console.error("Error in extractKmhdLink:", error.message);
     return null;
