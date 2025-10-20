@@ -49,6 +49,76 @@ function getFileType(url: string, server: string): string {
   return serverDefaults[server] || "mkv";
 }
 
+// Helper function to extract direct video URLs from cloud storage services
+async function extractDirectVideoUrl(link: string, server: string, axios: any): Promise<Stream[]> {
+  try {
+    // Debug logging
+    if (typeof window !== 'undefined' && window.console) {
+      window.console.log(`🔍 DEBUG - Extracting direct URL from ${server}: ${link}`);
+    }
+    if (typeof process !== 'undefined' && process.stdout) {
+      process.stdout.write(`🔍 DEBUG - Extracting direct URL from ${server}: ${link}\n`);
+    }
+
+    const response = await axios.get(link, { 
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      },
+      maxRedirects: 5,
+      timeout: 10000
+    });
+
+    const finalUrl = response.request?.responseURL || response.config?.url || link;
+    
+    // Debug the final URL
+    if (typeof window !== 'undefined' && window.console) {
+      window.console.log(`🔍 DEBUG - Final URL for ${server}: ${finalUrl}`);
+    }
+    if (typeof process !== 'undefined' && process.stdout) {
+      process.stdout.write(`🔍 DEBUG - Final URL for ${server}: ${finalUrl}\n`);
+    }
+
+    // Check if the final URL is a direct video file
+    const videoExtensions = /\.(mp4|mkv|avi|mov|wmv|flv|webm|m4v|m3u8)$/i;
+    if (videoExtensions.test(finalUrl)) {
+      return [{
+        server: server,
+        link: finalUrl,
+        type: getFileType(finalUrl, server),
+        quality: "1080"
+      }];
+    }
+
+    // If not a direct video file, return the original link as fallback
+    return [{
+      server: server,
+      link: link,
+      type: getFileType(link, server),
+      quality: "1080"
+    }];
+
+  } catch (error: any) {
+    // If extraction fails, return the original link as fallback
+    if (typeof window !== 'undefined' && window.console) {
+      window.console.log(`🔍 DEBUG - Extraction failed for ${server}: ${error.message}`);
+    }
+    if (typeof process !== 'undefined' && process.stdout) {
+      process.stdout.write(`🔍 DEBUG - Extraction failed for ${server}: ${error.message}\n`);
+    }
+
+    return [{
+      server: server,
+      link: link,
+      type: getFileType(link, server),
+      quality: "1080"
+    }];
+  }
+}
+
 export async function getStream({
   link,
   type,
@@ -144,12 +214,18 @@ export async function getStream({
       
       for (const stream of streamLinks) {
         try {
-          // Use hubcloudExtracter to get direct video URLs from cloud storage links
-          const directLinks = await hubcloudExtracter(stream.link, signal);
+          // Try direct extraction first for cloud storage services
+          const directLinks = await extractDirectVideoUrl(stream.link, stream.server, axios);
           directStreams.push(...directLinks);
         } catch (error) {
-          // If hubcloudExtracter fails, keep the original link as fallback
-          directStreams.push(stream);
+          // If direct extraction fails, try hubcloudExtracter as fallback
+          try {
+            const hubcloudLinks = await hubcloudExtracter(stream.link, signal);
+            directStreams.push(...hubcloudLinks);
+          } catch (hubcloudError) {
+            // If both fail, keep the original link as fallback
+            directStreams.push(stream);
+          }
         }
       }
       
