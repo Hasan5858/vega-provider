@@ -62,7 +62,7 @@ async function fetchPosts({
   providerContext: ProviderContext;
 }): Promise<Post[]> {
   try {
-    const baseUrl = await providerContext.getBaseUrl("katmoviefix");
+    const baseUrl = await providerContext.getBaseUrl("katfix");
     console.log("Base URL:", baseUrl);
     let url: string;
 

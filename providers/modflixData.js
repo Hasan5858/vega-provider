@@ -160,8 +160,8 @@ const modflixData = {
         "name": "zeefliz",
         "url": "https://zeefliz.asia"
     },
-    "katmoviefix": {
-        "name": "katmoviefix",
+    "katfix": {
+        "name": "katfix",
         "url": "https://katmoviefix.cards"
     },
     "movies4u": {
