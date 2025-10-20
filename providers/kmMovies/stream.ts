@@ -41,7 +41,10 @@ export async function getStream({
     const $ = cheerio.load(res.data);
 
     const ALLOWED_SERVERS = ["ONE CLICK", "ZIP-ZAP", "ULTRA FAST", "SKYDROP"];
+    
     // --- Scrape all <a class="download-button"> links
+    const downloadLinks: { server: string; link: string }[] = [];
+    
     $("a.download-button").each((_, el) => {
       const btn = $(el);
       const href = btn.attr("href")?.trim();
@@ -55,44 +58,36 @@ export async function getStream({
       );
 
       if (href && isAllowed) {
-        streamLinks.push({
+        downloadLinks.push({
           server: serverName,
           link: href,
-          type: "mkv", // Boss, mostly KMMOVIES MKV hota hai
         });
       }
     });
 
-    // If no streams found, try hubcloudExtracter as fallback
-    if (streamLinks.length === 0) {
-      console.log("🎬 No download-button links found, trying hubcloudExtracter fallback");
-      try {
-        const hubcloudStreams = await hubcloudExtracter(link, signal);
-        console.log("🎬 hubcloudExtracter returned:", hubcloudStreams.length, "streams");
-        return hubcloudStreams;
-      } catch (hubcloudError: any) {
-        console.log("🎬 hubcloudExtracter fallback failed:", hubcloudError.message);
-      }
-    }
+    console.log("Found download links:", downloadLinks.length);
 
-    // For each stream, try to extract direct links using hubcloudExtracter
-    const directStreams: Stream[] = [];
-    for (const stream of streamLinks) {
+    // Extract streams from each download link using hubcloudExtracter
+    for (const dlLink of downloadLinks) {
       try {
-        // Try to extract direct links from the stream URL
-        const directLinks = await hubcloudExtracter(stream.link, signal);
-        directStreams.push(...directLinks);
+        console.log(`Extracting streams from ${dlLink.server}:`, dlLink.link);
+        const extractedStreams = await hubcloudExtracter(dlLink.link, signal);
+        
+        if (extractedStreams && extractedStreams.length > 0) {
+          console.log(`Successfully extracted ${extractedStreams.length} streams from ${dlLink.server}`);
+          streamLinks.push(...extractedStreams);
+        } else {
+          console.log(`No streams extracted from ${dlLink.server}`);
+        }
       } catch (extractError: any) {
-        // If extraction fails, keep the original link as fallback
-        directStreams.push(stream);
+        console.log(`Failed to extract from ${dlLink.server}:`, extractError.message);
       }
     }
 
-    const finalStreams = directStreams.length > 0 ? directStreams : streamLinks;
-    console.log("🎬 kmMovies getStream returning:", finalStreams.length, "streams");
-    return finalStreams;
+    console.log("Total streams extracted:", streamLinks.length);
+    return streamLinks;
   } catch (error: any) {
-    console.log("🎬 kmMovies getStream error: ", error.message);
+    console.log("getStream error: ", error.message);
     return [];
   }
 }
