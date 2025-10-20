@@ -18,14 +18,30 @@ export const getStream = async function ({
     const res = await axios.get(streamUrl);
     const stream = res.data?.source?.Video;
     const subData = res.data?.subtitles;
+    
+    // Validate stream URL
+    if (!stream || typeof stream !== 'string') {
+      console.error('KissKh: Invalid stream URL received:', stream);
+      return [];
+    }
+    
+    // Ensure stream URL is a valid HTTP URL
+    if (!stream.startsWith('http://') && !stream.startsWith('https://')) {
+      console.error('KissKh: Stream URL is not a valid HTTP URL:', stream);
+      return [];
+    }
+    
     subData?.map((sub: any) => {
-      subtitles.push({
-        title: sub?.label,
-        language: sub?.land,
-        type: sub?.src?.includes(".vtt") ? "text/vtt" : "application/x-subrip",
-        uri: sub?.src,
-      });
+      if (sub?.src && (sub.src.startsWith('http://') || sub.src.startsWith('https://'))) {
+        subtitles.push({
+          title: sub?.label,
+          language: sub?.land,
+          type: sub?.src?.includes(".vtt") ? "text/vtt" : "application/x-subrip",
+          uri: sub?.src,
+        });
+      }
     });
+    
     streamLinks.push({
       server: "kissKh",
       link: stream,
