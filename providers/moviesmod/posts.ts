@@ -13,7 +13,7 @@ export const getPosts = async function ({
   providerContext: ProviderContext;
 }): Promise<Post[]> {
   const { getBaseUrl, axios, cheerio } = providerContext;
-  const baseUrl = await getBaseUrl("Moviesmod");
+  const baseUrl = await getBaseUrl("moviesmod");
   const url = `${baseUrl + filter}/page/${page}/`;
   return posts({ url, signal, axios, cheerio });
 };
@@ -31,7 +31,7 @@ export const getSearchPosts = async function ({
   providerContext: ProviderContext;
 }): Promise<Post[]> {
   const { getBaseUrl, axios, cheerio } = providerContext;
-  const baseUrl = await getBaseUrl("Moviesmod");
+  const baseUrl = await getBaseUrl("moviesmod");
   const url = `${baseUrl}/search/${searchQuery}/page/${page}/`;
   return posts({ url, signal, axios, cheerio });
 };

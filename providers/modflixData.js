@@ -1,7 +1,7 @@
 // Modflix data - base URLs for all providers
 const modflixData = {
-    "Moviesmod": {
-        "name": "Moviesmod",
+    "moviesmod": {
+        "name": "moviesmod",
         "url": "https://moviesmod.plus"
     },
     "Animeflix": {

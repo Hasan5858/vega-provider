@@ -15,6 +15,58 @@ export const catalog = [
     title: "Amazon Prime",
     filter: "/ott/amazon-prime-video",
   },
+  {
+    title: "Hollywood",
+    filter: "/movies/hollywood/english-movies/",
+  },
+  {
+    title: "Dual Audio",
+    filter: "/dual-audio/",
+  },
+  {
+    title: "Anime",
+    filter: "/anime/",
+  },
+  {
+    title: "Korean Series",
+    filter: "/korean-series/",
+  },
+  {
+    title: "Fan Dubbed",
+    filter: "/movies/fan-dubbed/",
+  },
+  {
+    title: "Adult Movies",
+    filter: "/movies/adult-movies/",
+  },
+  {
+    title: "Disney+",
+    filter: "/ott/disney-plus/",
+  },
+  {
+    title: "Apple TV+",
+    filter: "/ott/apple-tv/",
+  },
+  {
+    title: "Disney Hotstar",
+    filter: "/ott/disney-hotstar/",
+  },
+  {
+    title: "Hulu",
+    filter: "/ott/hulu/",
+  },
+  {
+    title: "Paramount+",
+    filter: "/ott/paramount/",
+  },
+  {
+    title: "MX Player",
+    filter: "/ott/mx-player/",
+  },
+  {
+    title: "Drama Series",
+    filter: "/tv-shows-by-genre/drama-series/",
+  },
 ];
 
 export const genres = [
