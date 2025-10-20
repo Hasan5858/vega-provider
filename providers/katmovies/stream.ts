@@ -235,13 +235,24 @@ async function extractKmhdLink(
     });
 
     // Check if we need to unlock
+    // Handle different response structures in React Native vs Node.js
+    const responseUrl = initialResponse.request?.res?.responseURL || 
+                       initialResponse.request?.responseURL || 
+                       initialResponse.config?.url;
+    
     debugLog('Step 1 complete', { 
       status: initialResponse.status, 
-      redirectUrl: initialResponse.request.res.responseUrl,
-      isLocked: initialResponse.request.res.responseUrl?.includes('/locked')
+      redirectUrl: responseUrl,
+      isLocked: responseUrl?.includes('/locked'),
+      responseStructure: {
+        hasRequest: !!initialResponse.request,
+        hasRes: !!initialResponse.request?.res,
+        hasResponseURL: !!initialResponse.request?.responseURL,
+        hasConfig: !!initialResponse.config
+      }
     });
     
-    if (initialResponse.request.res.responseUrl?.includes('/locked')) {
+    if (responseUrl?.includes('/locked')) {
       debugLog('Step 2: Links are locked, attempting to unlock');
       console.log("Links are locked, attempting to unlock...");
       
@@ -261,12 +272,13 @@ async function extractKmhdLink(
       // Step 3: Submit unlock form
         // Use the exact action as-is since it works
         const unlockUrl = `https://links.kmhd.net/locked${action}`;
+      debugLog('Step 3: Submitting unlock form', { unlockUrl });
       console.log("Submitting unlock form:", unlockUrl);
       
       const unlockResponse = await axios.post(unlockUrl, {}, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Referer': initialResponse.request.res.responseUrl,
+          'Referer': responseUrl,
           'Content-Type': 'application/x-www-form-urlencoded',
           'Origin': 'https://links.kmhd.net'
         },
@@ -274,11 +286,19 @@ async function extractKmhdLink(
       });
       
       // Step 4: Get the unlocked page
+      debugLog('Step 4: Getting unlocked page');
       console.log("Getting unlocked page...");
+      
+      // Get the unlock response URL safely
+      const unlockResponseUrl = unlockResponse.request?.res?.responseURL || 
+                               unlockResponse.request?.responseURL || 
+                               unlockResponse.config?.url || 
+                               katlink;
+      
       const unlockedResponse = await axios.get(katlink, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Referer': unlockResponse.request.res.responseUrl || katlink,
+          'Referer': unlockResponseUrl,
           'Cookie': unlockResponse.headers['set-cookie'] ? unlockResponse.headers['set-cookie'].join('; ') : ''
         }
       });
