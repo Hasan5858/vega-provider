@@ -90,6 +90,8 @@ async function scrape1xplayerDirectUrl(
       }
     });
     
+    console.log(`1xplayer page status: ${response.status}, content-type: ${response.headers['content-type']}`);
+    
     const $ = cheerio.load(response.data);
     
     // Look for various patterns that might contain the direct URL
@@ -104,26 +106,40 @@ async function scrape1xplayerDirectUrl(
     }
     
     // Pattern 2: Look for iframe sources
-    const iframeSrc = $('iframe').attr('src');
-    if (iframeSrc && iframeSrc.includes('player')) {
-      console.log("Found iframe source, following redirect:", iframeSrc);
-      const iframeResponse = await axios.get(iframeSrc, { 
-        timeout: 10000,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    const iframeElements = $('iframe');
+    console.log(`Found ${iframeElements.length} iframe elements`);
+    
+    for (let i = 0; i < iframeElements.length; i++) {
+      const iframeSrc = $(iframeElements[i]).attr('src');
+      if (iframeSrc) {
+        console.log(`Iframe ${i + 1} src: ${iframeSrc}`);
+        if (iframeSrc.includes('player') || iframeSrc.includes('embed')) {
+          try {
+            console.log("Following iframe redirect:", iframeSrc);
+            const iframeResponse = await axios.get(iframeSrc, { 
+              timeout: 10000,
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+              }
+            });
+            const $iframe = cheerio.load(iframeResponse.data);
+            const iframeVideoSrc = $iframe('video source').attr('src');
+            if (iframeVideoSrc) {
+              directUrl = iframeVideoSrc.startsWith('http') ? iframeVideoSrc : `${iframeSrc.split('/').slice(0, 3).join('/')}${iframeVideoSrc}`;
+              console.log("Found iframe video source:", directUrl);
+              return directUrl;
+            }
+          } catch (iframeError: any) {
+            console.log(`Iframe ${i + 1} error:`, iframeError.message);
+          }
         }
-      });
-      const $iframe = cheerio.load(iframeResponse.data);
-      const iframeVideoSrc = $iframe('video source').attr('src');
-      if (iframeVideoSrc) {
-        directUrl = iframeVideoSrc.startsWith('http') ? iframeVideoSrc : `${iframeSrc.split('/').slice(0, 3).join('/')}${iframeVideoSrc}`;
-        console.log("Found iframe video source:", directUrl);
-        return directUrl;
       }
     }
     
     // Pattern 3: Look for JavaScript variables containing URLs
     const scriptContent = response.data;
+    console.log(`Script content length: ${scriptContent.length}`);
+    
     const urlPatterns = [
       /file:\s*["']([^"']+\.(mp4|mkv|avi|mov|wmv|flv|webm))["']/i,
       /src:\s*["']([^"']+\.(mp4|mkv|avi|mov|wmv|flv|webm))["']/i,
@@ -132,14 +148,17 @@ async function scrape1xplayerDirectUrl(
       /'url':\s*'([^']+\.(mp4|mkv|avi|mov|wmv|flv|webm))'/i,
       /videoUrl:\s*["']([^"']+)["']/i,
       /streamUrl:\s*["']([^"']+)["']/i,
-      /playUrl:\s*["']([^"']+)["']/i
+      /playUrl:\s*["']([^"']+)["']/i,
+      /downloadUrl:\s*["']([^"']+)["']/i,
+      /fileUrl:\s*["']([^"']+)["']/i
     ];
     
-    for (const pattern of urlPatterns) {
+    for (let i = 0; i < urlPatterns.length; i++) {
+      const pattern = urlPatterns[i];
       const match = scriptContent.match(pattern);
       if (match && match[1]) {
         directUrl = match[1].startsWith('http') ? match[1] : `${url.split('/').slice(0, 3).join('/')}${match[1]}`;
-        console.log("Found URL in script:", directUrl);
+        console.log(`Found URL in script (pattern ${i + 1}):`, directUrl);
         return directUrl;
       }
     }
@@ -156,11 +175,26 @@ async function scrape1xplayerDirectUrl(
     
     // Pattern 5: Look for any link that might be a video file
     const videoLinks = $('a[href*=".mp4"], a[href*=".mkv"], a[href*=".avi"], a[href*=".mov"], a[href*=".wmv"], a[href*=".flv"], a[href*=".webm"]');
+    console.log(`Found ${videoLinks.length} video links`);
+    
     if (videoLinks.length > 0) {
       const videoLink = videoLinks.first().attr('href');
       if (videoLink) {
         directUrl = videoLink.startsWith('http') ? videoLink : `${url.split('/').slice(0, 3).join('/')}${videoLink}`;
         console.log("Found video link:", directUrl);
+        return directUrl;
+      }
+    }
+    
+    // Pattern 6: Look for any URLs in the page that might be video files
+    const allLinks = $('a[href]');
+    console.log(`Found ${allLinks.length} total links`);
+    
+    for (let i = 0; i < Math.min(allLinks.length, 10); i++) {
+      const href = $(allLinks[i]).attr('href');
+      if (href && (href.includes('.mp4') || href.includes('.mkv') || href.includes('.avi') || href.includes('.mov') || href.includes('.wmv') || href.includes('.flv') || href.includes('.webm'))) {
+        directUrl = href.startsWith('http') ? href : `${url.split('/').slice(0, 3).join('/')}${href}`;
+        console.log(`Found video file link:`, directUrl);
         return directUrl;
       }
     }
@@ -204,7 +238,8 @@ async function extractKmhdLink(
       }
       
       // Step 3: Submit unlock form
-      const unlockUrl = `https://links.kmhd.net${action}`;
+        // Use the exact action as-is since it works
+        const unlockUrl = `https://links.kmhd.net/locked${action}`;
       console.log("Submitting unlock form:", unlockUrl);
       
       const unlockResponse = await axios.post(unlockUrl, {}, {
@@ -313,6 +348,8 @@ async function extractKmhdLink(
             return serverUrl;
           }
         }
+        
+        console.log("No server URLs found, will try 1xplayer fallback");
       }
       
       // Fallback: Look for 1xplayer pattern
@@ -374,7 +411,11 @@ export const getStream = async function ({
       }
       
       // Check the type of server and handle accordingly
-      if (hubcloudLink.includes("1xplayer.com")) {
+      if (hubcloudLink.includes("hubcloud.ink")) {
+        // Use hubcloudExtractor for HubCloud links
+        console.log("HubCloud URL detected, using hubcloudExtractor");
+        return await hubcloudExtracter(hubcloudLink, signal);
+      } else if (hubcloudLink.includes("1xplayer.com")) {
         console.log("1xplayer URL detected, scraping for direct playable URL");
         try {
           const directUrl = await scrape1xplayerDirectUrl(hubcloudLink, providerContext);
@@ -387,7 +428,20 @@ export const getStream = async function ({
               quality: "1080"
             }];
           } else {
-            console.log("No direct playable URL found, returning original");
+            console.log("No direct playable URL found from 1xplayer, trying hubcloudExtractor");
+            // Try using hubcloudExtractor as fallback for 1xplayer URLs
+            try {
+              const hubcloudStreams = await hubcloudExtracter(hubcloudLink, signal);
+              if (hubcloudStreams.length > 0) {
+                console.log("Found streams via hubcloudExtractor:", hubcloudStreams.length);
+                return hubcloudStreams;
+              }
+            } catch (hubcloudError: any) {
+              console.log("hubcloudExtractor also failed:", hubcloudError.message);
+            }
+            
+            // Final fallback - return the original URL
+            console.log("All extraction methods failed, returning original 1xplayer URL");
             return [{
               server: "1xPlayer",
               link: hubcloudLink,
@@ -404,10 +458,6 @@ export const getStream = async function ({
             quality: "1080"
           }];
         }
-      } else if (hubcloudLink.includes("hubcloud.ink")) {
-        // Use hubcloudExtractor for HubCloud links
-        console.log("HubCloud URL detected, using hubcloudExtractor");
-        return await hubcloudExtracter(hubcloudLink, signal);
       } else if (hubcloudLink.includes("gd.kmhd.net") || hubcloudLink.includes("katdrive.eu") || hubcloudLink.includes("clicknupload.click") || hubcloudLink.includes("fuckingfast.net") || hubcloudLink.includes("1fichier.com")) {
         // These are direct file hosting services, try to extract direct links
         console.log("File hosting service detected:", hubcloudLink);
