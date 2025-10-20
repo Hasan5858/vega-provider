@@ -64,8 +64,29 @@ export async function getStream({
   const { hubcloudExtracter } = extractors;
 
   try {
+    // Debug logging that survives minification
+    if (typeof window !== 'undefined' && window.console) {
+      window.console.log("🔍 DEBUG - Stream link received:", link);
+    }
+    if (typeof process !== 'undefined' && process.stdout) {
+      process.stdout.write(`🔍 DEBUG - Stream link received: ${link}\n`);
+    }
+
     const streamLinks: Stream[] = [];
     const response = await axios.get(link, { headers });
+    
+    // Debug the response
+    if (typeof window !== 'undefined' && window.console) {
+      window.console.log("🔍 DEBUG - Response status:", response.status);
+      window.console.log("🔍 DEBUG - Response URL:", response.request?.responseURL || response.config?.url);
+      window.console.log("🔍 DEBUG - Response data length:", response.data ? response.data.length : 'no data');
+    }
+    if (typeof process !== 'undefined' && process.stdout) {
+      process.stdout.write(`🔍 DEBUG - Response status: ${response.status}\n`);
+      process.stdout.write(`🔍 DEBUG - Response URL: ${response.request?.responseURL || response.config?.url}\n`);
+      process.stdout.write(`🔍 DEBUG - Response data length: ${response.data ? response.data.length : 'no data'}\n`);
+    }
+
     const $ = cheerio.load(response.data);
 
     // --- Extract all cloud storage links ---
@@ -81,6 +102,22 @@ export async function getStream({
       "a[href*='mega.nz']",             // Mega
       "a[href*='drive.google.com']"     // Google Drive
     ].join(", ");
+
+    // Debug: Check how many elements each selector finds
+    if (typeof window !== 'undefined' && window.console) {
+      window.console.log("🔍 DEBUG - Testing cloud selectors:");
+      cloudSelectors.split(',').forEach(selector => {
+        const count = $(selector).length;
+        window.console.log(`  ${selector}: ${count} elements`);
+      });
+    }
+    if (typeof process !== 'undefined' && process.stdout) {
+      process.stdout.write("🔍 DEBUG - Testing cloud selectors:\n");
+      cloudSelectors.split(',').forEach(selector => {
+        const count = $(selector).length;
+        process.stdout.write(`  ${selector}: ${count} elements\n`);
+      });
+    }
 
     $(cloudSelectors).each((_, el) => {
       const href = $(el).attr("href")?.trim();
@@ -113,6 +150,16 @@ export async function getStream({
     const uniqueStreams = streamLinks.filter((stream, index, self) => 
       index === self.findIndex(s => s.link === stream.link)
     );
+
+    // Debug: Show final results
+    if (typeof window !== 'undefined' && window.console) {
+      window.console.log("🔍 DEBUG - Final stream links found:", uniqueStreams.length);
+      window.console.log("🔍 DEBUG - Sample streams:", uniqueStreams.slice(0, 3).map(s => ({ server: s.server, link: s.link })));
+    }
+    if (typeof process !== 'undefined' && process.stdout) {
+      process.stdout.write(`🔍 DEBUG - Final stream links found: ${uniqueStreams.length}\n`);
+      process.stdout.write(`🔍 DEBUG - Sample streams: ${JSON.stringify(uniqueStreams.slice(0, 3).map(s => ({ server: s.server, link: s.link })))}\n`);
+    }
 
     return uniqueStreams;
   } catch (error: any) {
