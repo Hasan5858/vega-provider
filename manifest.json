@@ -1,18 +1,12 @@
-{
-  "metadata": {
-    "last_updated": "2025-01-20T18:55:00Z",
-    "version": "1.0",
-    "description": "Vega Providers Manifest"
+[
+  {
+    "display_name": "VegaMovies",
+    "value": "vega",
+    "version": "1.9",
+    "icon": "",
+    "type": "global",
+    "disabled": false
   },
-  "providers": [
-    {
-      "display_name": "VegaMovies",
-      "value": "vega",
-      "version": "1.9",
-      "icon": "",
-      "type": "global",
-      "disabled": false
-    },
   {
     "display_name": "MoviesDrive",
     "value": "drive",
@@ -301,6 +295,5 @@
     "type": "india",
     "disabled": false
   }
-  ]
-}
+]
 
