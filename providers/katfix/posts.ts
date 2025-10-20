@@ -63,7 +63,9 @@ async function fetchPosts({
 }): Promise<Post[]> {
   try {
     const baseUrl = await providerContext.getBaseUrl("katfix");
-    console.log("Base URL:", baseUrl);
+    console.log("🔍 DEBUG - Base URL received:", baseUrl);
+    console.log("🔍 DEBUG - Base URL type:", typeof baseUrl);
+    console.log("🔍 DEBUG - Base URL length:", baseUrl ? baseUrl.length : 'undefined');
     let url: string;
 
     // --- Build URL for category filter or search query
