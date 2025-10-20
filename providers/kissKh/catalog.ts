@@ -17,23 +17,23 @@ export const catalog = [
   },
   {
     title: "Movies",
-    filter: "/Explore?type=2",
+    filter: "/api/DramaList/List?type=2&sub=0&country=0&status=0&order=2",
   },
   {
     title: "Thailand Drama",
-    filter: "/Explore?type=1&country=5",
+    filter: "/api/DramaList/List?type=1&sub=0&country=5&status=0&order=2",
   },
   {
     title: "Philippine Drama",
-    filter: "/Explore?type=1&country=8",
+    filter: "/api/DramaList/List?type=1&sub=0&country=8&status=0&order=2",
   },
   {
     title: "Japanese Drama",
-    filter: "/Explore?type=1&country=3",
+    filter: "/api/DramaList/List?type=1&sub=0&country=3&status=0&order=2",
   },
   {
     title: "Popular",
-    filter: "/Explore?type=4&country=0&order=1",
+    filter: "/api/DramaList/List?type=0&sub=0&country=0&status=0&order=1",
   },
 ];
 
