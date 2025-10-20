@@ -130,6 +130,7 @@ async function fetchPosts({
         : `${baseUrl}${href.startsWith("/") ? "" : "/"}${href}`;
 
     const seen = new Set<string>();
+    const seenTitles = new Set<string>();
     const catalog: Post[] = [];
 
     // --- HDMovie2 selectors
@@ -178,6 +179,10 @@ async function fetchPosts({
         .trim();
       if (!title) return;
 
+      // Check for duplicate titles (case-insensitive)
+      const normalizedTitle = title.toLowerCase().trim();
+      if (seenTitles.has(normalizedTitle)) return;
+
       const img =
         card.find("img").first().attr("src") ||
         card.find("img").first().attr("data-src") ||
@@ -186,6 +191,7 @@ async function fetchPosts({
       const image = img ? resolveUrl(img) : "";
 
       seen.add(link);
+      seenTitles.add(normalizedTitle);
       catalog.push({ title, link, image });
     });
 
