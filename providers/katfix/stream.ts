@@ -50,7 +50,7 @@ function getFileType(url: string, server: string): string {
 }
 
 // Helper function to extract direct video URLs from cloud storage services
-async function extractDirectVideoUrl(link: string, server: string, axios: any): Promise<Stream[]> {
+async function extractDirectVideoUrl(link: string, server: string, axios: any, cheerio: any): Promise<Stream[]> {
   try {
     // Debug logging
     if (typeof window !== 'undefined' && window.console) {
@@ -82,6 +82,29 @@ async function extractDirectVideoUrl(link: string, server: string, axios: any): 
       process.stdout.write(`🔍 DEBUG - Final URL for ${server}: ${finalUrl}\n`);
     }
 
+    // Special handling for fastcdn-dl.pages.dev URLs - extract the actual video URL from query parameter
+    if (finalUrl.includes('fastcdn-dl.pages.dev')) {
+      const urlParams = new URL(finalUrl);
+      const encodedUrl = urlParams.searchParams.get('url');
+      if (encodedUrl) {
+        try {
+          const decodedUrl = decodeURIComponent(encodedUrl);
+          // Check if the decoded URL is a direct video file
+          const videoExtensions = /\.(mp4|mkv|avi|mov|wmv|flv|webm|m4v|m3u8)$/i;
+          if (videoExtensions.test(decodedUrl)) {
+            return [{
+              server: server,
+              link: decodedUrl,
+              type: getFileType(decodedUrl, server),
+              quality: "1080"
+            }];
+          }
+        } catch (error) {
+          // If decoding fails, continue with other methods
+        }
+      }
+    }
+
     // Check if the final URL is a direct video file
     const videoExtensions = /\.(mp4|mkv|avi|mov|wmv|flv|webm|m4v|m3u8)$/i;
     if (videoExtensions.test(finalUrl)) {
@@ -93,7 +116,96 @@ async function extractDirectVideoUrl(link: string, server: string, axios: any): 
       }];
     }
 
-    // If not a direct video file, return the original link as fallback
+    // If not a direct video file, parse the HTML to find video links
+    const $ = cheerio.load(response.data);
+    const videoLinks: Stream[] = [];
+    
+    // Look for direct video links in the HTML
+    const videoSelectors = [
+      'a[href*=".mp4"]',
+      'a[href*=".mkv"]', 
+      'a[href*=".avi"]',
+      'a[href*=".mov"]',
+      'a[href*=".webm"]',
+      'a[href*=".m4v"]',
+      'a[href*=".m3u8"]'
+    ].join(', ');
+    
+    $(videoSelectors).each((_: any, el: any) => {
+      const href = $(el).attr('href')?.trim();
+      const text = $(el).text().trim();
+      
+      if (href) {
+        // Make sure it's a full URL
+        const fullUrl = href.startsWith('http') ? href : new URL(href, finalUrl).href;
+        
+        // Special handling for fastcdn-dl.pages.dev URLs
+        if (fullUrl.includes('fastcdn-dl.pages.dev')) {
+          const urlParams = new URL(fullUrl);
+          const encodedUrl = urlParams.searchParams.get('url');
+          if (encodedUrl) {
+            try {
+              const decodedUrl = decodeURIComponent(encodedUrl);
+              // Check if the decoded URL is a direct video file
+              const videoExtensions = /\.(mp4|mkv|avi|mov|wmv|flv|webm|m4v|m3u8)$/i;
+              if (videoExtensions.test(decodedUrl)) {
+                videoLinks.push({
+                  server: server,
+                  link: decodedUrl,
+                  type: getFileType(decodedUrl, server),
+                  quality: "1080"
+                });
+                return; // Skip adding the original URL
+              }
+            } catch (error) {
+              // If decoding fails, continue with original URL
+            }
+          }
+        }
+        
+        videoLinks.push({
+          server: server,
+          link: fullUrl,
+          type: getFileType(fullUrl, server),
+          quality: "1080"
+        });
+      }
+    });
+    
+    // Also look for video URLs in the HTML content using regex
+    const videoUrlPattern = /https?:\/\/[^\s"']+\.(mp4|mkv|avi|mov|webm|m4v|m3u8)(\?[^\s"']*)?/gi;
+    const matches = response.data.match(videoUrlPattern);
+    if (matches) {
+      matches.forEach((match: string) => {
+        videoLinks.push({
+          server: server,
+          link: match,
+          type: getFileType(match, server),
+          quality: "1080"
+        });
+      });
+    }
+    
+    
+    if (videoLinks.length > 0) {
+      // Debug found video links
+      if (typeof window !== 'undefined' && window.console) {
+        window.console.log(`🔍 DEBUG - Found ${videoLinks.length} video links in HTML`);
+        videoLinks.forEach((link, i) => {
+          window.console.log(`  ${i+1}. ${link.link}`);
+        });
+      }
+      if (typeof process !== 'undefined' && process.stdout) {
+        process.stdout.write(`🔍 DEBUG - Found ${videoLinks.length} video links in HTML\n`);
+        videoLinks.forEach((link, i) => {
+          process.stdout.write(`  ${i+1}. ${link.link}\n`);
+        });
+      }
+      
+      return videoLinks;
+    }
+
+    // If no video links found, return the original link as fallback
     return [{
       server: server,
       link: link,
@@ -215,7 +327,7 @@ export async function getStream({
       for (const stream of streamLinks) {
         try {
           // Try direct extraction first for cloud storage services
-          const directLinks = await extractDirectVideoUrl(stream.link, stream.server, axios);
+          const directLinks = await extractDirectVideoUrl(stream.link, stream.server, axios, cheerio);
           directStreams.push(...directLinks);
         } catch (error) {
           // If direct extraction fails, try hubcloudExtracter as fallback
