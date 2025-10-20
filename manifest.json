@@ -248,14 +248,6 @@
     "disabled": false
   },
   {
-    "display_name": "Dooflix",
-    "value": "dooflix",
-    "version": "1.4",
-    "icon": "",
-    "type": "india",
-    "disabled": true
-  },
-  {
     "display_name": "RogMovies",
     "value": "luxMovies",
     "version": "1.6",
