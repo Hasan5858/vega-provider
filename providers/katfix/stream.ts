@@ -127,6 +127,8 @@ export async function getStream({
         const server = getServerName(href);
         const fileType = getFileType(href, server);
         
+        // For cloud storage services, we need to extract the actual video URL
+        // For now, let's use the hubcloudExtracter to get direct links
         streamLinks.push({
           server: server,
           link: href,
@@ -136,8 +138,26 @@ export async function getStream({
       }
     });
 
-    // --- Try hubcloud extraction as fallback ---
-    if (streamLinks.length === 0) {
+    // --- Extract actual video URLs from cloud storage links ---
+    if (streamLinks.length > 0) {
+      const directStreams: Stream[] = [];
+      
+      for (const stream of streamLinks) {
+        try {
+          // Use hubcloudExtracter to get direct video URLs from cloud storage links
+          const directLinks = await hubcloudExtracter(stream.link, signal);
+          directStreams.push(...directLinks);
+        } catch (error) {
+          // If hubcloudExtracter fails, keep the original link as fallback
+          directStreams.push(stream);
+        }
+      }
+      
+      // Replace cloud storage links with direct video URLs
+      streamLinks.length = 0;
+      streamLinks.push(...directStreams);
+    } else {
+      // --- Try hubcloud extraction as fallback ---
       try {
         const hubcloudStreams = await hubcloudExtracter(link, signal);
         streamLinks.push(...hubcloudStreams);
