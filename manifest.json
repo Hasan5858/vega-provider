@@ -88,14 +88,6 @@
     "disabled": false
   },
   {
-    "display_name": "MovieBox",
-    "value": "movieBox",
-    "version": "1.2",
-    "icon": "",
-    "type": "global",
-    "disabled": false
-  },
-  {
     "display_name": "Movies4U",
     "value": "movies4u",
     "version": "1.0",

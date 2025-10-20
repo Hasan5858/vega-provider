@@ -144,10 +144,6 @@ const modflixData = {
         "name": "9xflix",
         "url": "https://9xflix.nexus"
     },
-    "movieBox": {
-        "name": "MovieBox",
-        "url": "https://api6.aoneroom.com"
-    },
     "cinevood": {
         "name": "Cinevood",
         "url": "https://kmmovies.fans"
