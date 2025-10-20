@@ -4,16 +4,32 @@ export const catalog = [
     filter: "",
   },
   {
+    title: "Bollywood Movies",
+    filter: "/category/bollywood-movies/",
+  },
+  {
+    title: "South Hindi Movies",
+    filter: "/category/south-hindi-movies/",
+  },
+  {
+    title: "Adult",
+    filter: "/category/adult/",
+  },
+  {
+    title: "Wrestling Shows",
+    filter: "/category/wrestling-shows/",
+  },
+  {
+    title: "Unofficial South Hindi Dubs",
+    filter: "/category/unofficial-south-hindi-dubs/",
+  },
+  {
     title: "Web Series",
     filter: "/category/web-series",
   },
   {
     title: "Hollywood ",
     filter: "/category/hollywood-movies",
-  },
-  {
-    title: "South Movies",
-    filter: "/category/south-hindi-movies",
   },
 ];
 
