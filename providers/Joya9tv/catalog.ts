@@ -4,7 +4,59 @@ export const catalog = [
     filter: "", // baseUrl se latest page fetch hoga
   },
   {
-    title: "Bangali-Movies",
-    filter: "genre/bengali-movies/",
+    title: "Bengali Movies",
+    filter: "/genre/bengali-movies/",
+  },
+  {
+    title: "Bangla Dubbed",
+    filter: "/genre/bangla-dubbed/",
+  },
+  {
+    title: "Hindi Dubbed",
+    filter: "/genre/hindi-dubbed/",
+  },
+  {
+    title: "Tamil Movies",
+    filter: "/genre/tamil-movies/",
+  },
+  {
+    title: "Korean Movies Drama",
+    filter: "/genre/korean-movies-drama/",
+  },
+  {
+    title: "Hoichoi Originals",
+    filter: "/genre/hoichoi-originals/",
+  },
+  {
+    title: "Klikk Originals",
+    filter: "/genre/klikk-originals/",
+  },
+  {
+    title: "Ullu Originals",
+    filter: "/genre/ullu-originals/",
+  },
+  {
+    title: "AltBalaji Originals",
+    filter: "/genre/altbalaji-originals/",
+  },
+  {
+    title: "Hotstar",
+    filter: "/genre/hotstar/",
+  },
+  {
+    title: "Zee5",
+    filter: "/genre/zee5/",
+  },
+  {
+    title: "Prime Video",
+    filter: "/genre/prime-video/",
+  },
+  {
+    title: "Netflix",
+    filter: "/genre/netflix/",
+  },
+  {
+    title: "4K UHD",
+    filter: "/genre/4k-uhd/",
   },
 ];
