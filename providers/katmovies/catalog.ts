@@ -8,6 +8,34 @@ export const catalog = [
     filter: "/category/netflix",
   },
   {
+    title: "Hollywood Eng",
+    filter: "/category/hollywood-eng/",
+  },
+  {
+    title: "Dual Audio",
+    filter: "/category/dual-audio/",
+  },
+  {
+    title: "TV Shows",
+    filter: "/category/tv-shows/",
+  },
+  {
+    title: "Korean Drama",
+    filter: "/category/tv-series-dubbed/korean-drama/",
+  },
+  {
+    title: "Turkish Drama Hindi",
+    filter: "/category/tv-series-dubbed/turkish-drama-in-hindi/",
+  },
+  {
+    title: "TV Series Dubbed",
+    filter: "/category/tv-series-dubbed/",
+  },
+  {
+    title: "Disney",
+    filter: "/category/disney/",
+  },
+  {
     title: "Animated",
     filter: "/category/animated",
   },
