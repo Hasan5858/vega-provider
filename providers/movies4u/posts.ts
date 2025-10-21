@@ -140,10 +140,16 @@ async function fetchPosts({
       ".movie-item",
     ].join(",");
 
+    console.log(`🔍 Looking for posts with selectors: ${POST_SELECTORS}`);
+    console.log(`🔍 Found ${$(POST_SELECTORS).length} elements matching selectors`);
+    
     $(POST_SELECTORS).each((_, el) => {
       const card = $(el);
       let link = card.find("a[href]").first().attr("href") || "";
-      if (!link) return;
+      if (!link) {
+        console.log(`⚠️ No link found in card: ${card.text().substring(0, 50)}...`);
+        return;
+      }
       link = resolveUrl(link);
       if (seen.has(link)) return;
 
