@@ -1,8 +1,5 @@
 import { EpisodeLink, ProviderContext } from "../types";
 
-// यहाँ `getEpisodes` फ़ंक्शन मान रहा है कि यह उस पेज को स्क्रैप कर रहा है 
-// जो 'Download Links' बटन से प्राप्त हुआ है (जैसे m4ulinks.com/number/42882)
-
 export const getEpisodes = async function ({
   url,
   providerContext,
@@ -13,57 +10,143 @@ export const getEpisodes = async function ({
   const { axios, cheerio, commonHeaders: headers } = providerContext;
   console.log("getEpisodeLinks", url);
   try {
-    // Note: Cookies को URL के आधार पर अपडेट करने की आवश्यकता हो सकती है
     const res = await axios.get(url, {
       headers: {
         ...headers,
-        // Cloudflare/Bot protection के लिए Hardcoded cookie यहाँ आवश्यक हो सकता है
-        cookie:
-          "ext_name=ojplmecpdpgccookcobabopnaifgidhf; cf_clearance=Zl2yiOCN3pzGUd0Bgs.VyBXniJooDbG2Tk1g7DEoRnw-1756381111-1.2.1.1-RVPZoWGCAygGNAHavrVR0YaqASWZlJyYff8A.oQfPB5qbcPrAVud42BzsSwcDgiKAP0gw5D92V3o8XWwLwDRNhyg3DuL1P8wh2K4BCVKxWvcy.iCCxczKtJ8QSUAsAQqsIzRWXk29N6X.kjxuOTYlfB2jrlq12TRDld_zTbsskNcTxaA.XQekUcpGLseYqELuvlNOQU568NZD6LiLn3ICyFThMFAx6mIcgXkxVAvnxU; xla=s4t",
+        'Referer': 'https://movies4u.lt/'
       },
     });
     const $ = cheerio.load(res.data);
-    const container = $(".entry-content,.entry-inner, .download-links-div"); 
-    
-    // .unili-content,.code-block-1 जैसे अवांछित तत्वों को हटा दें
-    $(".unili-content,.code-block-1").remove(); 
     
     const episodes: EpisodeLink[] = [];
 
-    // HubCloud Links को लक्षित करने के लिए:
-    // 1. Episode Title (h5) से शुरू करें
-    // 2. उसके बाद के downloads-btns-div में HubCloud बटन खोजें
-    
-    container.find("h5").each((index, element) => {
+    // Look for episode headings in H4 elements with pattern "-:Episodes: XX:-"
+    $("h4").each((index, element) => {
       const el = $(element);
-      const title = el.text().trim(); // e.g., "-:Episodes: 1:- (Grand Premiere)"
+      const title = el.text().trim();
       
-      // HubCloud लिंक को विशिष्ट स्टाइल और टेक्स्ट से खोजें
-      // बटन सेलेक्टर: style="background: linear-gradient(135deg,#e629d0,#007bff);color: white;"
-      const hubCloudLink = el
-        .next(".downloads-btns-div")
-        .find(
-          'a[style*="background: linear-gradient(135deg,#e629d0,#007bff);"]'
-        )
-        .attr("href");
-
-      if (title && hubCloudLink) {
-        // टाइटल को साफ़ करें (e.g., सिर्फ़ Episode 1: Grand Premiere रखें)
-        const cleanedTitle = title.replace(/[-:]/g, "").trim(); 
-        
-        episodes.push({ 
-            title: cleanedTitle, 
-            link: hubCloudLink, 
-            // यदि यह HubCloud/Streaming लिंक है, तो आप 'type' को यहाँ 'stream' भी सेट कर सकते हैं
-        });
+      // Check if this is an episode heading
+      if (title.includes("Episodes:") && title.includes(":-")) {
+        // Extract episode number and clean up title
+        const episodeMatch = title.match(/-:Episodes:\s*(\d+):-/);
+        if (episodeMatch) {
+          const episodeNumber = episodeMatch[1];
+          const cleanedTitle = `Episode ${episodeNumber}`;
+          
+          // Look for all server options for this episode
+          const serverLinks: { title: string; link: string }[] = [];
+          
+          // Check next sibling elements for download links
+          const nextElements = el.nextAll();
+          for (let i = 0; i < nextElements.length && i < 10; i++) {
+            const nextEl = $(nextElements[i]);
+            
+            // Stop if we hit the next episode heading
+            if (nextEl.is('h4') && nextEl.text().includes('Episodes:')) {
+              break;
+            }
+            
+            // Look for server buttons in this element
+            const links = nextEl.find('a[href]');
+            links.each((j, linkEl) => {
+              const $link = $(linkEl);
+              const href = $link.attr('href');
+              const text = $link.text().trim();
+              
+              // Look for specific server types
+              if (href && text && (
+                text.toLowerCase().includes('g-direct') ||
+                text.toLowerCase().includes('v-cloud') ||
+                text.toLowerCase().includes('filepress') ||
+                text.toLowerCase().includes('instant') ||
+                text.toLowerCase().includes('resumable') ||
+                text.toLowerCase().includes('g-drive') ||
+                href.includes('fastdl.zip') ||
+                href.includes('vcloud.zip') ||
+                href.includes('filebee.xyz')
+              )) {
+                // Determine server type
+                let serverType = 'Unknown';
+                if (text.toLowerCase().includes('g-direct') || href.includes('fastdl.zip')) {
+                  serverType = 'G-Direct';
+                } else if (text.toLowerCase().includes('v-cloud') || href.includes('vcloud.zip')) {
+                  serverType = 'V-Cloud';
+                } else if (text.toLowerCase().includes('filepress') || text.toLowerCase().includes('g-drive') || href.includes('filebee.xyz')) {
+                  serverType = 'Filepress';
+                }
+                
+                serverLinks.push({
+                  title: `${serverType} - ${text}`,
+                  link: href
+                });
+              }
+            });
+          }
+          
+          // If we found server links, create episodes for each server
+          if (serverLinks.length > 0) {
+            serverLinks.forEach((serverLink, serverIndex) => {
+              episodes.push({
+                title: `${cleanedTitle} - ${serverLink.title}`,
+                link: serverLink.link,
+              });
+            });
+          } else {
+            // Fallback: use the base URL if no server links found
+            episodes.push({
+              title: cleanedTitle,
+              link: url,
+            });
+          }
+        }
       }
     });
 
-    // console.log(episodes);
+    // If no H4 episodes found, try alternative selectors
+    if (episodes.length === 0) {
+      // Look for other episode patterns
+      $("h3, h5").each((index, element) => {
+        const el = $(element);
+        const title = el.text().trim();
+        
+        if (title.toLowerCase().includes('episode') || 
+            title.match(/\d+/)) {
+          
+          // Look for download links
+          let downloadLink = "";
+          const nextElements = el.nextAll();
+          for (let i = 0; i < nextElements.length && i < 3; i++) {
+            const nextEl = $(nextElements[i]);
+            const links = nextEl.find('a[href]');
+            
+            links.each((j, linkEl) => {
+              const $link = $(linkEl);
+              const href = $link.attr('href');
+              if (href && (href.includes('hubcloud') || href.includes('nexdrive'))) {
+                downloadLink = href;
+                return false;
+              }
+            });
+            
+            if (downloadLink) break;
+          }
+          
+          if (!downloadLink) {
+            downloadLink = url;
+          }
+          
+          episodes.push({
+            title: title.replace(/[-:]/g, "").trim(),
+            link: downloadLink,
+          });
+        }
+      });
+    }
+
+    console.log(`Found ${episodes.length} episodes`);
     return episodes;
-  } catch (err) {
-    console.log("getEpisodeLinks error: ");
-    // console.error(err);
+  } catch (err: any) {
+    console.log("getEpisodeLinks error:", err.message);
     return [];
   }
 };

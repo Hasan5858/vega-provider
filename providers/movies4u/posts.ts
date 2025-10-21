@@ -1,14 +1,20 @@
 import { Post, ProviderContext } from "../types";
 
 const defaultHeaders = {
-  Referer: "https://www.google.com",
+  Referer: "https://movies4u.lt/",
   "User-Agent":
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-    "(KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
-  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
   "Accept-Language": "en-US,en;q=0.9",
-  Pragma: "no-cache",
+  "Accept-Encoding": "gzip, deflate, br",
   "Cache-Control": "no-cache",
+  "Pragma": "no-cache",
+  "Sec-Fetch-Dest": "document",
+  "Sec-Fetch-Mode": "navigate",
+  "Sec-Fetch-Site": "same-origin",
+  "Sec-Fetch-User": "?1",
+  "Upgrade-Insecure-Requests": "1",
 };
 
 // --- Normal catalog posts ---
@@ -67,8 +73,8 @@ async function fetchPosts({
 
     // --- Build URL for category filter or search query
     if (query && query.trim()) {
-      url = `${baseUrl}/?s=${encodeURIComponent(query)}${
-        page > 1 ? `&paged=${page}` : ""
+      url = `${baseUrl}/search/${encodeURIComponent(query)}/${
+        page > 1 ? `page/${page}/` : ""
       }`;
     } else if (filter) {
       url = filter.startsWith("/")
@@ -81,7 +87,37 @@ async function fetchPosts({
     }
 
     const { axios, cheerio } = providerContext;
-    const res = await axios.get(url, { headers: defaultHeaders, signal });
+    
+    // Add retry logic for search requests
+    let res: any;
+    let retries = 0;
+    const maxRetries = 2;
+    
+    while (retries <= maxRetries) {
+      try {
+        res = await axios.get(url, { 
+          headers: defaultHeaders, 
+          signal,
+          timeout: 10000,
+          maxRedirects: 5
+        });
+        break;
+      } catch (error: any) {
+        if (error.response?.status === 403 && retries < maxRetries) {
+          console.log(`Search request blocked (403), retrying... (${retries + 1}/${maxRetries})`);
+          retries++;
+          // Wait a bit before retry
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          continue;
+        }
+        throw error;
+      }
+    }
+    
+    if (!res) {
+      throw new Error("Failed to fetch data after retries");
+    }
+    
     const $ = cheerio.load(res.data || "");
 
     const resolveUrl = (href: string) =>

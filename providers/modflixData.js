@@ -162,7 +162,7 @@ const modflixData = {
     },
     "movies4u": {
         "name": "movies4u",
-        "url": "https://www.google.com"
+        "url": "https://movies4u.lt"
     },
     "joya9tv": {
         "name": "joya9tv1",

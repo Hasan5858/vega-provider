@@ -1,6 +1,5 @@
 import { Info, Link, ProviderContext } from "../types";
 
-// Headers
 const headers = {
   Accept:
     "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -15,44 +14,274 @@ const headers = {
   "Sec-Fetch-Mode": "navigate",
   "Sec-Fetch-Site": "none",
   "Sec-Fetch-User": "?1",
-  Cookie:
-    "xla=s4t; _ga=GA1.1.1081149560.1756378968; _ga_BLZGKYN5PF=GS2.1.s1756378968$o1$g1$t1756378984$j44$l0$h0",
   "Upgrade-Insecure-Requests": "1",
   "User-Agent":
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
 };
 
-export const getMeta = async function ({
+export const getMeta = async ({
   link,
   providerContext,
 }: {
   link: string;
   providerContext: ProviderContext;
-}): Promise<Info> {
-  const { axios, cheerio } = providerContext;
-  const url = link;
-  const baseUrl = url.split("/").slice(0, 3).join("/");
-
-  const emptyResult: Info = {
-    title: "",
-    synopsis: "",
-    image: "",
-    imdbId: "",
-    type: "movie",
-    linkList: [],
-  };
-
+}): Promise<Info> => {
   try {
-    const response = await axios.get(url, {
-      headers: { ...headers, Referer: baseUrl },
+    const { axios, cheerio } = providerContext;
+    const baseUrl = link.split("/").slice(0, 3).join("/");
+    
+    const response = await axios.get(link, {
+      headers: {
+        ...headers,
+        Referer: baseUrl,
+      },
     });
-
+    
     const $ = cheerio.load(response.data);
-    const infoContainer = $(".entry-content, .post-inner").length
-      ? $(".entry-content, .post-inner")
-      : $("body");
+    const infoContainer = $(".entry-content, .post-inner, .movie-info");
+    
+    // --- Type Detection ---
+    const title = $("h1.page-title").text().trim() || $("h1.entry-title").text().trim() || $("h1").text().trim();
+    const infoParagraph = $(".entry-content p").first().text();
+    const bodyText = $("body").text().toLowerCase();
+    
+    // Check for series indicators in title first (higher priority)
+    const seriesIndicators = [
+      "season", "episode", "s0", "e0", "series", "tv-show", "web-series",
+      "season 2", "season 3", "s02", "s03", "e01", "e02", "e03", "e04", "e05",
+      "episodes", "complete", "all episodes", "s19", "s20", "s21", "s22", "s23", "s24", "s25"
+    ];
+    
+    const hasSeriesIndicators = seriesIndicators.some(indicator => 
+      title.toLowerCase().includes(indicator) ||
+      infoParagraph.toLowerCase().includes(indicator) ||
+      bodyText.includes(indicator)
+    );
+    
+    // Check for movie indicators
+    const movieIndicators = [
+      "full movie", "hindi movie", "bollywood movie", "hollywood movie",
+      "hdtc", "bluray", "web-dl", "dvdrip", "brrip", "film", "movie"
+    ];
+    
+    const hasMovieIndicators = movieIndicators.some(indicator =>
+      title.toLowerCase().includes(indicator) ||
+      infoParagraph.toLowerCase().includes(indicator)
+    );
+    
+    // Determine type based on movies4u patterns
+    let type = "movie"; // default
+    if (hasSeriesIndicators && !hasMovieIndicators) {
+      type = "series";
+    } else if (hasMovieIndicators) {
+      type = "movie";
+    }
+    
+    // --- Title ---
+    const cleanTitle = title.split(/\[| \d+p| x\d+/)[0].trim();
+    const showNameMatch = infoParagraph.match(/SHOW Name: (.+)/) || infoParagraph.match(/Name: (.+)/);
+    const finalTitle = showNameMatch && showNameMatch[1] ? showNameMatch[1].trim() : cleanTitle;
+    
+    // --- IMDb ID ---
+    const imdbMatch = infoContainer.html()?.match(/tt\d+/) || $("a[href*='imdb.com/title/']").attr("href")?.match(/tt\d+/);
+    const imdbId = imdbMatch ? imdbMatch[0] : "";
+    
+    // --- Image ---
+    let image = infoContainer.find(".post-thumbnail img").attr("src") || 
+                infoContainer.find("img[src]").first().attr("src") || "";
+    if (image.startsWith("//")) image = "https:" + image;
+    else if (image.startsWith("/")) image = baseUrl + image;
+    
+    // --- Synopsis ---
+    const synopsis = infoContainer.find("p").filter((i, el) => {
+      const text = $(el).text().trim();
+      return text.length > 50 && !text.includes("Download") && !text.includes("Quality");
+    }).first().text().trim() || "";
+    
+    // --- Link Groups ---
+    const links: Link[] = [];
+    
+    // Look for .dwd-button class buttons (movies4u specific download buttons)
+    const dwdButtons = $(".dwd-button");
+    if (dwdButtons.length > 0) {
+      const directLinks: Link["directLinks"] = [];
+      
+      dwdButtons.each((i, btn) => {
+        const btnEl = $(btn);
+        // The href is on the parent <a> element, not the button itself
+        const parentLink = btnEl.parent('a').attr("href");
+        const text = btnEl.text().trim();
+        
+        if (parentLink && !parentLink.includes('javascript:') && !parentLink.includes('mailto:')) {
+          // Determine quality from button text or parent elements
+          let quality = "HD";
+          const parentText = btnEl.parent().text().toLowerCase();
+          if (parentText.includes("1080p")) quality = "1080p";
+          else if (parentText.includes("720p")) quality = "720p";
+          else if (parentText.includes("480p")) quality = "480p";
+          else if (parentText.includes("4k")) quality = "4K";
+          
+          directLinks.push({
+            title: text || "Download",
+            link: parentLink.startsWith("http") ? parentLink : `${baseUrl}${parentLink}`,
+            type: type as "movie" | "series",
+          });
+        }
+      });
+      
+      if (directLinks.length) {
+        links.push({
+          title: "Downloads",
+          quality: "HD",
+          episodesLink: type === "series" ? directLinks[0]?.link || "" : "",
+          directLinks: directLinks,
+        });
+      }
+    }
+    
+    // Look for quality-based sections if no .dwd-button buttons found
+    if (links.length === 0) {
+      const qualitySections = $("h2, h3, h4").filter((i, el) => {
+        const text = $(el).text().toLowerCase();
+        return text.includes("480p") || text.includes("720p") || text.includes("1080p") || 
+               text.includes("4k") || text.includes("hd") || text.includes("bluray");
+      });
 
-    const result: Info = {
+      if (qualitySections.length > 0) {
+        // Process each quality section
+        qualitySections.each((i, section) => {
+          const $section = $(section);
+          const sectionText = $section.text();
+          const qualityMatch = sectionText.match(/(\d+p|4k|hd|bluray)/i);
+          const quality = qualityMatch ? qualityMatch[1] : "HD";
+          
+          // Look for download buttons in this section
+          const allButtons = $section.nextUntil("h2, h3, h4").find("a[href]");
+          
+          if (allButtons.length > 0) {
+            const fullTitle = `${quality} - ${sectionText.trim()}`;
+            
+            if (type === "series") {
+              // Series: look for episode links
+              const episodeButtons = allButtons.filter((i, btn) => {
+                const $btn = $(btn);
+                const text = $btn.text().toLowerCase();
+                return text.includes('episode') || text.includes('episodes');
+              });
+              
+              const episodesLink = episodeButtons.length > 0 ? 
+                episodeButtons.first().attr("href") || "" : 
+                allButtons.first().attr("href") || "";
+              
+              links.push({
+                title: fullTitle,
+                quality: quality,
+                episodesLink: episodesLink,
+                directLinks: [],
+              });
+            } else {
+              // Movie: collect all direct download buttons
+              const directLinks: Link["directLinks"] = [];
+
+              allButtons.each((i, btn) => {
+                const btnEl = $(btn);
+                const link = btnEl.attr("href");
+                const text = btnEl.text().trim();
+                
+                // Skip tutorial/guide links
+                if (text.toLowerCase().includes('how to download') || 
+                    text.toLowerCase().includes('tutorial') || 
+                    text.toLowerCase().includes('guide') ||
+                    link?.includes('how-to-download')) {
+                  return;
+                }
+                
+                // Skip links to other movies/series
+                if (link?.includes('movies4u.lt/') && 
+                    !link.includes('download') && 
+                    !link.includes('file')) {
+                  return;
+                }
+                
+                if (link && !link.includes('javascript:')) {
+                  directLinks.push({
+                    title: text || "Download",
+                    link: link.startsWith("http") ? link : `${baseUrl}${link}`,
+                    type: "movie",
+                  });
+                }
+              });
+
+              if (directLinks.length) {
+                links.push({
+                  title: fullTitle,
+                  quality: quality,
+                  episodesLink: "",
+                  directLinks: directLinks,
+                });
+              }
+            }
+          }
+        });
+      } else {
+        // Fallback: look for any download buttons on the page
+        const allButtons = $("a[href]").filter((i, el) => {
+          const $el = $(el);
+          const href = $el.attr("href");
+          const text = $el.text().toLowerCase();
+          
+          return !!(href && (
+            text.includes("download") ||
+            text.includes("watch") ||
+            text.includes("stream") ||
+            href.includes("hubcloud") ||
+            href.includes("nexdrive") ||
+            href.includes("gdflix")
+          ));
+        });
+
+        if (allButtons.length > 0) {
+          const directLinks: Link["directLinks"] = [];
+          
+          allButtons.each((i, btn) => {
+            const btnEl = $(btn);
+            const link = btnEl.attr("href");
+            const text = btnEl.text().trim();
+            
+            if (link && !link.includes('javascript:') && 
+                !text.toLowerCase().includes('how to download') &&
+                !link.includes('how-to-download')) {
+              directLinks.push({
+                title: text || "Download",
+                link: link.startsWith("http") ? link : `${baseUrl}${link}`,
+                type: type as "movie" | "series",
+              });
+            }
+          });
+
+          if (directLinks.length) {
+            links.push({
+              title: "Downloads",
+              quality: "HD",
+              episodesLink: type === "series" ? directLinks[0]?.link || "" : "",
+              directLinks: type === "movie" ? directLinks : [],
+            });
+          }
+        }
+      }
+    }
+
+    return {
+      title: finalTitle,
+      synopsis,
+      image,
+      imdbId,
+      type,
+      linkList: links,
+    };
+  } catch (error) {
+    console.log("getMeta error:", error);
+    return {
       title: "",
       synopsis: "",
       image: "",
@@ -60,108 +289,5 @@ export const getMeta = async function ({
       type: "movie",
       linkList: [],
     };
-
-    // --- Type determination ---
-    const infoParagraph = $("h2.movie-title").next("p").text();
-    if (
-      infoParagraph.includes("Season:") ||
-      infoParagraph.includes("Episode:") ||
-      infoParagraph.includes("SHOW Name:")
-    ) {
-      result.type = "series";
-    } else {
-      result.type = "movie";
-    }
-
-    // --- Title ---
-    const rawTitle = $("h1").text().trim() || $("h2").text().trim();
-    result.title = rawTitle.split(/\[| \d+p| x\d+/)[0].trim();
-    const showNameMatch =
-      infoParagraph.match(/SHOW Name: (.+)/) ||
-      infoParagraph.match(/Name: (.+)/);
-    if (showNameMatch && showNameMatch[1]) {
-      result.title = result.title || showNameMatch[1].trim();
-    }
-
-    // --- IMDb ID ---
-    const imdbMatch =
-      infoContainer.html()?.match(/tt\d+/) ||
-      $("a[href*='imdb.com/title/']").attr("href")?.match(/tt\d+/);
-    result.imdbId = imdbMatch ? imdbMatch[0] : "";
-
-    // --- Image ---
-    let image =
-      infoContainer.find(".post-thumbnail img").attr("src") ||
-      infoContainer.find("img[src]").first().attr("src") ||
-      "";
-    if (image.startsWith("//")) image = "https:" + image;
-    else if (image.startsWith("/")) image = baseUrl + image;
-    if (image.includes("no-thumbnail") || image.includes("placeholder"))
-      image = "";
-    result.image = image;
-
-    // --- Synopsis ---
-    result.synopsis =
-      $("h3.movie-title")
-        .filter((i, el) => $(el).text().includes("Storyline"))
-        .next("p")
-        .text()
-        .trim() ||
-      infoContainer.find("p").first().text().trim() ||
-      "";
-
-    // --- LinkList extraction ---
-    const links: Link[] = [];
-    const h4Elements = $(".download-links-div").find("> h4");
-
-    h4Elements.each((index, element) => {
-      const el = $(element);
-      const titleText = el.text().trim();
-      const qualityMatch = titleText.match(/\d+p\b/)?.[0];
-      const fullTitle = titleText;
-
-      const downloadButtons = el.next(".downloads-btns-div").find("a");
-
-      if (downloadButtons.length && qualityMatch) {
-        if (result.type === "series") {
-          links.push({
-            title: fullTitle,
-            quality: qualityMatch,
-            episodesLink: downloadButtons.attr("href") || "",
-            directLinks: [],
-          });
-        } else {
-          // Movie: collect all direct download buttons
-          const directLinks: Link["directLinks"] = [];
-
-          downloadButtons.each((i, btn) => {
-            const btnEl = $(btn);
-            const link = btnEl.attr("href");
-            if (link) {
-              directLinks.push({
-                title: btnEl.text().trim() || "Download",
-                link,
-                type: "movie", // literal type
-              });
-            }
-          });
-
-          if (directLinks.length) {
-            links.push({
-              title: fullTitle,
-              quality: qualityMatch,
-              episodesLink: "",
-              directLinks,
-            });
-          }
-        }
-      }
-    });
-
-    result.linkList = links;
-    return result;
-  } catch (err) {
-    console.log("getMeta error:", err);
-    return emptyResult;
   }
 };
