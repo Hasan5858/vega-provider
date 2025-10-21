@@ -126,8 +126,10 @@ async function fetchPosts({
     const seen = new Set<string>();
     const catalog: Post[] = [];
 
-    // --- HDMovie2 selectors
+    // --- Movies4u selectors
     const POST_SELECTORS = [
+      ".entry-card",
+      "article.entry-card",
       ".pstr_box",
       "article",
       ".result-item",
@@ -146,6 +148,7 @@ async function fetchPosts({
       if (seen.has(link)) return;
 
       let title =
+        card.find("h2.entry-title").first().text().trim() ||
         card.find("h2").first().text().trim() ||
         card.find("a[title]").first().attr("title")?.trim() ||
         card.text().trim();
