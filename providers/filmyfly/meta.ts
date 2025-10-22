@@ -38,17 +38,62 @@ export const getMeta = async function ({
     const rating = "";
     const links: Link[] = [];
     
-    // Extract download link from dlbtn
+    // Extract download link from dlbtn (the main download button)
     const downloadLink = $(".dlbtn a").attr("href");
-    if (downloadLink) {
-      links.push({
-        title: "Download",
-        episodesLink: downloadLink,
-        directLinks: [{
-          title: "Download Movie",
-          link: downloadLink,
-          type: type as "movie" | "series"
-        }]
+    const downloadText = $(".dlbtn a").text().trim();
+    
+    if (downloadLink && downloadText) {
+      // Parse the download text to extract quality options
+      // Text format: "Download 480p 720p 1080p 2160p(4k) [HD]"
+      const qualityMatch = downloadText.match(/(\d+p|4k|2160p)/gi);
+      
+      if (qualityMatch && qualityMatch.length > 0) {
+        // Create separate Link objects for each quality
+        qualityMatch.forEach(quality => {
+          const normalizedQuality = quality.toLowerCase();
+          links.push({
+            title: `${normalizedQuality.toUpperCase()} Quality`,
+            quality: normalizedQuality,
+            episodesLink: downloadLink,
+            directLinks: [{
+              title: `Download ${normalizedQuality.toUpperCase()}`,
+              link: downloadLink,
+              type: type as "movie" | "series"
+            }]
+          });
+        });
+      } else {
+        // Fallback: create a single download link
+        links.push({
+          title: "Download",
+          episodesLink: downloadLink,
+          directLinks: [{
+            title: "Download Movie",
+            link: downloadLink,
+            type: type as "movie" | "series"
+          }]
+        });
+      }
+    }
+    
+    // Fallback: if no dlbtn found, try other selectors
+    if (links.length === 0) {
+      $(".dwd-button").each((i, el) => {
+        const btnEl = $(el);
+        const parentLink = btnEl.parent("a").attr("href");
+        const text = btnEl.text().trim();
+        
+        if (parentLink && !parentLink.includes("javascript:") && !parentLink.includes("mailto:")) {
+          links.push({
+            title: "Download",
+            episodesLink: parentLink,
+            directLinks: [{
+              title: text || "Download",
+              link: parentLink.startsWith("http") ? parentLink : `https://filmyfly.observer${parentLink}`,
+              type: type as "movie" | "series"
+            }]
+          });
+        }
       });
     }
     
