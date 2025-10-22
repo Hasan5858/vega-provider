@@ -1,5 +1,16 @@
 import { Stream, ProviderContext } from "../types";
 
+// Helper function to extract quality from quality text
+function extractQualityFromText(qualityText: string): "360" | "480" | "720" | "1080" | "2160" | undefined {
+  const text = qualityText.toLowerCase();
+  if (text.includes('1080p') || text.includes('1080')) return '1080';
+  if (text.includes('720p') || text.includes('720')) return '720';
+  if (text.includes('480p') || text.includes('480')) return '480';
+  if (text.includes('4k') || text.includes('2160p') || text.includes('2160')) return '2160';
+  if (text.includes('360p') || text.includes('360')) return '360';
+  return undefined;
+}
+
 export const getStream = async function ({
   link,
   signal,
@@ -60,10 +71,12 @@ export const getStream = async function ({
                       try {
                         if (serverText.toLowerCase().includes('fast cloud') || serverText.toLowerCase().includes('aws')) {
                           // Direct AWS links - no extraction needed
+                          const quality = extractQualityFromText(qualityText);
                           streams.push({
-                            server: `${qualityText} - ${serverText}`,
+                            server: "Fast Cloud",
                             link: finalLink,
                             type: "mkv",
+                            quality: quality,
                           });
                         } else if (serverText.toLowerCase().includes('gofile')) {
                           // Use gofile extractor
@@ -71,53 +84,63 @@ export const getStream = async function ({
                           if (gofileId) {
                             const gofileResult = await providerContext.extractors.gofileExtracter(gofileId);
                             if (gofileResult.link) {
+                              const quality = extractQualityFromText(qualityText);
                               streams.push({
-                                server: `${qualityText} - GoFile`,
+                                server: "GoFile",
                                 link: gofileResult.link,
                                 type: "mkv",
+                                quality: quality,
                               });
                             }
                           }
                         } else if (serverText.toLowerCase().includes('gdflix')) {
                           // Use gdflix extractor
                           const gdflixStreams = await providerContext.extractors.gdFlixExtracter(finalLink, signal);
+                          const quality = extractQualityFromText(qualityText);
                           gdflixStreams.forEach(stream => {
                             streams.push({
-                              server: `${qualityText} - ${stream.server}`,
+                              server: stream.server,
                               link: stream.link,
                               type: stream.type,
+                              quality: quality,
                             });
                           });
                         } else if (serverText.toLowerCase().includes('ultra fastdl') || 
                                    serverText.toLowerCase().includes('fastdl')) {
                           // Use hubcloud extractor for FastDL links
                           const hubcloudStreams = await providerContext.extractors.hubcloudExtracter(finalLink, signal);
+                          const quality = extractQualityFromText(qualityText);
                           hubcloudStreams.forEach(stream => {
                             streams.push({
-                              server: `${qualityText} - ${stream.server}`,
+                              server: stream.server,
                               link: stream.link,
                               type: stream.type,
+                              quality: quality,
                             });
                           });
                         } else if (serverText.toLowerCase().includes('direct download') || 
                                    serverText.toLowerCase().includes('fast cloud-02')) {
                           // Use hubcloud extractor for FilesDL links
                           const hubcloudStreams = await providerContext.extractors.hubcloudExtracter(finalLink, signal);
+                          const quality = extractQualityFromText(qualityText);
                           hubcloudStreams.forEach(stream => {
                             streams.push({
-                              server: `${qualityText} - ${stream.server}`,
+                              server: stream.server,
                               link: stream.link,
                               type: stream.type,
+                              quality: quality,
                             });
                           });
                         }
                       } catch (extractorError) {
                         console.error(`Error extracting from ${serverText}:`, extractorError);
                         // Fallback to direct link
+                        const quality = extractQualityFromText(qualityText);
                         streams.push({
-                          server: `${qualityText} - ${serverText}`,
+                          server: "Direct",
                           link: finalLink,
                           type: "mkv",
+                          quality: quality,
                         });
                       }
                     })();
