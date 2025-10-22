@@ -11,14 +11,29 @@ export const getStream = async function ({
   providerContext: ProviderContext;
 }): Promise<Stream[]> {
   try {
-    const res = await providerContext.axios.get(link, { signal });
+    // Update URL to use new domain
+    const url = link.replace('filmyfly.deals', 'filmyfly.observer');
+    const res = await providerContext.axios.get(url, { signal });
     const data = res.data;
     const $ = providerContext.cheerio.load(data);
     const streams: Stream[] = [];
-    const elements = $(".button2,.button1,.button3,.button4,.button").toArray();
+    
+    // Check if it's a direct download link (linkmake.in)
+    if (url.includes('linkmake.in')) {
+      streams.push({
+        server: "Direct Download",
+        link: url,
+        type: "mkv",
+      });
+      return streams;
+    }
+    
+    // Look for download buttons and links
+    const elements = $(".dlbtn a, .button2,.button1,.button3,.button4,.button").toArray();
     const promises = elements.map(async (element) => {
       const title = $(element).text();
       let link = $(element).attr("href");
+      
       if (title.includes("GDFLIX") && link) {
         const gdLinks = await providerContext.extractors.gdFlixExtracter(
           link,
@@ -26,6 +41,7 @@ export const getStream = async function ({
         );
         streams.push(...gdLinks);
       }
+      
       const alreadyAdded = streams.find((s) => s.link === link);
       if (
         title &&
@@ -42,6 +58,7 @@ export const getStream = async function ({
         });
       }
     });
+    
     await Promise.all(promises);
     return streams;
   } catch (err) {

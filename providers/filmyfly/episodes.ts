@@ -10,18 +10,20 @@ export const getEpisodes = async function ({
   try {
     const headers = providerContext.commonHeaders;
     const { axios, cheerio } = providerContext;
-    const res = await axios.get(url, { headers });
+    // Update URL to use new domain
+    const updatedUrl = url.replace('filmyfly.deals', 'filmyfly.observer');
+    const res = await axios.get(updatedUrl, { headers });
     const data = res.data;
     const $ = cheerio.load(data);
     const episodeLinks: EpisodeLink[] = [];
 
-    $(".dlink.dl").map((i, element) => {
+    // Look for download links in the new structure
+    $(".dlbtn a, .dlink.dl").each((i, element) => {
       const title = $(element)
-        .find("a")
         .text()
         ?.replace("Download", "")
         ?.trim();
-      const link = $(element).find("a").attr("href");
+      const link = $(element).attr("href");
 
       if (title && link) {
         episodeLinks.push({
@@ -30,6 +32,7 @@ export const getEpisodes = async function ({
         });
       }
     });
+    
     return episodeLinks;
   } catch (err) {
     console.error("cl episode links", err);

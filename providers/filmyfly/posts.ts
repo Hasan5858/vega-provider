@@ -14,8 +14,10 @@ export const getPosts = async function ({
 }): Promise<Post[]> {
   const { getBaseUrl } = providerContext;
   const baseUrl = await getBaseUrl("filmyfly");
-  const url = `${baseUrl + filter}/${page}`;
-  return posts({ url, signal, baseUrl, providerContext });
+  // Update to use new domain
+  const newBaseUrl = baseUrl.replace('filmyfly.deals', 'filmyfly.observer');
+  const url = `${newBaseUrl + filter}/${page}`;
+  return posts({ url, signal, baseUrl: newBaseUrl, providerContext });
 };
 
 export const getSearchPosts = async function ({
@@ -32,11 +34,13 @@ export const getSearchPosts = async function ({
 }): Promise<Post[]> {
   const { getBaseUrl } = providerContext;
   const baseUrl = await getBaseUrl("filmyfly");
-  const url = `${baseUrl}/site-1.html?to-search=${searchQuery}`;
+  // Update to use new domain
+  const newBaseUrl = baseUrl.replace('filmyfly.deals', 'filmyfly.observer');
+  const url = `${newBaseUrl}/site-1.html?to-search=${searchQuery}`;
   if (page > 1) {
     return [];
   }
-  return posts({ url, signal, baseUrl, providerContext });
+  return posts({ url, signal, baseUrl: newBaseUrl, providerContext });
 };
 
 async function posts({
@@ -56,11 +60,17 @@ async function posts({
     const data = await res.text();
     const $ = cheerio.load(data);
     const catalog: Post[] = [];
-    $(".A2,.A10,.fl").map((i, element) => {
-      const title =
-        $(element).find("a").eq(1).text() || $(element).find("b").text();
-      const link = $(element).find("a").attr("href");
-      const image = $(element).find("img").attr("src");
+    
+    // Updated selectors for new page structure
+    $(".A10").each((i, element) => {
+      const $el = $(element);
+      const linkEl = $el.find("a").first();
+      const titleEl = $el.find("div[style*='font-weight:bold']").first();
+      
+      const title = titleEl.text().trim();
+      const link = linkEl.attr("href");
+      const image = $el.find("img").attr("src");
+      
       if (title && link && image) {
         catalog.push({
           title: title,
@@ -69,6 +79,7 @@ async function posts({
         });
       }
     });
+    
     return catalog;
   } catch (err) {
     console.error("ff error ", err);
