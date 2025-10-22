@@ -69,7 +69,17 @@ export const getStream = async function ({
                     // Use appropriate extractor based on server type
                     const promise = (async () => {
                       try {
-                        if (serverText.toLowerCase().includes('fast cloud') || serverText.toLowerCase().includes('aws')) {
+                        // Check if URL is a known redirect/download service that needs extraction
+                        const needsExtraction = finalLink.includes('bbdownload') || 
+                                               finalLink.includes('filesdl') || 
+                                               finalLink.includes('fastdl') || 
+                                               finalLink.includes('hubcloud') ||
+                                               finalLink.includes('fdownload.php') ||
+                                               finalLink.includes('fastdla.php');
+                        
+                        if (serverText.toLowerCase().includes('fast cloud') && 
+                            finalLink.includes('awsstorage') && 
+                            !needsExtraction) {
                           // Direct AWS links - no extraction needed
                           const quality = extractQualityFromText(qualityText);
                           streams.push({
@@ -105,22 +115,12 @@ export const getStream = async function ({
                               quality: quality,
                             });
                           });
-                        } else if (serverText.toLowerCase().includes('ultra fastdl') || 
-                                   serverText.toLowerCase().includes('fastdl')) {
-                          // Use hubcloud extractor for FastDL links
-                          const hubcloudStreams = await providerContext.extractors.hubcloudExtracter(finalLink, signal);
-                          const quality = extractQualityFromText(qualityText);
-                          hubcloudStreams.forEach(stream => {
-                            streams.push({
-                              server: stream.server,
-                              link: stream.link,
-                              type: stream.type,
-                              quality: quality,
-                            });
-                          });
-                        } else if (serverText.toLowerCase().includes('direct download') || 
+                        } else if (needsExtraction || 
+                                   serverText.toLowerCase().includes('ultra fastdl') || 
+                                   serverText.toLowerCase().includes('fastdl') ||
+                                   serverText.toLowerCase().includes('direct download') || 
                                    serverText.toLowerCase().includes('fast cloud-02')) {
-                          // Use hubcloud extractor for FilesDL links
+                          // Use hubcloud extractor for all bbdownload/filesdl/fastdl links
                           const hubcloudStreams = await providerContext.extractors.hubcloudExtracter(finalLink, signal);
                           const quality = extractQualityFromText(qualityText);
                           hubcloudStreams.forEach(stream => {
@@ -131,17 +131,62 @@ export const getStream = async function ({
                               quality: quality,
                             });
                           });
+                        } else {
+                          // Unknown server type - add as direct if it looks like a direct URL
+                          const isDirect = (finalLink.includes('.mkv') || 
+                                           finalLink.includes('.mp4') || 
+                                           finalLink.includes('.avi')) &&
+                                          !finalLink.includes('?id=') && 
+                                          !finalLink.includes('fdownload.php') &&
+                                          !finalLink.includes('fastdla.php');
+                          
+                          if (isDirect) {
+                            const quality = extractQualityFromText(qualityText);
+                            streams.push({
+                              server: "Direct",
+                              link: finalLink,
+                              type: "mkv",
+                              quality: quality,
+                            });
+                          } else {
+                            console.log(`Unknown server type, trying hubcloud extractor: ${finalLink}`);
+                            // Try hubcloud extractor as last resort
+                            const hubcloudStreams = await providerContext.extractors.hubcloudExtracter(finalLink, signal);
+                            const quality = extractQualityFromText(qualityText);
+                            hubcloudStreams.forEach(stream => {
+                              streams.push({
+                                server: stream.server,
+                                link: stream.link,
+                                type: stream.type,
+                                quality: quality,
+                              });
+                            });
+                          }
                         }
                       } catch (extractorError) {
                         console.error(`Error extracting from ${serverText}:`, extractorError);
-                        // Fallback to direct link
-                        const quality = extractQualityFromText(qualityText);
-                        streams.push({
-                          server: "Direct",
-                          link: finalLink,
-                          type: "mkv",
-                          quality: quality,
-                        });
+                        // Only add truly direct file URLs as fallback
+                        const isTrulyDirect = (finalLink.includes('.mkv') || 
+                                              finalLink.includes('.mp4') || 
+                                              finalLink.includes('.avi')) &&
+                                             !finalLink.includes('?id=') &&
+                                             !finalLink.includes('bbdownload') &&
+                                             !finalLink.includes('filesdl') &&
+                                             !finalLink.includes('fdownload.php') &&
+                                             !finalLink.includes('fastdla.php') &&
+                                             finalLink.includes('awsstorage');
+                        
+                        if (isTrulyDirect) {
+                          const quality = extractQualityFromText(qualityText);
+                          streams.push({
+                            server: "Direct",
+                            link: finalLink,
+                            type: "mkv",
+                            quality: quality,
+                          });
+                        } else {
+                          console.log(`Skipping problematic URL after extraction failed: ${finalLink}`);
+                        }
                       }
                     })();
                     
@@ -204,28 +249,61 @@ export const getStream = async function ({
       const title = $(element).text();
       let link = $(element).attr("href");
       
+      if (!link) return;
+      
+      // Use extractors for all links to ensure they resolve to direct file URLs
       if (title.includes("GDFLIX") && link) {
         const gdLinks = await providerContext.extractors.gdFlixExtracter(
           link,
           signal
         );
         streams.push(...gdLinks);
-      }
-      
-      const alreadyAdded = streams.find((s) => s.link === link);
-      if (
-        title &&
-        link &&
-        !title.includes("Watch") &&
-        !title.includes("Login") &&
-        !title.includes("GoFile") &&
-        !alreadyAdded
-      ) {
+      } else if (title.includes("GoFile") && link) {
+        const gofileResult = await providerContext.extractors.gofileExtracter(
+          link
+        );
         streams.push({
-          server: title,
-          link: link,
+          server: "GoFile",
+          link: gofileResult.link,
           type: "mkv",
+          quality: extractQualityFromText(title)
         });
+      } else if (link.includes("hubcloud") || link.includes("bbdownload") || title.includes("HubCloud")) {
+        const hubcloudLinks = await providerContext.extractors.hubcloudExtracter(
+          link,
+          signal
+        );
+        streams.push(...hubcloudLinks);
+      } else if (link && !title.includes("Watch") && !title.includes("Login")) {
+        // For other links, try to extract direct URLs
+        try {
+          const response = await providerContext.axios.get(link, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            },
+            timeout: 10000
+          });
+          
+          const $page = providerContext.cheerio.load(response.data);
+          
+          // Look for direct download links
+          const directLinks = $page('a[href*=".mkv"], a[href*=".mp4"], a[href*=".avi"], a[href*=".mov"]').toArray();
+          
+          if (directLinks.length > 0) {
+            const directLink = $page(directLinks[0]).attr('href');
+            if (directLink && directLink.includes('.')) {
+              const fullUrl = directLink.startsWith('http') ? directLink : `${link.split('/').slice(0, 3).join('/')}${directLink}`;
+              streams.push({
+                server: title,
+                link: fullUrl,
+                type: "mkv",
+                quality: extractQualityFromText(title)
+              });
+            }
+          }
+        } catch (error) {
+          console.log('Failed to extract direct URL from:', link);
+        }
       }
     });
     
