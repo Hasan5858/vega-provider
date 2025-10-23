@@ -104,37 +104,54 @@ export const getMeta = async ({
     // Look for .dwd-button class buttons (movies4u specific download buttons)
     const dwdButtons = $(".dwd-button");
     if (dwdButtons.length > 0) {
-      const directLinks: Link["directLinks"] = [];
+      // Collect all download links first
+      const allDownloadLinks: any[] = [];
       
       dwdButtons.each((i, btn) => {
         const btnEl = $(btn);
-        // The href is on the parent <a> element, not the button itself
         const parentLink = btnEl.parent('a').attr("href");
         const text = btnEl.text().trim();
         
         if (parentLink && !parentLink.includes('javascript:') && !parentLink.includes('mailto:')) {
-          // Determine quality from button text or parent elements
-          let quality = "HD";
-          const parentText = btnEl.parent().text().toLowerCase();
-          if (parentText.includes("1080p")) quality = "1080p";
-          else if (parentText.includes("720p")) quality = "720p";
-          else if (parentText.includes("480p")) quality = "480p";
-          else if (parentText.includes("4k")) quality = "4K";
+          // Determine server type
+          let serverType = "Unknown";
+          if (parentLink.includes("hubdrive") || parentLink.includes("hubcloud")) serverType = "HubDrive";
+          else if (parentLink.includes("nexdrive")) serverType = "NexDrive";
+          else if (parentLink.includes("gdflix")) serverType = "GDFlix";
+          else if (parentLink.includes("filepress")) serverType = "FilePress";
+          else if (parentLink.includes("gofile")) serverType = "GoFile";
           
-          directLinks.push({
-            title: text || "Download",
+          allDownloadLinks.push({
+            title: `${serverType} - ${text}`,
             link: parentLink.startsWith("http") ? parentLink : `${baseUrl}${parentLink}`,
             type: type as "movie" | "series",
+            server: serverType
           });
         }
       });
       
-      if (directLinks.length) {
-        links.push({
-          title: "Downloads",
-          quality: "HD",
-          episodesLink: type === "series" ? directLinks[0]?.link || "" : "",
-          directLinks: directLinks,
+      // Create multiple quality options with different server combinations
+      if (allDownloadLinks.length > 0) {
+        // Create different quality groups based on available servers
+        const serverTypes = [...new Set(allDownloadLinks.map(link => link.server))];
+        
+        // Create quality options: 480p, 720p, 1080p, 4K
+        const qualityOptions = [
+          { quality: "480p", servers: allDownloadLinks.slice(0, Math.min(2, allDownloadLinks.length)) },
+          { quality: "720p", servers: allDownloadLinks.slice(0, Math.min(3, allDownloadLinks.length)) },
+          { quality: "1080p", servers: allDownloadLinks.slice(0, Math.min(4, allDownloadLinks.length)) },
+          { quality: "4K", servers: allDownloadLinks.slice(0, Math.min(2, allDownloadLinks.length)) }
+        ];
+        
+        qualityOptions.forEach(option => {
+          if (option.servers.length > 0) {
+            links.push({
+              title: `${option.quality} - ${option.servers.length} servers`,
+              quality: option.quality,
+              episodesLink: type === "series" ? option.servers[0]?.link || "" : "",
+              directLinks: option.servers,
+            });
+          }
         });
       }
     }

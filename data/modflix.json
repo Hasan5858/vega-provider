@@ -23,10 +23,6 @@
         "name": "vegamovies",
         "url": "https://vegamovies.menu"
     },
-    "lux": {
-        "name": "luxmovies",
-        "url": "https://rogmovies.store"
-    },
     "drive": {
         "name": "moviesDrive",
         "url": "https://moviesdrive.lat/"
@@ -169,7 +165,7 @@
     },
     "movies4u": {
         "name": "movies4u",
-        "url": "https://movies4u.lt"
+        "url": "https://movies4u.ps/"
     },
     "joya9tv": {
         "name": "joya9tv1",
