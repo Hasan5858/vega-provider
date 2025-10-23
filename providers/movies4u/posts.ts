@@ -1,5 +1,4 @@
 import { Post, ProviderContext } from "../types";
-import { gunzipSync } from "zlib";
 
 const defaultHeaders = {
   Referer: "https://movies4u.ps/",
@@ -107,7 +106,9 @@ async function fetchPosts({
           headers: defaultHeaders, 
           signal,
           timeout: 10000,
-          maxRedirects: 5
+          maxRedirects: 5,
+          decompress: true,
+          responseType: 'text'
         });
         break;
       } catch (error: any) {
@@ -126,29 +127,23 @@ async function fetchPosts({
       throw new Error("Failed to fetch data after retries");
     }
     
-    // Handle gzip-compressed responses
+    // axios with transformResponse can auto-decompress, but ensure we have string data
     let htmlData = res.data;
-    const contentEncoding = res.headers['content-encoding'];
-    console.log(`Content-Encoding: ${contentEncoding}`);
+    console.log(`Content-Encoding: ${res.headers['content-encoding']}`);
+    console.log(`Response data type: ${typeof htmlData}`);
+    console.log(`Response data is string: ${typeof htmlData === 'string'}`);
     
-    // Check for gzip magic bytes (1f 8b) if data is a Buffer
-    let isGzipped = false;
-    if (Buffer.isBuffer(htmlData)) {
-      isGzipped = htmlData.length >= 2 && htmlData[0] === 0x1f && htmlData[1] === 0x8b;
-      console.log(`Is gzipped (magic bytes): ${isGzipped}`);
-    }
-    
-    if (isGzipped) {
-      try {
-        htmlData = gunzipSync(htmlData).toString('utf8');
-        console.log(`✅ Decompressed gzip data, new length: ${htmlData.length}`);
-      } catch (decompressErr) {
-        console.error("Failed to decompress gzip:", decompressErr);
-        htmlData = htmlData.toString();
+    // If data is not a string, convert it
+    if (typeof htmlData !== 'string') {
+      // Try to convert ArrayBuffer or other types to string
+      if (htmlData && typeof htmlData === 'object') {
+        try {
+          htmlData = String(htmlData);
+        } catch (e) {
+          console.error("Failed to convert response data to string");
+          htmlData = "";
+        }
       }
-    } else if (Buffer.isBuffer(htmlData)) {
-      htmlData = htmlData.toString('utf8');
-      console.log(`Converted Buffer to string, length: ${htmlData.length}`);
     }
     
     const $ = cheerio.load(htmlData || "");
