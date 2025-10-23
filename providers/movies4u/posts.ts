@@ -83,7 +83,8 @@ async function fetchPosts({
           }`
         : `${baseUrl}/${filter}${page > 1 ? `/page/${page}` : ""}`;
     } else {
-      url = `${baseUrl}${page > 1 ? `/page/${page}` : ""}`;
+      // Homepage - ensure we have the correct URL
+      url = `${baseUrl}${page > 1 ? `/page/${page}/` : ""}`;
     }
 
     const { axios, cheerio } = providerContext;
