@@ -65,17 +65,32 @@ export const getMeta = async function ({
           }
         });
       } else {
-        // Movies
+        // Movies - Extract only quality links, filter out irrelevant ones
         infoContainer.find("a[href]").each((_, aEl) => {
           const el$ = $(aEl);
           const href = el$.attr("href")?.trim() || "";
           if (!href) return;
           const btnText = el$.text().trim() || "Download";
-          linkList.push({
-            title: btnText,
-            directLinks: [{ title: btnText, link: href, type: "movie" }],
-            episodesLink: "",
-          });
+          
+          // Filter: Only include quality-related links, exclude irrelevant options
+          const isQualityLink = /(\d+p|hd|sd|4k|1080|720|480|360|240|links?|download|watch|stream)/i.test(btnText) || 
+                               /(mb|gb|tb)/i.test(btnText);
+          
+          const isIrrelevant = /(imdb|rating|score|\d+\.\d+\/10)/i.test(btnText) ||
+                              /^(hindi|english|tamil|telugu|bengali|korean|turkish|urdu)$/i.test(btnText) ||
+                              /(share|telegram|whatsapp|facebook|twitter|instagram)/i.test(btnText) ||
+                              /(how to download|click to|open in new window|disclaimer)/i.test(btnText) ||
+                              btnText.length < 3 ||
+                              btnText === "Download"; // Generic download without quality info
+          
+          // Only add if it looks like a quality option and isn't irrelevant
+          if (isQualityLink && !isIrrelevant) {
+            linkList.push({
+              title: btnText,
+              directLinks: [{ title: btnText, link: href, type: "movie" }],
+              episodesLink: "",
+            });
+          }
         });
       }
 
