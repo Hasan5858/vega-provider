@@ -2,10 +2,26 @@ import { ProviderContext, Stream } from '../types';
 
 const WORKER_URL = 'https://movies4u.steep-bread-3c84.workers.dev';
 
+function getQualityFromService(serviceName: string): "360" | "480" | "720" | "1080" | "2160" | undefined {
+  // Extract quality based on service name or URL pattern
+  if (serviceName.includes('1080') || serviceName.includes('4K')) return '1080';
+  if (serviceName.includes('2160')) return '2160';
+  if (serviceName.includes('480')) return '480';
+  if (serviceName.includes('360')) return '360';
+  if (serviceName.includes('FastDL')) return '720';
+  if (serviceName.includes('GDFlix')) return '720';
+  if (serviceName.includes('HubCloud')) return '720';
+  if (serviceName.includes('GoFile')) return '720';
+  if (serviceName.includes('VCloud')) return '720';
+  if (serviceName.includes('FilePres')) return '480';
+  return '720'; // Default quality
+}
+
 async function extractStream(
   url: string,
   extractors: any,
-  signal: AbortSignal
+  signal: AbortSignal,
+  serviceName: string = 'Unknown'
 ): Promise<Stream[]> {
   if (!url) return [];
 
@@ -13,10 +29,10 @@ async function extractStream(
   if (url.includes('.mp4') || url.includes('.mkv') || url.includes('.avi')) {
     return [
       {
-        server: 'Direct',
+        server: serviceName || 'Direct',
         link: url,
         type: 'mp4',
-        quality: '720'
+        quality: getQualityFromService(serviceName)
       }
     ];
   }
@@ -25,11 +41,19 @@ async function extractStream(
   if (url.includes('hubcloud')) {
     console.log('[Movies4U Stream] Using HubCloud extractor');
     const extracted = await extractors.hubcloudExtracter(url, signal);
-    return extracted || [];
+    return extracted?.map((s: any) => ({
+      ...s,
+      server: s.server || 'HubCloud',
+      quality: (s.quality || getQualityFromService('HubCloud')) as "360" | "480" | "720" | "1080" | "2160" | undefined
+    })) || [];
   } else if (url.includes('gdflix')) {
     console.log('[Movies4U Stream] Using GDFlix extractor');
     const extracted = await extractors.gdFlixExtracter(url, signal);
-    return extracted || [];
+    return extracted?.map((s: any) => ({
+      ...s,
+      server: s.server || 'GDFlix',
+      quality: (s.quality || getQualityFromService('GDFlix')) as "360" | "480" | "720" | "1080" | "2160" | undefined
+    })) || [];
   } else if (url.includes('gofile')) {
     console.log('[Movies4U Stream] Using GoFile extractor');
     const extracted = await extractors.gofileExtracter(url);
@@ -39,7 +63,7 @@ async function extractStream(
           server: 'GoFile',
           link: extracted.link,
           type: 'mp4',
-          quality: '720'
+          quality: getQualityFromService('GoFile')
         }
       ];
     }
@@ -47,15 +71,27 @@ async function extractStream(
   } else if (url.includes('fastdl')) {
     console.log('[Movies4U Stream] Using FastDL extractor');
     const extracted = await extractors.fastdlExtractor(url, signal);
-    return extracted || [];
+    return extracted?.map((s: any) => ({
+      ...s,
+      server: s.server || 'FastDL',
+      quality: (s.quality || getQualityFromService('FastDL')) as "360" | "480" | "720" | "1080" | "2160" | undefined
+    })) || [];
   } else if (url.includes('vcloud')) {
     console.log('[Movies4U Stream] Using VCloud extractor');
     const extracted = await extractors.vcloudExtractor(url, signal);
-    return extracted || [];
+    return extracted?.map((s: any) => ({
+      ...s,
+      server: s.server || 'VCloud',
+      quality: (s.quality || getQualityFromService('VCloud')) as "360" | "480" | "720" | "1080" | "2160" | undefined
+    })) || [];
   } else if (url.includes('filepress')) {
     console.log('[Movies4U Stream] Using FilePres extractor');
     const extracted = await extractors.filepresExtractor(url, signal);
-    return extracted || [];
+    return extracted?.map((s: any) => ({
+      ...s,
+      server: s.server || 'FilePres',
+      quality: (s.quality || getQualityFromService('FilePres')) as "360" | "480" | "720" | "1080" | "2160" | undefined
+    })) || [];
   } else if (url.includes('hubdrive')) {
     console.log('[Movies4U Stream] HubDrive link detected');
     return [
@@ -63,7 +99,7 @@ async function extractStream(
         server: 'HubDrive',
         link: url,
         type: 'mp4',
-        quality: '720'
+        quality: getQualityFromService('HubDrive')
       }
     ];
   }
@@ -108,6 +144,7 @@ export async function getStream({
     for (const streamLink of data.streams) {
       try {
         const url = streamLink.link;
+        const serviceName = streamLink.server || 'Unknown';
 
         if (
           !url ||
@@ -129,16 +166,17 @@ export async function getStream({
             // For each service link returned by NexDrive, extract the final stream
             for (const serviceLink of extracted) {
               try {
-                console.log('[Movies4U Stream] Processing service link:', serviceLink.server);
-                const finalStreams = await extractStream(serviceLink.link, extractors, signal);
+                const linkServiceName = serviceLink.server || 'Service';
+                console.log('[Movies4U Stream] Processing service link:', linkServiceName);
+                const finalStreams = await extractStream(serviceLink.link, extractors, signal, linkServiceName);
                 
                 if (finalStreams && finalStreams.length > 0) {
                   allStreams.push(...finalStreams);
-                  console.log('[Movies4U Stream]', serviceLink.server, 'extracted', finalStreams.length, 'streams');
+                  console.log('[Movies4U Stream]', linkServiceName, 'extracted', finalStreams.length, 'streams');
                 } else {
                   // If no final streams, add the service link as-is
                   allStreams.push(serviceLink);
-                  console.log('[Movies4U Stream] No extraction, keeping', serviceLink.server, 'link');
+                  console.log('[Movies4U Stream] No extraction, keeping', linkServiceName, 'link');
                 }
               } catch (err) {
                 console.error('[Movies4U Stream] Error extracting service link:', err);
@@ -149,10 +187,10 @@ export async function getStream({
           }
         } else {
           // For non-NexDrive links, try to extract directly
-          const extracted = await extractStream(url, extractors, signal);
+          const extracted = await extractStream(url, extractors, signal, serviceName);
           if (extracted && extracted.length > 0) {
             allStreams.push(...extracted);
-            console.log('[Movies4U Stream] Extracted', extracted.length, 'streams');
+            console.log('[Movies4U Stream]', serviceName, 'extracted', extracted.length, 'streams');
           }
         }
       } catch (extractorError) {
