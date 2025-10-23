@@ -240,9 +240,9 @@
     "disabled": false
   },
   {
-    "display_name": "TopMovies",
-    "value": "topmovies",
-    "version": "1.0",
+    "display_name": "RogMovies",
+    "value": "luxMovies",
+    "version": "1.8",
     "icon": "",
     "type": "india",
     "disabled": false
