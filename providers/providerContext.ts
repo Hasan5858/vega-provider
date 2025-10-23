@@ -6,6 +6,10 @@ import { hubcloudExtracter } from "./hubcloudExtractor";
 import { gofileExtracter } from "./gofileExtracter";
 import { superVideoExtractor } from "./superVideoExtractor";
 import { gdFlixExtracter } from "./gdflixExtractor";
+import { nexdriveExtractor } from "./nexdriveExtractor";
+import { fastdlExtractor } from "./fastdlExtractor";
+import { vcloudExtractor } from "./vcloudExtractor";
+import { filepresExtractor } from "./filepresExtractor";
 import { ProviderContext } from "./types";
 import Aes from "react-native-aes-crypto";
 
@@ -19,6 +23,10 @@ const extractors = {
   gofileExtracter,
   superVideoExtractor,
   gdFlixExtracter,
+  nexdriveExtractor,
+  fastdlExtractor,
+  vcloudExtractor,
+  filepresExtractor,
 };
 
 export const providerContext: ProviderContext = {

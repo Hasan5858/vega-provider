@@ -144,5 +144,9 @@ export type ProviderContext = {
     }>;
     superVideoExtractor: (data: any) => Promise<string>;
     gdFlixExtracter: (link: string, signal: AbortSignal) => Promise<Stream[]>;
+    nexdriveExtractor: (link: string, signal: AbortSignal) => Promise<Stream[]>;
+    fastdlExtractor: (link: string, signal: AbortSignal) => Promise<Stream[]>;
+    vcloudExtractor: (link: string, signal: AbortSignal) => Promise<Stream[]>;
+    filepresExtractor: (link: string, signal: AbortSignal) => Promise<Stream[]>;
   };
 };

@@ -14,7 +14,7 @@ export async function getStream({
   providerContext: ProviderContext;
 }): Promise<Stream[]> {
   const { axios, extractors } = providerContext;
-  const { hubcloudExtracter, gdFlixExtracter, gofileExtracter } = extractors;
+  const { hubcloudExtracter, gdFlixExtracter, gofileExtracter, nexdriveExtractor, fastdlExtractor, vcloudExtractor, filepresExtractor } = extractors;
 
   try {
     console.log('[Movies4U Stream] Fetching streams for:', link);
@@ -91,15 +91,38 @@ export async function getStream({
           }
         } else if (url.includes('nexdrive')) {
           // NexDrive contains links to other streaming services
-          console.log('[Movies4U Stream] NexDrive link detected - passing through to player');
-          allStreams.push({
-            server: streamLink.server || 'NexDrive',
-            link: url,
-            type: streamLink.type || 'mp4',
-            quality: streamLink.quality,
-          });
+          console.log('[Movies4U Stream] Using NexDrive extractor');
+          const extracted = await nexdriveExtractor(url, signal);
+          if (extracted && extracted.length > 0) {
+            allStreams.push(...extracted);
+            console.log('[Movies4U Stream] NexDrive extracted', extracted.length, 'streams');
+          }
+        } else if (url.includes('fastdl')) {
+          // FastDL uses 302 redirects to provide direct download links
+          console.log('[Movies4U Stream] Using FastDL extractor');
+          const extracted = await fastdlExtractor(url, signal);
+          if (extracted && extracted.length > 0) {
+            allStreams.push(...extracted);
+            console.log('[Movies4U Stream] FastDL extracted', extracted.length, 'streams');
+          }
+        } else if (url.includes('vcloud')) {
+          // VCloud contains links to multiple download servers
+          console.log('[Movies4U Stream] Using VCloud extractor');
+          const extracted = await vcloudExtractor(url, signal);
+          if (extracted && extracted.length > 0) {
+            allStreams.push(...extracted);
+            console.log('[Movies4U Stream] VCloud extracted', extracted.length, 'streams');
+          }
+        } else if (url.includes('filepress')) {
+          // FilePres uses API to get direct download links
+          console.log('[Movies4U Stream] Using FilePres extractor');
+          const extracted = await filepresExtractor(url, signal);
+          if (extracted && extracted.length > 0) {
+            allStreams.push(...extracted);
+            console.log('[Movies4U Stream] FilePres extracted', extracted.length, 'streams');
+          }
         } else if (url.includes('hubdrive')) {
-          // HubDrive also contains links to other services
+          // HubDrive also contains links to other services - pass through
           console.log('[Movies4U Stream] HubDrive link detected - passing through to player');
           allStreams.push({
             server: streamLink.server || 'HubDrive',
