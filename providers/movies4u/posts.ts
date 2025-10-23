@@ -1,4 +1,5 @@
 import { Post, ProviderContext } from "../types";
+import { gunzipSync } from "zlib";
 
 const defaultHeaders = {
   Referer: "https://movies4u.ps/",
@@ -125,16 +126,31 @@ async function fetchPosts({
       throw new Error("Failed to fetch data after retries");
     }
     
-    const $ = cheerio.load(res.data || "");
+    // Handle gzip-compressed responses
+    let htmlData = res.data;
+    const contentEncoding = res.headers['content-encoding'];
+    console.log(`Content-Encoding: ${contentEncoding}`);
+    
+    if (contentEncoding === 'gzip' && Buffer.isBuffer(htmlData)) {
+      try {
+        htmlData = gunzipSync(htmlData).toString('utf8');
+        console.log(`✅ Decompressed gzip data, new length: ${htmlData.length}`);
+      } catch (decompressErr) {
+        console.error("Failed to decompress gzip:", decompressErr);
+        htmlData = htmlData.toString();
+      }
+    }
+    
+    const $ = cheerio.load(htmlData || "");
     
     console.log("🔍 Movies4U Debug Info:");
     console.log(`URL: ${url}`);
-    console.log(`Response length: ${res.data?.length || 0}`);
+    console.log(`Response length: ${htmlData?.length || 0}`);
     console.log(`Cheerio loaded: Yes`);
     console.log(`Response status: ${res.status}`);
 
     // Debug: Check what's actually in the HTML
-    const htmlStr = res.data?.toString() || '';
+    const htmlStr = htmlData?.toString() || '';
     console.log(`HTML starts with: ${htmlStr.substring(0, 100)}`);
     console.log(`Contains 'entry-card': ${htmlStr.includes('entry-card')}`);
     console.log(`Contains 'article': ${htmlStr.includes('<article')}`);
