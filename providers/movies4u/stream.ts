@@ -1,4 +1,5 @@
 import { ProviderContext, Stream } from '../types';
+import * as cheerio from 'cheerio';
 
 const WORKER_URL = 'https://movies4u.steep-bread-3c84.workers.dev';
 
@@ -130,29 +131,72 @@ export async function getStream({
   try {
     console.log('[Movies4U Stream] Fetching streams for:', link);
 
-    const { data } = await axios.get(WORKER_URL, {
-      params: {
-        action: 'stream',
-        link: link,
-      },
+    // Fetch directly instead of using Worker (Worker is blocked by the site)
+    const response = await axios.get(link, {
       signal,
       timeout: 30000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+      }
     });
 
-    if (!data.success || !Array.isArray(data.streams)) {
-      console.error('[Movies4U Stream] Invalid worker response:', data);
-      return [];
-    }
+    const html = response.data;
+    const $ = cheerio.load(html);
 
-    console.log('[Movies4U Stream] Worker returned', data.streams.length, 'links');
+    const streamLinks: any[] = [];
+
+    // Look for download buttons with quality info and links
+    // Pattern: <a href="URL"><button class="dwd-button">480p</button></a>
+    $('a[href]').each((_, elem) => {
+      const $link = $(elem);
+      const href = $link.attr('href');
+      const text = $link.text().trim();
+      
+      // Check if this link has a download button or quality info
+      const hasDownloadBtn = $link.find('button.dwd-button').length > 0;
+      const hasQuality = /\d+p/.test(text);
+      
+      if (href && (hasDownloadBtn || hasQuality)) {
+        // Skip social media links, javascript, anchors
+        if (!href.includes('javascript') && !href.startsWith('#') && !href.includes('facebook') && !href.includes('twitter')) {
+          // Extract quality from button text or link text
+          let quality = '720p';
+          if (text.includes('1080')) quality = '1080p';
+          else if (text.includes('720')) quality = '720p';
+          else if (text.includes('480')) quality = '480p';
+          else if (text.includes('360')) quality = '360p';
+          
+          // Determine server
+          let server = 'Unknown';
+          if (href.includes('hubcloud')) server = 'HubCloud';
+          else if (href.includes('gdflix')) server = 'GDFlix';
+          else if (href.includes('filepress')) server = 'FilePress';
+          else if (href.includes('gofile')) server = 'GoFile';
+          else if (href.includes('nexdrive')) server = 'NexDrive';
+          else if (href.includes('hubdrive')) server = 'HubDrive';
+          else if (href.includes('mega')) server = 'Mega';
+          else if (href.includes('dropbox')) server = 'Dropbox';
+          else if (href.includes('fastdl')) server = 'FastDL';
+          else if (href.includes('vcloud')) server = 'VCloud';
+          
+          streamLinks.push({
+            link: href,
+            server,
+            quality
+          });
+        }
+      }
+    });
+
+    console.log('[Movies4U Stream] Found', streamLinks.length, 'download links');
 
     const allStreams: Stream[] = [];
 
-    for (const streamLink of data.streams) {
+    for (const streamLink of streamLinks) {
       try {
         const url = streamLink.link;
         const serverName = streamLink.server || 'Unknown';
-        const qualityFromWorker = streamLink.quality || '720p'; // Quality from Worker (480p, 720p, 1080p, etc.)
+        const qualityFromPage = streamLink.quality || '720p';
 
         if (
           !url ||
@@ -165,7 +209,7 @@ export async function getStream({
 
         // For NexDrive links, extract to get FastDL, VCloud, FilePres, etc.
         if (url.includes('nexdrive')) {
-          console.log('[Movies4U Stream] Using NexDrive extractor for quality:', qualityFromWorker);
+          console.log('[Movies4U Stream] Using NexDrive extractor for quality:', qualityFromPage);
           const extracted = await extractors.nexdriveExtractor(url, signal);
           
           if (extracted && extracted.length > 0) {
@@ -175,36 +219,36 @@ export async function getStream({
             for (const serviceLink of extracted) {
               try {
                 const linkServerName = serviceLink.server || 'Service';
-                console.log('[Movies4U Stream] Processing service link:', linkServerName, 'for quality:', qualityFromWorker);
-                const finalStreams = await extractStream(serviceLink.link, extractors, signal, qualityFromWorker);
+                console.log('[Movies4U Stream] Processing service link:', linkServerName, 'for quality:', qualityFromPage);
+                const finalStreams = await extractStream(serviceLink.link, extractors, signal, qualityFromPage);
                 
                 if (finalStreams && finalStreams.length > 0) {
                   allStreams.push(...finalStreams);
-                  console.log('[Movies4U Stream]', linkServerName, 'extracted', finalStreams.length, 'streams for quality', qualityFromWorker);
+                  console.log('[Movies4U Stream]', linkServerName, 'extracted', finalStreams.length, 'streams for quality', qualityFromPage);
                 } else {
                   // If no final streams, add the service link as-is with preserved quality
                   allStreams.push({
                     ...serviceLink,
-                    quality: parseQuality(qualityFromWorker)
+                    quality: parseQuality(qualityFromPage)
                   });
-                  console.log('[Movies4U Stream] No extraction, keeping', linkServerName, 'link for quality', qualityFromWorker);
+                  console.log('[Movies4U Stream] No extraction, keeping', linkServerName, 'link for quality', qualityFromPage);
                 }
               } catch (err) {
                 console.error('[Movies4U Stream] Error extracting service link:', err);
                 // Add the original link if extraction fails
                 allStreams.push({
                   ...serviceLink,
-                  quality: parseQuality(qualityFromWorker)
+                  quality: parseQuality(qualityFromPage)
                 });
               }
             }
           }
         } else {
           // For non-NexDrive links, try to extract directly while preserving quality
-          const extracted = await extractStream(url, extractors, signal, qualityFromWorker);
+          const extracted = await extractStream(url, extractors, signal, qualityFromPage);
           if (extracted && extracted.length > 0) {
             allStreams.push(...extracted);
-            console.log('[Movies4U Stream]', serverName, 'extracted', extracted.length, 'streams for quality', qualityFromWorker);
+            console.log('[Movies4U Stream]', serverName, 'extracted', extracted.length, 'streams for quality', qualityFromPage);
           }
         }
       } catch (extractorError) {

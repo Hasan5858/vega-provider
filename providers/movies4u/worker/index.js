@@ -19,15 +19,13 @@
 const BASE_URL = 'https://movies4u.ps';
 
 const HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-  'Accept-Language': 'en-US,en;q=0.9',
-  'Accept-Encoding': 'gzip, deflate, br',
-  'Cache-Control': 'no-cache',
-  'Pragma': 'no-cache',
-  'Sec-Fetch-Dest': 'document',
-  'Sec-Fetch-Mode': 'navigate',
-  'Sec-Fetch-Site': 'same-origin',
+  'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Accept-Language': 'en-US,en;q=0.5',
+  'Referer': 'https://movies4u.ps/',
+  'DNT': '1',
+  'Connection': 'keep-alive',
+  'Upgrade-Insecure-Requests': '1'
 };
 
 // Parse posts from HTML
@@ -35,6 +33,9 @@ function parsePosts(html) {
   const posts = [];
   const articleRegex = /<article[^>]*class="[^"]*entry-card[^"]*"[^>]*>[\s\S]*?<\/article>/g;
   let articleMatch;
+  
+  // DEBUG: Log HTML info
+  console.log(`[parsePosts] HTML length: ${html.length}, Contains '<article': ${html.includes('<article')}, Contains 'entry-card': ${html.includes('entry-card')}`);
 
   while ((articleMatch = articleRegex.exec(html)) !== null) {
     const article = articleMatch[0];
@@ -75,6 +76,9 @@ function parsePosts(html) {
       });
     }
   }
+  
+  // DEBUG: Log results
+  console.log(`[parsePosts] Found ${posts.length} valid posts`);
 
   return posts;
 }
@@ -344,8 +348,10 @@ export default {
           targetUrl += `${targetUrl.includes('?') ? '&' : '?'}page=${page}`;
         }
 
+        console.log(`[posts] Fetching from: ${targetUrl}`);
         const res = await fetch(targetUrl, { headers: HEADERS });
         const html = await res.text();
+        console.log(`[posts] Response length: ${html.length}, Status: ${res.status}`);
         const posts = parsePosts(html);
 
         result = {
@@ -354,7 +360,13 @@ export default {
           count: posts.length,
           posts: posts,
           category: category,
-          page: parseInt(page)
+          page: parseInt(page),
+          debug: {
+            htmlLength: html.length,
+            hasArticles: html.includes('<article'),
+            hasEntryCard: html.includes('entry-card'),
+            targetUrl: targetUrl
+          }
         };
       } else if (action === 'catalog') {
         // Get categories
