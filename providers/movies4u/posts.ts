@@ -132,7 +132,19 @@ async function fetchPosts({
     console.log(`Response length: ${res.data?.length || 0}`);
     console.log(`Cheerio loaded: Yes`);
     console.log(`Response status: ${res.status}`);
-    console.log(`Response headers: ${JSON.stringify(res.headers)}`);
+
+    // Debug: Check what's actually in the HTML
+    const htmlStr = res.data?.toString() || '';
+    console.log(`HTML starts with: ${htmlStr.substring(0, 100)}`);
+    console.log(`Contains 'entry-card': ${htmlStr.includes('entry-card')}`);
+    console.log(`Contains 'article': ${htmlStr.includes('<article')}`);
+    console.log(`Contains 'entries': ${htmlStr.includes('entries')}`);
+    
+    // Check if body exists
+    console.log(`Body found: ${$('body').length > 0}`);
+    console.log(`Total divs: ${$('div').length}`);
+    console.log(`Total articles: ${$('article').length}`);
+    console.log(`Divs with class 'entries': ${$('div.entries').length}`);
 
     const resolveUrl = (href: string) =>
       href?.startsWith("http") ? href : new URL(href, url).href;
@@ -140,22 +152,22 @@ async function fetchPosts({
     const seen = new Set<string>();
     const catalog: Post[] = [];
 
-    // --- Movies4u selectors
-    const POST_SELECTORS = [
-      ".entry-card",
-      "article.entry-card",
-      ".pstr_box",
-      "article",
-      ".result-item",
-      ".post",
-      ".item",
-      ".thumbnail",
-      ".latest-movies",
-      ".movie-item",
-    ].join(",");
-
-    const elements = $(POST_SELECTORS);
-    console.log(`🔍 Found ${elements.length} elements with selectors`);
+    // --- Movies4u selectors - First try direct article selection
+    let elements = $('article.entry-card');
+    console.log(`🔍 Using article.entry-card selector: ${elements.length} found`);
+    
+    // If no results, try broader selectors
+    if (elements.length === 0) {
+      elements = $('article');
+      console.log(`🔍 Fallback to article: ${elements.length} found`);
+    }
+    
+    if (elements.length === 0) {
+      elements = $('.entry-card');
+      console.log(`🔍 Fallback to .entry-card: ${elements.length} found`);
+    }
+    
+    console.log(`🔍 Total elements to process: ${elements.length}`);
     
     elements.each((_, el) => {
       const card = $(el);
