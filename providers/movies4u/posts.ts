@@ -67,6 +67,8 @@ async function fetchPosts({
   signal?: AbortSignal;
   providerContext: ProviderContext;
 }): Promise<Post[]> {
+  console.log("🚀 Movies4U fetchPosts called");
+  console.log(`Filter: "${filter}", Query: "${query}", Page: ${page}`);
   try {
     const baseUrl = await providerContext.getBaseUrl("movies4u");
     let url: string;
@@ -87,6 +89,7 @@ async function fetchPosts({
       url = `${baseUrl}${page > 1 ? `/page/${page}/` : ""}`;
     }
 
+    console.log(`🔗 Constructed URL: ${url}`);
     const { axios, cheerio } = providerContext;
     
     // Add retry logic for search requests
@@ -120,6 +123,13 @@ async function fetchPosts({
     }
     
     const $ = cheerio.load(res.data || "");
+    
+    console.log("🔍 Movies4U Debug Info:");
+    console.log(`URL: ${url}`);
+    console.log(`Response length: ${res.data?.length || 0}`);
+    console.log(`Cheerio loaded: Yes`);
+    console.log(`Response status: ${res.status}`);
+    console.log(`Response headers: ${JSON.stringify(res.headers)}`);
 
     const resolveUrl = (href: string) =>
       href?.startsWith("http") ? href : new URL(href, url).href;
@@ -141,7 +151,10 @@ async function fetchPosts({
       ".movie-item",
     ].join(",");
 
-    $(POST_SELECTORS).each((_, el) => {
+    const elements = $(POST_SELECTORS);
+    console.log(`🔍 Found ${elements.length} elements with selectors`);
+    
+    elements.each((_, el) => {
       const card = $(el);
       let link = card.find("a[href]").first().attr("href") || "";
       if (!link) return;
@@ -170,13 +183,15 @@ async function fetchPosts({
       seen.add(link);
       catalog.push({ title, link, image });
     });
+    
+    console.log(`🔍 Final catalog length: ${catalog.length}`);
+    console.log(`🔍 Sample posts: ${catalog.slice(0, 3).map(p => p.title).join(', ')}`);
 
     return catalog.slice(0, 100);
   } catch (err) {
-    console.error(
-      "HDMovie2 fetchPosts error:",
-      err instanceof Error ? err.message : String(err)
-    );
+    console.error("❌ Movies4U fetchPosts error:");
+    console.error("Error message:", err instanceof Error ? err.message : String(err));
+    console.error("Error stack:", err instanceof Error ? err.stack : 'No stack');
     return [];
   }
 }
