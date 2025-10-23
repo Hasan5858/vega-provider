@@ -11,6 +11,8 @@ const headers = {
     "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
 };
 
+// Simplified and working version based on FilmyFly approach
+
 // Helper function to get server name from URL
 function getServerName(url: string): string {
   if (url.includes("gofile.io")) return "GoFile";
@@ -217,13 +219,6 @@ async function extractDirectVideoUrl(link: string, server: string, axios: any, c
 
   } catch (error: any) {
     // If extraction fails, return the original link as fallback
-    if (typeof window !== 'undefined' && window.console) {
-      window.console.log(`🔍 DEBUG - Extraction failed for ${server}: ${error.message}`);
-    }
-    if (typeof process !== 'undefined' && process.stdout) {
-      process.stdout.write(`🔍 DEBUG - Extraction failed for ${server}: ${error.message}\n`);
-    }
-
     return [{
       server: server,
       link: link,
@@ -243,206 +238,106 @@ export async function getStream({
   type: string;
   signal: AbortSignal;
   providerContext: ProviderContext;
-}) {
+}): Promise<Stream[]> {
   const { axios, cheerio, extractors } = providerContext;
-  const { hubcloudExtracter } = extractors;
+  const { gofileExtracter, gdFlixExtracter } = extractors;
 
   try {
-    // Debug logging that survives minification
-    if (typeof window !== 'undefined' && window.console) {
-      window.console.log("🔍 DEBUG - Stream link received:", link);
-    }
-    if (typeof process !== 'undefined' && process.stdout) {
-      process.stdout.write(`🔍 DEBUG - Stream link received: ${link}\n`);
-    }
-
     const streamLinks: Stream[] = [];
-    const response = await axios.get(link, { headers });
-    
-    // Debug the response
-    if (typeof window !== 'undefined' && window.console) {
-      window.console.log("🔍 DEBUG - Response status:", response.status);
-      window.console.log("🔍 DEBUG - Response URL:", response.request?.responseURL || response.config?.url);
-      window.console.log("🔍 DEBUG - Response data length:", response.data ? response.data.length : 'no data');
-    }
-    if (typeof process !== 'undefined' && process.stdout) {
-      process.stdout.write(`🔍 DEBUG - Response status: ${response.status}\n`);
-      process.stdout.write(`🔍 DEBUG - Response URL: ${response.request?.responseURL || response.config?.url}\n`);
-      process.stdout.write(`🔍 DEBUG - Response data length: ${response.data ? response.data.length : 'no data'}\n`);
-    }
-
+    const response = await axios.get(link, { headers, signal, timeout: 10000 });
     const $ = cheerio.load(response.data);
 
-    // --- Extract all cloud storage links ---
+    // Extract all cloud storage links
     const cloudSelectors = [
-      "a[href*='gofile.io']",           // GoFile
-      "a[href*='send.cm']",             // Send
-      "a[href*='gdflix']",              // GDFlix
-      "a[href*='filepress']",           // FilePress
-      "a[href*='gdtot']",               // GDTot
-      "a[href*='pixeldrain.dev']",      // PixelDrain
-      "a[href*='hubcloud']",            // HubCloud
-      "a[href*='1fichier.com']",        // 1fichier
-      "a[href*='mega.nz']",             // Mega
-      "a[href*='drive.google.com']"     // Google Drive
+      "a[href*='gofile.io']",
+      "a[href*='gdflix']",
+      "a[href*='gdtot']",
+      "a[href*='hubcloud']",
+      "a[href*='pixeldrain']",
+      "a[href*='send.cm']",
+      "a[href*='1fichier']",
+      "a[href*='mega.nz']",
+      "a[href*='drive.google']"
     ].join(", ");
 
-    // Debug: Check how many elements each selector finds
-    if (typeof window !== 'undefined' && window.console) {
-      window.console.log("🔍 DEBUG - Testing cloud selectors:");
-      cloudSelectors.split(',').forEach(selector => {
-        const count = $(selector).length;
-        window.console.log(`  ${selector}: ${count} elements`);
-      });
-    }
-    if (typeof process !== 'undefined' && process.stdout) {
-      process.stdout.write("🔍 DEBUG - Testing cloud selectors:\n");
-      cloudSelectors.split(',').forEach(selector => {
-        const count = $(selector).length;
-        process.stdout.write(`  ${selector}: ${count} elements\n`);
-      });
-    }
-
-    $(cloudSelectors).each((_, el) => {
+    $(cloudSelectors).each((_, el: any) => {
       const href = $(el).attr("href")?.trim();
       const text = $(el).text().trim();
       
-      if (href) {
-        // Skip only clearly irrelevant options
-        const isIrrelevant = /(imdb|rating|score|\d+\.\d+\/10)/i.test(text) ||
-                            /^(hindi|english|tamil|telugu|bengali|korean|turkish|urdu)$/i.test(text) ||
-                            /(share|telegram|whatsapp|facebook|twitter|instagram)/i.test(text) ||
-                            /(how to download|click to|disclaimer)/i.test(text) ||
-                            text.length < 2; // Skip very short text
-        
-        // Include cloud storage links if they're not irrelevant
-        if (!isIrrelevant) {
-          const server = getServerName(href);
-          const fileType = getFileType(href, server);
-          
-          // Extract quality from text (e.g., "480p Links [436MB]" -> "480")
-          let quality: "360" | "480" | "720" | "1080" | "2160" = "1080"; // Default
-          const qualityMatch = text.match(/(\d+)p/i);
-          if (qualityMatch) {
-            const qualityNum = parseInt(qualityMatch[1]);
-            if (qualityNum <= 360) quality = "360";
-            else if (qualityNum <= 480) quality = "480";
-            else if (qualityNum <= 720) quality = "720";
-            else if (qualityNum <= 1080) quality = "1080";
-            else if (qualityNum >= 2160) quality = "2160";
-          }
-          
-          streamLinks.push({
-            server: server,
-            link: href,
-            type: fileType,
-            quality: quality
-          });
-        }
+      if (!href || !text) return;
+      
+      // Skip clearly irrelevant options
+      if (/(imdb|rating|score|share|telegram|whatsapp|how to)/i.test(text)) return;
+      if (text.length < 2) return;
+      
+      const server = getServerName(href);
+      const fileType = getFileType(href, server);
+      
+      // Extract quality from text
+      let quality: "360" | "480" | "720" | "1080" | "2160" = "1080";
+      const qualityMatch = text.match(/(\d+)p/i);
+      if (qualityMatch) {
+        const q = parseInt(qualityMatch[1]);
+        if (q <= 360) quality = "360";
+        else if (q <= 480) quality = "480";
+        else if (q <= 720) quality = "720";
+        else if (q <= 1080) quality = "1080";
+        else quality = "2160";
       }
+      
+      streamLinks.push({
+        server: `${server} [${quality}p]`,
+        link: href,
+        type: fileType,
+        quality: quality
+      });
     });
 
-    // --- Extract actual video URLs from cloud storage links using appropriate extractors ---
-    if (streamLinks.length > 0) {
-      const directStreams: Stream[] = [];
-      
-      for (const stream of streamLinks) {
-        try {
-          // Route to appropriate extractor based on server
-          if (stream.server === 'GoFile') {
-            // Extract GoFile ID and use gofileExtracter
-            const gofileId = stream.link.split('/d/')[1]?.split('?')[0];
-            if (gofileId) {
-              try {
-                const gofileResult = await providerContext.extractors.gofileExtracter(gofileId);
-                if (gofileResult?.link) {
-                  directStreams.push({
-                    ...stream,
-                    link: gofileResult.link,
-                    server: `${stream.server} - ${stream.quality}p`
-                  });
-                } else {
-                  directStreams.push(stream);
-                }
-              } catch (gofileError) {
-                directStreams.push(stream);
-              }
-            }
-          } else if (stream.server === 'GDFlix') {
-            // Use gdFlixExtracter
-            try {
-              const gdflixLinks = await providerContext.extractors.gdFlixExtracter(stream.link, signal);
-              if (gdflixLinks && gdflixLinks.length > 0) {
-                directStreams.push(...gdflixLinks.map(s => ({
-                  ...s,
-                  server: `${stream.server} - ${stream.quality}p`,
-                  quality: stream.quality
-                })));
-              } else {
-                directStreams.push(stream);
-              }
-            } catch (gdflixError) {
-              directStreams.push(stream);
-            }
-          } else if (stream.server === 'GDTot' || stream.server === 'HubCloud') {
-            // Use hubcloudExtracter
-            try {
-              const hubcloudLinks = await hubcloudExtracter(stream.link, signal);
-              if (hubcloudLinks && hubcloudLinks.length > 0) {
-                directStreams.push(...hubcloudLinks.map(s => ({
-                  ...s,
-                  server: `${stream.server} - ${stream.quality}p`,
-                  quality: stream.quality
-                })));
-              } else {
-                directStreams.push(stream);
-              }
-            } catch (hubcloudError) {
-              directStreams.push(stream);
-            }
-          } else {
-            // For unknown servers, try general extraction
-            try {
-              const directLinks = await extractDirectVideoUrl(stream.link, stream.server, axios, cheerio);
-              directStreams.push(...directLinks);
-            } catch (error) {
-              directStreams.push(stream);
+    // Extract actual URLs from cloud storage links
+    const finalStreams: Stream[] = [];
+    
+    for (const stream of streamLinks) {
+      try {
+        if (stream.link.includes("gofile.io")) {
+          const gofileId = stream.link.split("/d/")[1]?.split("?")[0];
+          if (gofileId) {
+            const result = await gofileExtracter(gofileId);
+            if (result?.link) {
+              finalStreams.push({
+                server: stream.server,
+                link: result.link,
+                type: stream.type,
+                quality: stream.quality
+              });
+              continue;
             }
           }
-        } catch (error) {
-          // Last resort: keep original link
-          directStreams.push(stream);
+        } else if (stream.link.includes("gdflix")) {
+          const results = await gdFlixExtracter(stream.link, signal);
+          if (results?.length > 0) {
+            results.forEach((r: any) => {
+              finalStreams.push({
+                server: stream.server,
+                link: r.link,
+                type: stream.type,
+                quality: stream.quality
+              });
+            });
+            continue;
+          }
         }
+      } catch (e) {
+        // Extraction failed, will use fallback
       }
       
-      // Replace cloud storage links with extracted URLs
-      streamLinks.length = 0;
-      streamLinks.push(...directStreams);
-    } else {
-      // --- Try hubcloud extraction as fallback ---
-      try {
-        const hubcloudStreams = await hubcloudExtracter(link, signal);
-        streamLinks.push(...hubcloudStreams);
-      } catch (hubcloudError) {
-        // HubCloud extraction failed, continue with what we have
-      }
+      // Fallback: use cloud storage link directly
+      finalStreams.push(stream);
     }
 
-    // --- Remove duplicates ---
-    const uniqueStreams = streamLinks
-      .filter((stream, index, self) => 
-        index === self.findIndex(s => s.link === stream.link)
-      );
-
-    // Debug: Show final results
-    if (typeof window !== 'undefined' && window.console) {
-      window.console.log("🔍 DEBUG - Final stream links found:", uniqueStreams.length);
-      window.console.log("🔍 DEBUG - Sample streams:", uniqueStreams.slice(0, 3).map(s => ({ server: s.server, link: s.link, quality: s.quality })));
-    }
-    if (typeof process !== 'undefined' && process.stdout) {
-      process.stdout.write(`🔍 DEBUG - Final stream links found: ${uniqueStreams.length}\n`);
-      process.stdout.write(`🔍 DEBUG - Sample streams: ${JSON.stringify(uniqueStreams.slice(0, 3).map(s => ({ server: s.server, link: s.link, quality: s.quality })))}\n`);
-    }
+    // Remove duplicates
+    const uniqueStreams = finalStreams.filter((s, i, arr) =>
+      i === arr.findIndex(t => t.link === s.link)
+    );
 
     return uniqueStreams;
   } catch (error: any) {
