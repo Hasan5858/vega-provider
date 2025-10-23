@@ -308,19 +308,15 @@ export async function getStream({
       const text = $(el).text().trim();
       
       if (href) {
-        // Filter out irrelevant options - only include actual video quality options
-        const isVideoQuality = /(\d+p|hd|sd|4k|1080|720|480|360|240)/i.test(text) || 
-                              /(links?|download|watch|stream)/i.test(text) ||
-                              /(mb|gb|tb)/i.test(text);
-        
-        // Skip irrelevant options like IMDb ratings, language tags, etc.
+        // Skip only clearly irrelevant options
         const isIrrelevant = /(imdb|rating|score|\d+\.\d+\/10)/i.test(text) ||
-                            /^(hindi|english|tamil|telugu|bengali|korean|turkish)$/i.test(text) ||
-                            /(share|telegram|whatsapp|facebook|twitter)/i.test(text) ||
-                            /(how to download|click to)/i.test(text) ||
-                            text.length < 3; // Skip very short text
+                            /^(hindi|english|tamil|telugu|bengali|korean|turkish|urdu)$/i.test(text) ||
+                            /(share|telegram|whatsapp|facebook|twitter|instagram)/i.test(text) ||
+                            /(how to download|click to|disclaimer)/i.test(text) ||
+                            text.length < 2; // Skip very short text
         
-        if (isVideoQuality && !isIrrelevant) {
+        // Include cloud storage links if they're not irrelevant
+        if (!isIrrelevant) {
           const server = getServerName(href);
           const fileType = getFileType(href, server);
           
@@ -346,28 +342,80 @@ export async function getStream({
       }
     });
 
-    // --- Extract actual video URLs from cloud storage links ---
+    // --- Extract actual video URLs from cloud storage links using appropriate extractors ---
     if (streamLinks.length > 0) {
       const directStreams: Stream[] = [];
       
       for (const stream of streamLinks) {
         try {
-          // Try direct extraction first for cloud storage services
-          const directLinks = await extractDirectVideoUrl(stream.link, stream.server, axios, cheerio);
-          directStreams.push(...directLinks);
-        } catch (error) {
-          // If direct extraction fails, try hubcloudExtracter as fallback
-          try {
-            const hubcloudLinks = await hubcloudExtracter(stream.link, signal);
-            directStreams.push(...hubcloudLinks);
-          } catch (hubcloudError) {
-            // If both fail, keep the original link as fallback
-            directStreams.push(stream);
+          // Route to appropriate extractor based on server
+          if (stream.server === 'GoFile') {
+            // Extract GoFile ID and use gofileExtracter
+            const gofileId = stream.link.split('/d/')[1]?.split('?')[0];
+            if (gofileId) {
+              try {
+                const gofileResult = await providerContext.extractors.gofileExtracter(gofileId);
+                if (gofileResult?.link) {
+                  directStreams.push({
+                    ...stream,
+                    link: gofileResult.link,
+                    server: `${stream.server} - ${stream.quality}p`
+                  });
+                } else {
+                  directStreams.push(stream);
+                }
+              } catch (gofileError) {
+                directStreams.push(stream);
+              }
+            }
+          } else if (stream.server === 'GDFlix') {
+            // Use gdFlixExtracter
+            try {
+              const gdflixLinks = await providerContext.extractors.gdFlixExtracter(stream.link, signal);
+              if (gdflixLinks && gdflixLinks.length > 0) {
+                directStreams.push(...gdflixLinks.map(s => ({
+                  ...s,
+                  server: `${stream.server} - ${stream.quality}p`,
+                  quality: stream.quality
+                })));
+              } else {
+                directStreams.push(stream);
+              }
+            } catch (gdflixError) {
+              directStreams.push(stream);
+            }
+          } else if (stream.server === 'GDTot' || stream.server === 'HubCloud') {
+            // Use hubcloudExtracter
+            try {
+              const hubcloudLinks = await hubcloudExtracter(stream.link, signal);
+              if (hubcloudLinks && hubcloudLinks.length > 0) {
+                directStreams.push(...hubcloudLinks.map(s => ({
+                  ...s,
+                  server: `${stream.server} - ${stream.quality}p`,
+                  quality: stream.quality
+                })));
+              } else {
+                directStreams.push(stream);
+              }
+            } catch (hubcloudError) {
+              directStreams.push(stream);
+            }
+          } else {
+            // For unknown servers, try general extraction
+            try {
+              const directLinks = await extractDirectVideoUrl(stream.link, stream.server, axios, cheerio);
+              directStreams.push(...directLinks);
+            } catch (error) {
+              directStreams.push(stream);
+            }
           }
+        } catch (error) {
+          // Last resort: keep original link
+          directStreams.push(stream);
         }
       }
       
-      // Replace cloud storage links with direct video URLs
+      // Replace cloud storage links with extracted URLs
       streamLinks.length = 0;
       streamLinks.push(...directStreams);
     } else {
@@ -380,30 +428,20 @@ export async function getStream({
       }
     }
 
-    // --- Remove duplicates and filter for valid video quality options ---
+    // --- Remove duplicates ---
     const uniqueStreams = streamLinks
       .filter((stream, index, self) => 
         index === self.findIndex(s => s.link === stream.link)
-      )
-      .filter(stream => {
-        // Only include streams with valid quality indicators
-        const validQualities = ['360', '480', '720', '1080', '2160'];
-        return validQualities.some(q => 
-          stream.quality === q || 
-          stream.server.toLowerCase().includes('cloud') ||
-          stream.link.includes('.mkv') || 
-          stream.link.includes('.mp4')
-        );
-      });
+      );
 
     // Debug: Show final results
     if (typeof window !== 'undefined' && window.console) {
       window.console.log("🔍 DEBUG - Final stream links found:", uniqueStreams.length);
-      window.console.log("🔍 DEBUG - Sample streams:", uniqueStreams.slice(0, 3).map(s => ({ server: s.server, link: s.link })));
+      window.console.log("🔍 DEBUG - Sample streams:", uniqueStreams.slice(0, 3).map(s => ({ server: s.server, link: s.link, quality: s.quality })));
     }
     if (typeof process !== 'undefined' && process.stdout) {
       process.stdout.write(`🔍 DEBUG - Final stream links found: ${uniqueStreams.length}\n`);
-      process.stdout.write(`🔍 DEBUG - Sample streams: ${JSON.stringify(uniqueStreams.slice(0, 3).map(s => ({ server: s.server, link: s.link })))}\n`);
+      process.stdout.write(`🔍 DEBUG - Sample streams: ${JSON.stringify(uniqueStreams.slice(0, 3).map(s => ({ server: s.server, link: s.link, quality: s.quality })))}\n`);
     }
 
     return uniqueStreams;
