@@ -69,22 +69,28 @@ export const getStream = async function ({
                     // Use appropriate extractor based on server type
                     const promise = (async () => {
                       try {
-                        if (serverText.toLowerCase().includes('gofile')) {
-                          // Use gofile extractor
-                          const gofileId = finalLink.split('/').pop();
+                        if (serverText.toLowerCase().includes('gofile') || finalLink.includes('gofile.io')) {
+                          // Use gofile extractor - extract ID from URL
+                          const gofileId = finalLink.includes('gofile.io/d/') 
+                            ? finalLink.split('/d/')[1]?.split('?')[0] 
+                            : finalLink.split('/').pop();
                           if (gofileId) {
-                            const gofileResult = await providerContext.extractors.gofileExtracter(gofileId);
-                            if (gofileResult.link) {
-                              const quality = extractQualityFromText(qualityText);
-                              streams.push({
-                                server: "GoFile",
-                                link: gofileResult.link,
-                                type: "mkv",
-                                quality: quality,
-                              });
+                            try {
+                              const gofileResult = await providerContext.extractors.gofileExtracter(gofileId);
+                              if (gofileResult.link) {
+                                const quality = extractQualityFromText(qualityText);
+                                streams.push({
+                                  server: "GoFile",
+                                  link: gofileResult.link,
+                                  type: "mkv",
+                                  quality: quality,
+                                });
+                              }
+                            } catch (gofileError) {
+                              console.error('GoFile extraction failed:', gofileError);
                             }
                           }
-                        } else if (serverText.toLowerCase().includes('gdflix')) {
+                        } else if (serverText.toLowerCase().includes('gdflix') || finalLink.includes('gdflix')) {
                           // Use gdflix extractor
                           const gdflixStreams = await providerContext.extractors.gdFlixExtracter(finalLink, signal);
                           const quality = extractQualityFromText(qualityText);
@@ -204,16 +210,26 @@ export const getStream = async function ({
           signal
         );
         streams.push(...gdLinks);
-      } else if (title.includes("GoFile") && link) {
-        const gofileResult = await providerContext.extractors.gofileExtracter(
-          link
-        );
-        streams.push({
-          server: "GoFile",
-          link: gofileResult.link,
-          type: "mkv",
-          quality: extractQualityFromText(title)
-        });
+      } else if ((title.toLowerCase().includes("gofile") || link.includes("gofile.io")) && link) {
+        // Extract GoFile ID from URL
+        const gofileId = link.includes('gofile.io/d/') 
+          ? link.split('/d/')[1]?.split('?')[0] 
+          : link.split('/').pop();
+        if (gofileId) {
+          try {
+            const gofileResult = await providerContext.extractors.gofileExtracter(gofileId);
+            if (gofileResult.link) {
+              streams.push({
+                server: "GoFile",
+                link: gofileResult.link,
+                type: "mkv",
+                quality: extractQualityFromText(title)
+              });
+            }
+          } catch (gofileError) {
+            console.error('GoFile extraction failed:', gofileError);
+          }
+        }
       } else if (link.includes("hubcloud") || link.includes("bbdownload") || title.includes("HubCloud")) {
         const hubcloudLinks = await providerContext.extractors.hubcloudExtracter(
           link,
