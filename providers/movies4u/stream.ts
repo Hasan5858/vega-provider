@@ -39,7 +39,7 @@ export async function getStream({
     console.log("🔗 Processing stream link:", link);
     
           // Skip if it's not a valid download link
-          if (!link || link.includes('how-to-download') || link.includes('movies4u.lt/') || link.includes('gdtot')) {
+          if (!link || link.includes('how-to-download') || link.includes('movies4u.ps/') || link.includes('gdtot')) {
             console.log("❌ Skipping invalid link:", link);
             return [];
           }
@@ -96,7 +96,7 @@ export async function getStream({
       const response = await axios.get(link, { 
         headers: {
           ...headers,
-          Referer: "https://movies4u.lt/"
+          Referer: "https://movies4u.ps/"
         },
         signal,
         timeout: 10000

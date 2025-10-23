@@ -13,7 +13,7 @@ export const getEpisodes = async function ({
     const res = await axios.get(url, {
       headers: {
         ...headers,
-        'Referer': 'https://movies4u.lt/'
+        'Referer': 'https://movies4u.ps/'
       },
     });
     const $ = cheerio.load(res.data);

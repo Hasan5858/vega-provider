@@ -214,7 +214,7 @@ export const getMeta = async ({
                 }
                 
                 // Skip links to other movies/series
-                if (link?.includes('movies4u.lt/') && 
+                if (link?.includes('movies4u.ps/') && 
                     !link.includes('download') && 
                     !link.includes('file')) {
                   return;
