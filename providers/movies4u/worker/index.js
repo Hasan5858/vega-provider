@@ -124,57 +124,12 @@ async function getMeta(link) {
       type = 'series';
     }
 
-    // For movies, fetch streams and include them in linkList for immediate playback
+    // For movies and series, don't fetch streams here (app will do that separately)
+    // Just return basic metadata for the detail page
+    // linkList can be empty or contain generic quality hints
     let linkList = [];
-    if (type === 'movie') {
-      try {
-        const streams = await getStream(link);
-        if (streams && streams.length > 0) {
-          // Group streams by quality
-          const streamsByQuality = {};
-          streams.forEach(stream => {
-            const quality = stream.quality || 'auto';
-            if (!streamsByQuality[quality]) {
-              streamsByQuality[quality] = [];
-            }
-            streamsByQuality[quality].push(stream);
-          });
-
-          // Create a single linkList entry with all direct links
-          linkList = [{
-            title: 'Play Movie',
-            directLinks: streams.map((stream, idx) => ({
-              link: stream.link,
-              title: `${stream.server} - ${stream.quality || 'auto'}`,
-              type: 'movie'
-            }))
-          }];
-        }
-      } catch (streamError) {
-        console.error('Error fetching streams for meta:', streamError);
-        // Continue with empty linkList if stream fetching fails
-      }
-    } else if (type === 'series') {
-      // For series, try to fetch streams as well and present them similarly
-      try {
-        const streams = await getStream(link);
-        if (streams && streams.length > 0) {
-          // Create a single linkList entry with all direct links
-          linkList = [{
-            title: 'Watch Series',
-            directLinks: streams.map((stream, idx) => ({
-              link: stream.link,
-              title: `${stream.server} - ${stream.quality || 'auto'}`,
-              type: 'series'
-            }))
-          }];
-        }
-      } catch (streamError) {
-        console.error('Error fetching streams for series meta:', streamError);
-        // Continue with empty linkList if stream fetching fails
-      }
-    }
-
+    
+    // Keep it minimal - app will call /stream endpoint separately when user clicks play
     return {
       title: title || 'Unknown',
       image: image || '',
