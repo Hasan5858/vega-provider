@@ -107,11 +107,11 @@ export const getStream = async function ({
               continue;
             }
             
-            // Handle direct video links (Fast Cloud, etc.)
+            // Handle direct video links (Fast Cloud and Ultra FastDL only)
+            // Skip Direct Download and Fast Cloud-02 (Cloudflare blocked)
             if (
-              dlTitle.includes("Fast Cloud") ||
-              dlTitle.includes("Direct Download") ||
-              dlTitle.includes("FastDL")
+              (dlTitle.includes("Fast Cloud") && !dlTitle.includes("Fast Cloud-02")) ||
+              dlTitle.includes("Ultra FastDL")
             ) {
               // Check if link looks like a direct video URL
               if (
@@ -119,7 +119,8 @@ export const getStream = async function ({
                 dlHref.includes(".mp4") ||
                 dlHref.includes(".m3u8") ||
                 dlHref.includes("awsstorage") ||
-                dlHref.includes("download")
+                dlHref.includes("download") ||
+                dlHref.includes("filesd1.xyz")
               ) {
                 streams.push({
                   server: `${title} - ${dlTitle}`,
