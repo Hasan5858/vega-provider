@@ -131,7 +131,14 @@ async function fetchPosts({
     const contentEncoding = res.headers['content-encoding'];
     console.log(`Content-Encoding: ${contentEncoding}`);
     
-    if (contentEncoding === 'gzip' && Buffer.isBuffer(htmlData)) {
+    // Check for gzip magic bytes (1f 8b) if data is a Buffer
+    let isGzipped = false;
+    if (Buffer.isBuffer(htmlData)) {
+      isGzipped = htmlData.length >= 2 && htmlData[0] === 0x1f && htmlData[1] === 0x8b;
+      console.log(`Is gzipped (magic bytes): ${isGzipped}`);
+    }
+    
+    if (isGzipped) {
       try {
         htmlData = gunzipSync(htmlData).toString('utf8');
         console.log(`✅ Decompressed gzip data, new length: ${htmlData.length}`);
@@ -139,6 +146,9 @@ async function fetchPosts({
         console.error("Failed to decompress gzip:", decompressErr);
         htmlData = htmlData.toString();
       }
+    } else if (Buffer.isBuffer(htmlData)) {
+      htmlData = htmlData.toString('utf8');
+      console.log(`Converted Buffer to string, length: ${htmlData.length}`);
     }
     
     const $ = cheerio.load(htmlData || "");
