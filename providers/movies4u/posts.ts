@@ -88,6 +88,9 @@ async function fetchPosts({
       // Homepage - ensure we have the correct URL
       url = `${baseUrl}${page > 1 ? `/page/${page}/` : ""}`;
     }
+    
+    // Fix double slashes
+    url = url.replace(/([^:]\/)\/+/g, '$1');
 
     console.log(`🔗 Constructed URL: ${url}`);
     const { axios, cheerio } = providerContext;
