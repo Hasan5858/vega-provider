@@ -89,12 +89,20 @@ export async function getStream({
             });
             console.log('[Movies4U Stream] GoFile extracted 1 stream');
           }
-        } else if (url.includes('nexdrive') || url.includes('hubdrive')) {
-          // NexDrive and HubDrive require extraction but we'll pass them through
-          // The player or user can handle these if available
-          console.log('[Movies4U Stream] NexDrive/HubDrive link - passing through');
+        } else if (url.includes('nexdrive')) {
+          // NexDrive contains links to other streaming services
+          console.log('[Movies4U Stream] NexDrive link detected - passing through to player');
           allStreams.push({
-            server: streamLink.server || 'Unknown',
+            server: streamLink.server || 'NexDrive',
+            link: url,
+            type: streamLink.type || 'mp4',
+            quality: streamLink.quality,
+          });
+        } else if (url.includes('hubdrive')) {
+          // HubDrive also contains links to other services
+          console.log('[Movies4U Stream] HubDrive link detected - passing through to player');
+          allStreams.push({
+            server: streamLink.server || 'HubDrive',
             link: url,
             type: streamLink.type || 'mp4',
             quality: streamLink.quality,

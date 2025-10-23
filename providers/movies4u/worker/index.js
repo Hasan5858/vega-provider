@@ -124,13 +124,64 @@ async function getMeta(link) {
       type = 'series';
     }
 
+    // For movies, fetch streams and include them in linkList for immediate playback
+    let linkList = [];
+    if (type === 'movie') {
+      try {
+        const streams = await getStream(link);
+        if (streams && streams.length > 0) {
+          // Group streams by quality
+          const streamsByQuality = {};
+          streams.forEach(stream => {
+            const quality = stream.quality || 'auto';
+            if (!streamsByQuality[quality]) {
+              streamsByQuality[quality] = [];
+            }
+            streamsByQuality[quality].push(stream);
+          });
+
+          // Create a single linkList entry with all direct links
+          linkList = [{
+            title: 'Play Movie',
+            directLinks: streams.map((stream, idx) => ({
+              link: stream.link,
+              title: `${stream.server} - ${stream.quality || 'auto'}`,
+              type: 'movie'
+            }))
+          }];
+        }
+      } catch (streamError) {
+        console.error('Error fetching streams for meta:', streamError);
+        // Continue with empty linkList if stream fetching fails
+      }
+    } else if (type === 'series') {
+      // For series, try to fetch streams as well and present them similarly
+      try {
+        const streams = await getStream(link);
+        if (streams && streams.length > 0) {
+          // Create a single linkList entry with all direct links
+          linkList = [{
+            title: 'Watch Series',
+            directLinks: streams.map((stream, idx) => ({
+              link: stream.link,
+              title: `${stream.server} - ${stream.quality || 'auto'}`,
+              type: 'series'
+            }))
+          }];
+        }
+      } catch (streamError) {
+        console.error('Error fetching streams for series meta:', streamError);
+        // Continue with empty linkList if stream fetching fails
+      }
+    }
+
     return {
       title: title || 'Unknown',
       image: image || '',
       synopsis: synopsis || '',
       imdbId: imdbId || '',
       type: type,
-      linkList: [] // Empty for now, provider will handle link extraction
+      linkList: linkList
     };
   } catch (error) {
     console.error('Error in getMeta:', error);
