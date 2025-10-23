@@ -15,33 +15,52 @@ export const getStream = async function ({
     const data = res.data;
     const $ = providerContext.cheerio.load(data);
     const streams: Stream[] = [];
-    const elements = $(".button2,.button1,.button3,.button4,.button").toArray();
+    
+    // For linkmake.in pages, look for download links
+    // For direct movie pages, look for button classes
+    const elements = $("a[href]:contains('Download'), .button2,.button1,.button3,.button4,.button").toArray();
+    
     const promises = elements.map(async (element) => {
-      const title = $(element).text();
-      let link = $(element).attr("href");
-      if (title.includes("GDFLIX") && link) {
+      const title = $(element).text().trim();
+      let elementLink = $(element).attr("href");
+      
+      if (!title || !elementLink) return;
+      
+      // Handle GDFLIX links
+      if (title.includes("GDFLIX") && elementLink) {
         const gdLinks = await providerContext.extractors.gdFlixExtracter(
-          link,
+          elementLink,
           signal
         );
         streams.push(...gdLinks);
+        return;
       }
-      const alreadyAdded = streams.find((s) => s.link === link);
+      
+      // Skip unwanted links
       if (
-        title &&
-        link &&
-        !title.includes("Watch") &&
-        !title.includes("Login") &&
-        !title.includes("GoFile") &&
-        !alreadyAdded
+        title.includes("Watch") ||
+        title.includes("Login") ||
+        title.includes("Signup") ||
+        title.includes("Privacy") ||
+        title.includes("DMCA") ||
+        title.includes("Contact") ||
+        title.includes("Linkmake")
       ) {
-        streams.push({
-          server: title,
-          link: link,
-          type: "mkv",
-        });
+        return;
       }
+      
+      // Check if already added
+      const alreadyAdded = streams.find((s) => s.link === elementLink);
+      if (alreadyAdded) return;
+      
+      // Add the stream
+      streams.push({
+        server: title,
+        link: elementLink,
+        type: "mkv",
+      });
     });
+    
     await Promise.all(promises);
     return streams;
   } catch (err) {
