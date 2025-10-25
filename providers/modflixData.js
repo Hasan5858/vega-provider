@@ -132,10 +132,6 @@ const modflixData = {
         "name": "4khdhub",
         "url": "https://4khdhub.fans"
     },
-    "moviezwap": {
-        "name": "moviezwap",
-        "url": "https://www.moviezwap.haus/"
-    },
     "9xflix": {
         "name": "9xflix",
         "url": "https://9xflix.nexus"
