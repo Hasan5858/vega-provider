@@ -73,18 +73,16 @@ export const getMeta = async function ({
       }
     );
 
-    // Create individual quality options as separate links
-    // The app will call getStream for each quality option
+    // Create a single "Watch Movie" option
+    // The app will call getStream once and get all available qualities
     if (qualityOptions.length > 0) {
-      qualityOptions.forEach((option, index) => {
-        links.push({
-          title: option.title, // e.g., "320p", "480p", "720p"
-          directLinks: [{
-            title: option.title,
-            link: url, // Movie page URL - getStream will extract the specific quality
-            type: "movie"
-          }]
-        });
+      links.push({
+        title: "Watch Movie",
+        directLinks: [{
+          title: "Movie",
+          link: url, // Movie page URL - getStream will extract all qualities
+          type: "movie"
+        }]
       });
     }
 

@@ -61,19 +61,10 @@ export async function getStream({
     }
   });
 
-  // Filter by requested quality if specified
-  let filteredDownloadLinks = downloadLinks;
-  if (type && type !== "movie") {
-    // type contains the quality (e.g., "320p", "480p", "720p")
-    const requestedQuality = type.toLowerCase();
-    console.log(`moviezwap: Filtering for quality: ${requestedQuality}`);
-    
-    filteredDownloadLinks = downloadLinks.filter(link => 
-      link.text.toLowerCase().includes(requestedQuality)
-    );
-    
-    console.log(`moviezwap: Found ${filteredDownloadLinks.length} links for quality ${requestedQuality}`);
-  }
+  // Return all available streams - let the app handle quality selection
+  // The app will filter by quality on the client side
+  const filteredDownloadLinks = downloadLinks;
+  console.log(`moviezwap: Found ${filteredDownloadLinks.length} total download links`);
 
   // Process each download link to get the direct MP4 URL
   for (const downloadLink of filteredDownloadLinks) {
