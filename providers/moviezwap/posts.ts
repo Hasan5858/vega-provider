@@ -46,8 +46,10 @@ async function posts({
   cheerio: ProviderContext["cheerio"];
 }): Promise<Post[]> {
   try {
+    console.log("moviezwap posts function called with URL:", url);
     const res = await fetch(url, { signal });
     const data = await res.text();
+    console.log("moviezwap fetched data length:", data.length);
     const $ = cheerio.load(data);
     const catalog: Post[] = [];
     
@@ -55,44 +57,49 @@ async function posts({
     const urlObj = new URL(url);
     const baseUrl = `${urlObj.protocol}//${urlObj.host}`;
     
-  // Look for movie links in the category page structure
-  $('a[href*="/movie/"]').each((i, el) => {
-    const title = $(el).text().trim();
-    const link = $(el).attr("href");
+    // Look for movie links in the category page structure
+    const movieLinks = $('a[href*="/movie/"]');
+    console.log("moviezwap found movie links:", movieLinks.length);
     
-    // Generate thumbnail URL based on movie link pattern
-    let image = "";
-    if (link && link.includes('/movie/')) {
-      // Extract movie name from link (e.g., /movie/Tunnel-(2025)-Telugu-Original.html)
-      const movieName = link.replace(/.*\/movie\//, '').replace('.html', '');
-      // Convert to lowercase and replace special characters for poster naming convention
-      let posterName = movieName.toLowerCase()
-        .replace(/[^a-z0-9-]/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
+    movieLinks.each((i, el) => {
+      const title = $(el).text().trim();
+      const link = $(el).attr("href");
       
-      // MoviezWap seems to use "dubbed" in poster names even for original movies
-      // Replace "original" with "dubbed" in poster names
-      posterName = posterName.replace('-original', '-dubbed');
-      
-      // Some movies need "-movie" suffix (like tunnel-2025-telugu-dubbed-movie.jpg)
-      // Add "-movie" if the name doesn't already contain "org" or "movie"
-      if (!posterName.includes('-org') && !posterName.includes('-movie')) {
-        posterName += '-movie';
+      // Generate thumbnail URL based on movie link pattern
+      let image = "";
+      if (link && link.includes('/movie/')) {
+        // Extract movie name from link (e.g., /movie/Tunnel-(2025)-Telugu-Original.html)
+        const movieName = link.replace(/.*\/movie\//, '').replace('.html', '');
+        // Convert to lowercase and replace special characters for poster naming convention
+        let posterName = movieName.toLowerCase()
+          .replace(/[^a-z0-9-]/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '');
+        
+        // MoviezWap seems to use "dubbed" in poster names even for original movies
+        // Replace "original" with "dubbed" in poster names
+        posterName = posterName.replace('-original', '-dubbed');
+        
+        // Some movies need "-movie" suffix (like tunnel-2025-telugu-dubbed-movie.jpg)
+        // Add "-movie" if the name doesn't already contain "org" or "movie"
+        if (!posterName.includes('-org') && !posterName.includes('-movie')) {
+          posterName += '-movie';
+        }
+        
+        // Generate poster URL based on MoviezWap's naming pattern
+        image = `${baseUrl}/poster/${posterName}.jpg`;
       }
       
-      // Generate poster URL based on MoviezWap's naming pattern
-      image = `${baseUrl}/poster/${posterName}.jpg`;
-    }
+      if (title && link && link.includes('/movie/')) {
+        catalog.push({
+          title: title,
+          link: link,
+          image: image,
+        });
+      }
+    });
     
-    if (title && link && link.includes('/movie/')) {
-      catalog.push({
-        title: title,
-        link: link,
-        image: image,
-      });
-    }
-  });
+    console.log("moviezwap returning posts:", catalog.length);
     return catalog;
   } catch (err) {
     console.error("moviezwapGetPosts error ", err);
