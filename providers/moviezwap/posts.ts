@@ -80,9 +80,14 @@ async function posts({
       // Remove "-original" and "-dubbed" suffixes as they're not in poster URLs
       posterName = posterName.replace('-original', '').replace('-dubbed', '');
       
-      // Add "-movie" suffix if not already present
-      if (!posterName.includes('-movie')) {
-        posterName += '-movie';
+      // For series, add "-dubbed" back as they use it in poster names
+      if (posterName.includes('season') || posterName.includes('episode')) {
+        posterName = posterName.replace('-movie', '-dubbed');
+      } else {
+        // For regular movies, add "-movie" suffix if not already present
+        if (!posterName.includes('-movie')) {
+          posterName += '-movie';
+        }
       }
         
         // Generate poster URL based on MoviezWap's naming pattern

@@ -52,23 +52,41 @@ export const getMeta = async function ({
       synopsis = $("p:contains('plot')").text().trim();
     }
 
-    // 4. Download links (multiple qualities)
+    // 4. Create quality options - return the movie page URL for getStream to process
     const links: Link[] = [];
+    
+    // Extract quality information from download links
+    const qualityOptions: {title: string, quality: string}[] = [];
     $('a[href*="download.php?file="], a[href*="dwload.php?file="]').each(
       (i, el) => {
-        const downloadPage =
-          $(el).attr("href")?.replace("dwload.php", "download.php") || "";
         const text = $(el).text().trim();
-        if (downloadPage && /\d+p/i.test(text)) {
-          // Only add links with quality in text
-          links.push({
-            title: text,
-            directLinks: [{ title: "Movie", link: baseUrl + downloadPage }],
-          });
+        if (/\d+p/i.test(text)) {
+          // Extract quality from text (e.g., "320p", "480p", "720p")
+          const qualityMatch = text.match(/(\d+)p/i);
+          if (qualityMatch) {
+            qualityOptions.push({
+              title: text,
+              quality: qualityMatch[1]
+            });
+          }
         }
       }
     );
 
+    // Create a single link with all quality options
+    // The app will call getStream with this movie page URL
+    if (qualityOptions.length > 0) {
+      links.push({
+        title: "Watch Movie",
+        directLinks: [{
+          title: "Movie",
+          link: url, // This is the movie page URL, not download URL
+          type: "movie"
+        }]
+      });
+    }
+
+    // Also add any play button links (for series/episodes)
     $("img[src*='/images/play.png']").each((i, el) => {
       const downloadPage = $(el).siblings("a").attr("href");
       const text = $(el).siblings("a").text().trim();
