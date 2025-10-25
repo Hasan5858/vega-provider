@@ -11,14 +11,8 @@ export async function getStream({
   signal: AbortSignal;
   providerContext: ProviderContext;
 }) {
-  console.log(`moviezwap stream function called with link: ${link}, type: ${type}`);
+  console.log(`moviezwap download function called with link: ${link}, type: ${type}`);
   const { axios, cheerio, commonHeaders: headers, getBaseUrl } = providerContext;
-  
-  // Check if this is a download.php link (wrong URL format from app)
-  if (link.includes('/download.php?file=')) {
-    console.log('moviezwap: Received download.php link, this is wrong - should be movie page URL');
-    return [];
-  }
   
   const res = await axios.get(link, { headers, signal });
   const html = res.data;
@@ -28,7 +22,7 @@ export async function getStream({
   
   console.log(`moviezwap: Fetched movie page, looking for download links...`);
 
-  // Extract download links with different qualities and get direct MP4 URLs
+  // Extract download links with different qualities
   const downloadLinks: Array<{url: string, quality: "360" | "480" | "720" | "1080" | "2160" | undefined, text: string}> = [];
   $('a[href*="/dwload.php?file="]').each((i, el) => {
     const href = $(el).attr("href");
@@ -61,13 +55,10 @@ export async function getStream({
     }
   });
 
-  // Return all available streams - let the app handle quality selection
-  // The app will filter by quality on the client side
-  const filteredDownloadLinks = downloadLinks;
-  console.log(`moviezwap: Found ${filteredDownloadLinks.length} total download links`);
+  console.log(`moviezwap: Found ${downloadLinks.length} download links`);
 
-  // Process each download link to get the direct MP4 URL
-  for (const downloadLink of filteredDownloadLinks) {
+  // Process each download link to get the direct download URL
+  for (const downloadLink of downloadLinks) {
     try {
       // Get the download page
       const downloadPageRes = await axios.get(downloadLink.url, {
@@ -112,39 +103,20 @@ export async function getStream({
         });
       }
       
-      // If we found a direct download URL, add it to streams
+      // If we found a direct download URL, add it as a download stream
       if (directDownloadUrl) {
-        // Test if the URL is accessible before adding it
-        try {
-          const testResponse = await fetch(directDownloadUrl, {
-            method: 'HEAD',
-            headers: {
-              ...headers,
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-              "Referer": baseUrl,
-            },
-            signal
-          });
-          
-          if (testResponse.ok) {
-            Streams.push({
-              link: directDownloadUrl,
-              type: "mp4",
-              server: "MoviezWap",
-              quality: downloadLink.quality,
-              headers: {
-                ...headers,
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                "Referer": baseUrl,
-              },
-            });
-            console.log(`moviezwap: Added working stream for ${downloadLink.quality}p`);
-          } else {
-            console.log(`moviezwap: Skipped non-working stream for ${downloadLink.quality}p (${testResponse.status})`);
-          }
-        } catch (testError) {
-          console.log(`moviezwap: Skipped failing stream for ${downloadLink.quality}p (${testError instanceof Error ? testError.message : 'Unknown error'})`);
-        }
+        Streams.push({
+          link: directDownloadUrl,
+          type: "download", // Changed from "mp4" to "download"
+          server: `MoviezWap Download [${downloadLink.quality}p]`,
+          quality: downloadLink.quality,
+          headers: {
+            ...headers,
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Referer": baseUrl,
+          },
+        });
+        console.log(`moviezwap: Added download link for ${downloadLink.quality}p`);
       }
       
     } catch (error) {
@@ -153,9 +125,9 @@ export async function getStream({
     }
   }
 
-  console.log(`moviezwap: Returning ${Streams.length} streams to app`);
+  console.log(`moviezwap: Returning ${Streams.length} download links to app`);
   Streams.forEach((stream, index) => {
-    console.log(`  Stream ${index + 1}: ${stream.server} - ${stream.quality}p - ${stream.type}`);
+    console.log(`  Download ${index + 1}: ${stream.server} - ${stream.quality}p - ${stream.type}`);
     console.log(`    URL: ${stream.link.substring(0, 80)}...`);
   });
 

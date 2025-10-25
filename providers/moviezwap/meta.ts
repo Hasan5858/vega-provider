@@ -73,14 +73,14 @@ export const getMeta = async function ({
       }
     );
 
-    // Create a single "Watch Movie" option
-    // The app will call getStream once and get all available qualities
+    // Create a single "Download Movie" option
+    // The app will call getStream once and get all available download qualities
     if (qualityOptions.length > 0) {
       links.push({
-        title: "Watch Movie",
+        title: "Download Movie",
         directLinks: [{
-          title: "Movie",
-          link: url, // Movie page URL - getStream will extract all qualities
+          title: "Download",
+          link: url, // Movie page URL - getStream will extract all download qualities
           type: "movie"
         }]
       });

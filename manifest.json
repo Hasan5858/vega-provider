@@ -168,12 +168,12 @@
     "disabled": true
   },
   {
-    "display_name": "MoviezWap",
-    "value": "moviezwap",
-    "version": "2.9",
-    "icon": "",
-    "type": "india",
-    "disabled": false
+          "display_name": "MoviezWap",
+          "value": "moviezwap",
+          "version": "3.0",
+          "icon": "",
+          "type": "india",
+          "disabled": false
   },
   {
     "display_name": "ShowBox",
