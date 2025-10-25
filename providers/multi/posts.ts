@@ -68,7 +68,8 @@ async function posts({
           });
         }
       });
-    return catalog;
+    // Limit posts to 15 for faster homepage loading
+    return catalog.slice(0, 15);
   } catch (err) {
     console.error("multiGetPosts error ", err);
     return [];
