@@ -2,6 +2,7 @@ import { ProviderContext, Stream } from "../types";
 
 export async function getStream({
   link,
+  type,
   signal,
   providerContext,
 }: {
@@ -10,7 +11,7 @@ export async function getStream({
   signal: AbortSignal;
   providerContext: ProviderContext;
 }) {
-  console.log(`moviezwap stream function called with link: ${link}`);
+  console.log(`moviezwap stream function called with link: ${link}, type: ${type}`);
   const { axios, cheerio, commonHeaders: headers, getBaseUrl } = providerContext;
   
   // Check if this is a download.php link (wrong URL format from app)
@@ -60,8 +61,22 @@ export async function getStream({
     }
   });
 
+  // Filter by requested quality if specified
+  let filteredDownloadLinks = downloadLinks;
+  if (type && type !== "movie") {
+    // type contains the quality (e.g., "320p", "480p", "720p")
+    const requestedQuality = type.toLowerCase();
+    console.log(`moviezwap: Filtering for quality: ${requestedQuality}`);
+    
+    filteredDownloadLinks = downloadLinks.filter(link => 
+      link.text.toLowerCase().includes(requestedQuality)
+    );
+    
+    console.log(`moviezwap: Found ${filteredDownloadLinks.length} links for quality ${requestedQuality}`);
+  }
+
   // Process each download link to get the direct MP4 URL
-  for (const downloadLink of downloadLinks) {
+  for (const downloadLink of filteredDownloadLinks) {
     try {
       // Get the download page
       const downloadPageRes = await axios.get(downloadLink.url, {

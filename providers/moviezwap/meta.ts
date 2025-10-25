@@ -73,18 +73,18 @@ export const getMeta = async function ({
       }
     );
 
-    // Create quality options as directLinks for movies
-    // The app will call getStream with the movie page URL for each quality
+    // Create individual quality options as separate links
+    // The app will call getStream for each quality option
     if (qualityOptions.length > 0) {
-      // For movies, create directLinks with the movie page URL
-      // The app will call getStream with this URL and we'll extract all qualities
-      links.push({
-        title: "Watch Movie",
-        directLinks: [{
-          title: "Movie",
-          link: url, // This is the movie page URL
-          type: "movie"
-        }]
+      qualityOptions.forEach((option, index) => {
+        links.push({
+          title: option.title, // e.g., "320p", "480p", "720p"
+          directLinks: [{
+            title: option.title,
+            link: url, // Movie page URL - getStream will extract the specific quality
+            type: "movie"
+          }]
+        });
       });
     }
 
