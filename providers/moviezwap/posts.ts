@@ -53,9 +53,9 @@ async function posts({
     const $ = cheerio.load(data);
     const catalog: Post[] = [];
     
-    // Extract base URL from the URL parameter
-    const urlObj = new URL(url);
-    const baseUrl = `${urlObj.protocol}//${urlObj.host}`;
+    // Extract base URL from the URL parameter using string manipulation
+    const urlMatch = url.match(/^(https?:\/\/[^\/]+)/);
+    const baseUrl = urlMatch ? urlMatch[1] : "https://www.moviezwap.haus";
     
     // Look for movie links in the category page structure
     const movieLinks = $('a[href*="/movie/"]');
