@@ -34,7 +34,7 @@ const modflixData = {
     },
     "multi": {
         "name": "multimovies",
-        "url": "https://multimovies.network"
+        "url": "https://multimovies.cheap/"
     },
     "w4u": {
         "name": "world4ufree",
