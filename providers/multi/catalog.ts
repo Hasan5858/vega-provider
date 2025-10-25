@@ -15,6 +15,42 @@ export const catalog = [
     title: "Disney Hotstar",
     filter: "/genre/disney-hotstar/",
   },
+  {
+    title: "Jio OTT",
+    filter: "/genre/jio-ott/",
+  },
+  {
+    title: "K-Drama",
+    filter: "/genre/k-drama/",
+  },
+  {
+    title: "Sony LIV",
+    filter: "/genre/sony-liv/",
+  },
+  {
+    title: "Zee5",
+    filter: "/genre/zee-5/",
+  },
+  {
+    title: "Anime Hindi",
+    filter: "/genre/anime-hindi/",
+  },
+  {
+    title: "Cartoon Network",
+    filter: "/genre/cartoon-network/",
+  },
+  {
+    title: "Marvel Collection",
+    filter: "/genre/marvel-collection/",
+  },
+  {
+    title: "Bollywood Movies",
+    filter: "/genre/bollywood-movies/",
+  },
+  {
+    title: "South Indian",
+    filter: "/genre/south-indian/",
+  },
 ];
 
 export const genres = [
