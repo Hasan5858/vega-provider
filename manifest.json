@@ -88,14 +88,6 @@
     "disabled": false
   },
   {
-    "display_name": "Movies4U",
-    "value": "movies4u",
-    "version": "3.5",
-    "icon": "",
-    "type": "global",
-    "disabled": true
-  },
-  {
     "display_name": "KmMovies",
     "value": "kmMovies",
     "version": "2.4",
@@ -176,17 +168,9 @@
     "disabled": true
   },
   {
-    "display_name": "MoviesApi",
-    "value": "moviesApi",
-    "version": "1.0",
-    "icon": "",
-    "type": "english",
-    "disabled": true
-  },
-  {
     "display_name": "MoviezWap",
     "value": "moviezwap",
-    "version": "1.0",
+    "version": "1.1",
     "icon": "",
     "type": "india",
     "disabled": false

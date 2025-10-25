@@ -96,14 +96,6 @@
     "disabled": false
   },
   {
-    "display_name": "Movies4U",
-    "value": "movies4u",
-    "version": "1.0",
-    "icon": "",
-    "type": "global",
-    "disabled": false
-  },
-  {
     "display_name": "KmMovies",
     "value": "kmMovies",
     "version": "1.2",
@@ -181,14 +173,6 @@
     "version": "1.0",
     "icon": "",
     "type": "global",
-    "disabled": true
-  },
-  {
-    "display_name": "MoviesApi",
-    "value": "moviesApi",
-    "version": "1.0",
-    "icon": "",
-    "type": "english",
     "disabled": true
   },
   {

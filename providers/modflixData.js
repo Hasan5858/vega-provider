@@ -104,10 +104,6 @@ const modflixData = {
         "name": "animerulz",
         "url": "https://animerulz.co"
     },
-    "moviesapi": {
-        "name": "moviesapi",
-        "url": "https://moviesapi.club"
-    },
     "ridomovies": {
         "name": "ridomovies",
         "url": "https://ridomovies.tv"
@@ -138,7 +134,7 @@ const modflixData = {
     },
     "moviezwap": {
         "name": "moviezwap",
-        "url": "https://www.moviezwap.beer/"
+        "url": "https://www.moviezwap.haus/"
     },
     "9xflix": {
         "name": "9xflix",
@@ -159,10 +155,6 @@ const modflixData = {
     "katfix": {
         "name": "katfix",
         "url": "https://katmoviefix.cards"
-    },
-    "movies4u": {
-        "name": "movies4u",
-        "url": "https://movies4u.lt"
     },
     "joya9tv": {
         "name": "joya9tv1",

@@ -107,10 +107,6 @@
         "name": "animerulz",
         "url": "https://animerulz.co"
     },
-    "moviesapi": {
-        "name": "moviesapi",
-        "url": "https://moviesapi.club"
-    },
     "ridomovies": {
         "name": "ridomovies",
         "url": "https://ridomovies.tv"
@@ -141,7 +137,7 @@
     },
     "moviezwap": {
         "name": "moviezwap",
-        "url": "https://www.moviezwap.beer/"
+        "url": "https://www.moviezwap.haus/"
     },
     "9xflix": {
         "name": "9xflix",
@@ -162,10 +158,6 @@
     "katmoviefix": {
         "name": "katmoviefix",
         "url": "https://katmoviefix.cards"
-    },
-    "movies4u": {
-        "name": "movies4u",
-        "url": "https://movies4u.ps/"
     },
     "joya9tv": {
         "name": "joya9tv1",
