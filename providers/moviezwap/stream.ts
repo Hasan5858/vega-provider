@@ -114,17 +114,37 @@ export async function getStream({
       
       // If we found a direct download URL, add it to streams
       if (directDownloadUrl) {
-        Streams.push({
-          link: directDownloadUrl,
-          type: "mp4",
-          server: "MoviezWap",
-          quality: downloadLink.quality,
-          headers: {
-            ...headers,
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Referer": baseUrl,
-          },
-        });
+        // Test if the URL is accessible before adding it
+        try {
+          const testResponse = await fetch(directDownloadUrl, {
+            method: 'HEAD',
+            headers: {
+              ...headers,
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+              "Referer": baseUrl,
+            },
+            signal
+          });
+          
+          if (testResponse.ok) {
+            Streams.push({
+              link: directDownloadUrl,
+              type: "mp4",
+              server: "MoviezWap",
+              quality: downloadLink.quality,
+              headers: {
+                ...headers,
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Referer": baseUrl,
+              },
+            });
+            console.log(`moviezwap: Added working stream for ${downloadLink.quality}p`);
+          } else {
+            console.log(`moviezwap: Skipped non-working stream for ${downloadLink.quality}p (${testResponse.status})`);
+          }
+        } catch (testError) {
+          console.log(`moviezwap: Skipped failing stream for ${downloadLink.quality}p (${testError instanceof Error ? testError.message : 'Unknown error'})`);
+        }
       }
       
     } catch (error) {
@@ -132,6 +152,12 @@ export async function getStream({
       // Continue with other download links even if one fails
     }
   }
+
+  console.log(`moviezwap: Returning ${Streams.length} streams to app`);
+  Streams.forEach((stream, index) => {
+    console.log(`  Stream ${index + 1}: ${stream.server} - ${stream.quality}p - ${stream.type}`);
+    console.log(`    URL: ${stream.link.substring(0, 80)}...`);
+  });
 
   return Streams;
 }
