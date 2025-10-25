@@ -50,6 +50,11 @@ async function posts({
     const data = await res.text();
     const $ = cheerio.load(data);
     const catalog: Post[] = [];
+    
+    // Extract base URL from the URL parameter
+    const urlObj = new URL(url);
+    const baseUrl = `${urlObj.protocol}//${urlObj.host}`;
+    
     $('a[href^="/movie/"]').each((i, el) => {
       const title = $(el).text().trim();
       const link = $(el).attr("href");
@@ -76,7 +81,7 @@ async function posts({
         }
         
         // Generate poster URL based on MoviezWap's naming pattern
-        image = `/poster/${posterName}.jpg`;
+        image = `${baseUrl}/poster/${posterName}.jpg`;
       }
       
       if (title && link) {
