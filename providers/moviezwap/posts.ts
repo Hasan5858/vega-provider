@@ -76,15 +76,14 @@ async function posts({
           .replace(/-+/g, '-')
           .replace(/^-|-$/g, '');
         
-        // MoviezWap seems to use "dubbed" in poster names even for original movies
-        // Replace "original" with "dubbed" in poster names
-        posterName = posterName.replace('-original', '-dubbed');
-        
-        // Some movies need "-movie" suffix (like tunnel-2025-telugu-dubbed-movie.jpg)
-        // Add "-movie" if the name doesn't already contain "org" or "movie"
-        if (!posterName.includes('-org') && !posterName.includes('-movie')) {
-          posterName += '-movie';
-        }
+      // MoviezWap uses different naming patterns for posters
+      // Remove "-original" and "-dubbed" suffixes as they're not in poster URLs
+      posterName = posterName.replace('-original', '').replace('-dubbed', '');
+      
+      // Add "-movie" suffix if not already present
+      if (!posterName.includes('-movie')) {
+        posterName += '-movie';
+      }
         
         // Generate poster URL based on MoviezWap's naming pattern
         image = `${baseUrl}/poster/${posterName}.jpg`;

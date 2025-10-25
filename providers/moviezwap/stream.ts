@@ -10,12 +10,22 @@ export async function getStream({
   signal: AbortSignal;
   providerContext: ProviderContext;
 }) {
+  console.log(`moviezwap stream function called with link: ${link}`);
   const { axios, cheerio, commonHeaders: headers, getBaseUrl } = providerContext;
+  
+  // Check if this is a download.php link (wrong URL format from app)
+  if (link.includes('/download.php?file=')) {
+    console.log('moviezwap: Received download.php link, this is wrong - should be movie page URL');
+    return [];
+  }
+  
   const res = await axios.get(link, { headers, signal });
   const html = res.data;
   const $ = cheerio.load(html);
   const Streams: Stream[] = [];
   const baseUrl = await getBaseUrl("moviezwap");
+  
+  console.log(`moviezwap: Fetched movie page, looking for download links...`);
 
   // Extract download links with different qualities and get direct MP4 URLs
   const downloadLinks: Array<{url: string, quality: "360" | "480" | "720" | "1080" | "2160" | undefined, text: string}> = [];
