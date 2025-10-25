@@ -73,31 +73,40 @@ export const getMeta = async function ({
       }
     );
 
-    // Create a single link with all quality options
-    // The app will call getStream with this movie page URL
+    // Create quality options as directLinks for movies
+    // The app will call getStream with the movie page URL for each quality
     if (qualityOptions.length > 0) {
+      // For movies, create directLinks with the movie page URL
+      // The app will call getStream with this URL and we'll extract all qualities
       links.push({
         title: "Watch Movie",
         directLinks: [{
           title: "Movie",
-          link: url, // This is the movie page URL, not download URL
+          link: url, // This is the movie page URL
           type: "movie"
         }]
       });
     }
 
-    // Also add any play button links (for series/episodes)
-    $("img[src*='/images/play.png']").each((i, el) => {
-      const downloadPage = $(el).siblings("a").attr("href");
-      const text = $(el).siblings("a").text().trim();
-      console.log("Found link:🔥🔥", text, downloadPage);
-      if (downloadPage && text) {
-        links.push({
-          title: text,
-          episodesLink: baseUrl + downloadPage,
-        });
-      }
-    });
+    // Only add episodesLink for actual series (not movies with download links)
+    // Check if this is a series by looking for series-specific patterns
+    const isSeries = title.toLowerCase().includes('season') || 
+                    title.toLowerCase().includes('episode') ||
+                    title.toLowerCase().includes('series');
+    
+    if (isSeries) {
+      $("img[src*='/images/play.png']").each((i, el) => {
+        const downloadPage = $(el).siblings("a").attr("href");
+        const text = $(el).siblings("a").text().trim();
+        console.log("Found series link:🔥🔥", text, downloadPage);
+        if (downloadPage && text) {
+          links.push({
+            title: text,
+            episodesLink: baseUrl + downloadPage,
+          });
+        }
+      });
+    }
 
     return {
       title,

@@ -28,14 +28,14 @@ const { getPosts } = require('./dist/moviezwap/posts.js');
 const { getMeta } = require('./dist/moviezwap/meta.js');
 const { getStream } = require('./dist/moviezwap/stream.js');
 
-async function testCompleteFlow() {
+async function testCompleteAppFlow() {
   try {
-    console.log('🧪 Testing MoviezWap Complete Flow (App Simulation)');
-    console.log('=' .repeat(60));
+    console.log('🧪 Testing MoviezWap - Complete App Flow Simulation');
+    console.log('=' .repeat(70));
     
     // Step 1: Test posts extraction (homepage)
-    console.log('\n📋 Step 1: Testing Posts Extraction (Homepage)');
-    console.log('-'.repeat(40));
+    console.log('\n📋 Step 1: Homepage Posts Extraction');
+    console.log('-'.repeat(50));
     
     const posts = await getPosts({
       filter: "/category/Telugu-(2025)-Movies.html",
@@ -48,7 +48,7 @@ async function testCompleteFlow() {
     console.log(`✅ Found ${posts.length} posts`);
     if (posts.length > 0) {
       console.log(`📝 Sample post:`, {
-        title: posts[0].title,
+        title: posts[0].title.substring(0, 50) + '...',
         image: posts[0].image,
         link: posts[0].link
       });
@@ -64,12 +64,11 @@ async function testCompleteFlow() {
       }
     }
     
-    // Step 2: Test meta extraction (movie details) - use a specific movie with download links
-    console.log('\n🎬 Step 2: Testing Meta Extraction (Movie Details)');
-    console.log('-'.repeat(40));
+    // Step 2: Test meta extraction (movie details) - use the specific movie from screenshot
+    console.log('\n🎬 Step 2: Movie Details Extraction');
+    console.log('-'.repeat(50));
     
-    // Use the specific movie that has download links
-    const movieUrl = "https://www.moviezwap.haus/movie/Bhadrakaali-(2025)-Telugu-Original.html";
+    const movieUrl = "https://www.moviezwap.haus/movie/Thank-You-Dear-(2025)-Telugu-Original.html";
     console.log(`🔗 Testing movie: ${movieUrl}`);
       
     const meta = await getMeta({
@@ -78,24 +77,31 @@ async function testCompleteFlow() {
     });
       
     console.log(`✅ Meta extracted:`, {
-      title: meta.title,
+      title: meta.title.substring(0, 60) + '...',
       type: meta.type,
       linkListCount: meta.linkList?.length || 0
     });
       
     if (meta.linkList && meta.linkList.length > 0) {
-      console.log(`📋 LinkList sample:`, {
-        title: meta.linkList[0].title,
-        directLinks: meta.linkList[0].directLinks?.length || 0,
-        episodesLink: meta.linkList[0].episodesLink ? 'Yes' : 'No'
+      console.log(`📋 LinkList details:`);
+      meta.linkList.forEach((link, index) => {
+        console.log(`  ${index + 1}. "${link.title}"`);
+        console.log(`     - directLinks: ${link.directLinks?.length || 0}`);
+        console.log(`     - episodesLink: ${link.episodesLink ? 'Yes' : 'No'}`);
+        if (link.directLinks && link.directLinks.length > 0) {
+          console.log(`     - URL: ${link.directLinks[0].link}`);
+        }
       });
       
       // Step 3: Test stream extraction (what app calls)
-      console.log('\n🎥 Step 3: Testing Stream Extraction (App Call)');
-      console.log('-'.repeat(40));
+      console.log('\n🎥 Step 3: Stream Extraction (App Call)');
+      console.log('-'.repeat(50));
       
-      if (meta.linkList[0].directLinks && meta.linkList[0].directLinks.length > 0) {
-        const streamUrl = meta.linkList[0].directLinks[0].link;
+      // Find the directLinks entry (should be "Watch Movie")
+      const watchMovieLink = meta.linkList.find(link => link.title === "Watch Movie");
+      
+      if (watchMovieLink && watchMovieLink.directLinks && watchMovieLink.directLinks.length > 0) {
+        const streamUrl = watchMovieLink.directLinks[0].link;
         console.log(`🔗 App calls getStream with: ${streamUrl}`);
         
         const streams = await getStream({
@@ -113,30 +119,30 @@ async function testCompleteFlow() {
         
         // Test if streams are actually playable
         if (streams.length > 0) {
-          console.log('\n🔍 Step 4: Testing Stream URLs (Playability)');
-          console.log('-'.repeat(40));
+          console.log('\n🔍 Step 4: Stream URL Playability Test');
+          console.log('-'.repeat(50));
           
-          for (let i = 0; i < Math.min(2, streams.length); i++) {
+          for (let i = 0; i < Math.min(3, streams.length); i++) {
             try {
               const streamResponse = await fetch(streams[i].link, {
                 method: 'HEAD',
                 headers: streams[i].headers || {}
               });
-              console.log(`  Stream ${i + 1}: ${streamResponse.status} ${streamResponse.statusText}`);
+              console.log(`  Stream ${i + 1} (${streams[i].quality}p): ${streamResponse.status} ${streamResponse.statusText}`);
             } catch (e) {
-              console.log(`  Stream ${i + 1}: Error - ${e.message}`);
+              console.log(`  Stream ${i + 1} (${streams[i].quality}p): Error - ${e.message}`);
             }
           }
         }
       } else {
-        console.log('❌ No directLinks found in meta');
+        console.log('❌ No "Watch Movie" directLinks found in meta');
       }
     } else {
       console.log('❌ No linkList found in meta');
     }
     
-    console.log('\n🎉 Complete Flow Test Finished!');
-    console.log('=' .repeat(60));
+    console.log('\n🎉 Complete App Flow Test Finished!');
+    console.log('=' .repeat(70));
     
   } catch (error) {
     console.error('❌ Test failed:', error);
@@ -144,4 +150,4 @@ async function testCompleteFlow() {
 }
 
 // Run the test
-testCompleteFlow();
+testCompleteAppFlow();
