@@ -65,7 +65,11 @@ async function posts({
     $(".index_item.index_item_ie").map((i, element) => {
       const title = $(element).find("a").attr("title");
       const link = $(element).find("a").attr("href");
-      const image = $(element).find("img").attr("src") || "";
+      let image = $(element).find("img").attr("src") || "";
+      // Convert relative image URLs to absolute URLs
+      if (image && image.startsWith("/")) {
+        image = baseUrl + image;
+      }
       if (title && link) {
         catalog.push({
           title: title,

@@ -14,11 +14,26 @@ export const getMeta = async function ({
     const res = await axios.get(url);
     const html = await res.data;
     const $ = cheerio.load(html);
+    
+    // Extract title
+    const title = $("h1").text().trim() || "";
+    
+    // Extract image
+    let image = $(".movie_thumb").find("img").attr("src") || "";
+    if (image && image.startsWith("/")) {
+      image = baseUrl + image;
+    }
+    
+    // Extract synopsis
+    const synopsis = $(".movie_description").text().trim() || "";
+    
+    // Extract IMDB ID
     const imdbId =
       $(".movie_info")
         .find('a[href*="imdb.com/title/tt"]:not([href*="imdb.com/title/tt/"])')
         .attr("href")
         ?.split("/")[4] || "";
+    
     const type = $(".show_season").html() ? "series" : "movie";
     const linkList: Link[] = [];
     $(".show_season").each((i, element) => {
@@ -61,10 +76,10 @@ export const getMeta = async function ({
       });
     }
     return {
-      title: "",
-      image: "",
+      title: title,
+      image: image,
       imdbId: imdbId,
-      synopsis: "",
+      synopsis: synopsis,
       type: type,
       linkList: linkList,
     };
