@@ -76,10 +76,6 @@ const modflixData = {
         "name": "consumet",
         "url": "https://api.consumet.org"
     },
-    "nfMirror": {
-        "name": "nfMirror",
-        "url": "https://net20.cc"
-    },
     "primewire": {
         "name": "primewire",
         "url": "https://www.primewire.tf"
@@ -152,10 +148,9 @@ const modflixData = {
         "name": "katfix",
         "url": "https://katmoviefix.cards"
     },
-    "joya9tv": {
-        "name": "joya9tv1",
-        "url": "https://joya9tv1.com"
+    "ogomovies": {
+        "name": "ogomovies",
+        "url": "https://ogomovies.dad/"
     }
-};
 
 module.exports = modflixData;

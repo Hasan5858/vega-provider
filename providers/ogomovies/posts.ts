@@ -56,7 +56,7 @@ async function fetchPosts({
   providerContext: ProviderContext;
 }): Promise<Post[]> {
   try {
-    const baseUrl = "https://ogomovies.mobi";
+    const baseUrl = "https://ogomovies.dad/";
     let url: string;
 
     if (query && query.trim()) {
