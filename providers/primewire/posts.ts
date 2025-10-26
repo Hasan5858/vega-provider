@@ -62,21 +62,37 @@ async function posts({
     const data = res.data;
     const $ = cheerio.load(data);
     const catalog: Post[] = [];
-    $(".index_item.index_item_ie").map((i, element) => {
+    const seen = new Set<string>(); // Deduplication by link
+    const seenTitles = new Set<string>(); // Additional deduplication by title
+    
+    $(".index_item.index_item_ie").each((i, element) => {
       const title = $(element).find("a").attr("title");
       const link = $(element).find("a").attr("href");
       let image = $(element).find("img").attr("src") || "";
+      
       // Convert relative image URLs to absolute URLs
       if (image && image.startsWith("/")) {
         image = baseUrl + image;
       }
-      if (title && link) {
-        catalog.push({
-          title: title,
-          link: baseUrl + link,
-          image: image,
-        });
-      }
+      
+      if (!title || !link) return;
+      
+      const fullLink = baseUrl + link;
+      
+      // Deduplication by link
+      if (seen.has(fullLink)) return;
+      
+      // Deduplication by title
+      if (seenTitles.has(title.toLowerCase())) return;
+      
+      seen.add(fullLink);
+      seenTitles.add(title.toLowerCase());
+      
+      catalog.push({
+        title: title,
+        link: fullLink,
+        image: image,
+      });
     });
     return catalog;
   } catch (err) {
