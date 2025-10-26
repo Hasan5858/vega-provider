@@ -56,7 +56,22 @@ export async function getStream({
         const dlText = dlRes.data;
         const $$ = cheerio.load(dlText);
 
-        // Extract direct video links (using cheerio only to avoid duplicates)
+        // Method 1: Regex extraction (finds different URLs than cheerio)
+        const directMatches = dlText.matchAll(
+          /<a\s+href="([^"]+\.(?:mkv|mp4))"/gi
+        );
+        for (const m of directMatches) {
+          const href = m[1];
+          if (href) {
+            streamLinks.push({
+              server: "direct",
+              link: href,
+              type: href.endsWith(".mp4") ? "mp4" : "mkv",
+            });
+          }
+        }
+
+        // Method 2: Cheerio extraction (finds different URLs than regex)
         $$("a").each((_, el) => {
           const href = $$(el).attr("href") ?? null;
           if (href && (href.includes(".mkv") || href.includes(".mp4"))) {
