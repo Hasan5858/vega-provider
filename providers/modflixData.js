@@ -78,7 +78,7 @@ const modflixData = {
     },
     "primewire": {
         "name": "primewire",
-        "url": "https://www.primewire.tf"
+        "url": "https://www.primewire.mov/"
     },
     "rive": {
         "name": "rive",
