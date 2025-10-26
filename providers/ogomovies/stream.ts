@@ -37,6 +37,16 @@ export async function getStream({
   try {
     const streamLinks: Stream[] = [];
 
+    // 🔹 Check if link is an m3u8 URL - return it directly
+    if (link.includes('.m3u8')) {
+      console.log("🎬 M3U8 URL detected, returning directly");
+      return [{
+        server: "direct",
+        link: link,
+        type: "m3u8",
+      }];
+    }
+
     // 🔹 Step 1: Load main page
     const dotlinkRes = await axios(`${link}`, { headers, signal });
     const dotlinkText = dotlinkRes.data;
