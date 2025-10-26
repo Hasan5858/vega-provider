@@ -83,9 +83,13 @@ async function fetchPosts({
 
     const seen = new Set<string>();
     const catalog: Post[] = [];
+    const maxPosts = 20; // Reduced from 100 to 20 for faster loading
 
     // ✅ OGOMovies structure -> .ml-item
     $(".ml-item").each((_, el) => {
+      // Early exit if we already have enough posts
+      if (catalog.length >= maxPosts) return false;
+      
       const anchor = $(el).find("a.ml-mask");
       let link = anchor.attr("href") || "";
       if (!link) return;
@@ -109,7 +113,7 @@ async function fetchPosts({
       catalog.push({ title, link, image });
     });
 
-    return catalog.slice(0, 100);
+    return catalog; // No need for slice since we limit during processing
   } catch (err) {
     console.error(
       "fetchPosts error:",
