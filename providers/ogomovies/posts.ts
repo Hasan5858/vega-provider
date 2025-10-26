@@ -82,6 +82,7 @@ async function fetchPosts({
       href?.startsWith("http") ? href : new URL(href, baseUrl).href;
 
     const seen = new Set<string>();
+    const seenTitles = new Set<string>(); // Additional deduplication by title
     const catalog: Post[] = [];
     const maxPosts = 20; // Reduced from 100 to 20 for faster loading
 
@@ -100,16 +101,32 @@ async function fetchPosts({
       const title =
         anchor.attr("title")?.trim() || anchor.find("h2").text().trim() || "";
 
-      // Image
+      // Image - try multiple attributes for better extraction
+      const imgElement = anchor.find("img");
       let img =
-        anchor.find("img").attr("data-original") ||
-        anchor.find("img").attr("src") ||
+        imgElement.attr("data-original") ||
+        imgElement.attr("data-src") ||
+        imgElement.attr("data-lazy") ||
+        imgElement.attr("src") ||
         "";
+      
+      // Additional fallback: check parent elements for images
+      if (!img) {
+        img = $(el).find("img").attr("data-original") ||
+              $(el).find("img").attr("data-src") ||
+              $(el).find("img").attr("src") ||
+              "";
+      }
+      
       const image = img ? resolveUrl(img) : "";
 
       if (!title || !image) return;
 
+      // Additional deduplication by title to avoid same content with different URLs
+      if (seenTitles.has(title.toLowerCase())) return;
+
       seen.add(link);
+      seenTitles.add(title.toLowerCase());
       catalog.push({ title, link, image });
     });
 
