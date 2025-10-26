@@ -23,10 +23,10 @@ const headers = {
 };
 
 /**
- * Executes the 5-step link chaining to fetch the final download links.
+ * Simplified approach: Get download links directly from watching page
  */
 async function getDownloadLinks(
-    watchUrl: string,
+    movieUrl: string,
     movieTitle: string,
     providerContext: ProviderContext
 ): Promise<Link[]> {
@@ -34,81 +34,48 @@ async function getDownloadLinks(
     const finalLinks: Link[] = [];
 
     try {
-        // --- STEP 1: Scrape Watch Page to get Server Link (data-putload) ---
-        let response = await axios.get(watchUrl, { headers });
-        let $ = cheerio.load(response.data);
-
-        // Find the specific episode item and extract the data-putload URL
-        const serverLink = $('li[data-server="3"][data-putload]').attr('data-putload');
+        // Step 1: Construct watching page URL
+        const watchingUrl = movieUrl + 'watching/';
         
-        if (!serverLink) {
-            console.log("Failed to find server link (data-putload) on watch page.");
-            return finalLinks;
-        }
-
-        // --- STEP 2: Scrape Server Link Page to get Link Gate Button URL ---
-        response = await axios.get(serverLink, { headers: { ...headers, Referer: watchUrl } });
-        $ = cheerio.load(response.data);
-
-        // Find the "GET DOWNLOAD LINKS" button URL
-        const linkGateUrl = $('.content-pt a button').parent().attr('href');
-
-        if (!linkGateUrl) {
-            console.log("Failed to find link gate URL on server page.");
-            return finalLinks;
-        }
-
-        // --- STEP 3: Scrape Link Gate Page to get Iframe Source (Final Download Page) ---
-        response = await axios.get(linkGateUrl, { headers: { ...headers, Referer: serverLink } });
-        $ = cheerio.load(response.data);
-
-        // Find the iframe src (the final download page URL)
-        const finalDownloadPageUrl = $('.video-container iframe').attr('src');
+        // Step 2: Fetch watching page and find embed URL
+        const watchingResponse = await axios.get(watchingUrl, { headers });
+        const $ = cheerio.load(watchingResponse.data);
         
-        if (!finalDownloadPageUrl) {
-            console.log("Failed to find final download page URL (iframe src).");
-            return finalLinks;
-        }
-
-        // --- STEP 4: Scrape Final Download Page to get CDN Button URL ---
-        response = await axios.get(finalDownloadPageUrl, { headers: { ...headers, Referer: linkGateUrl } });
-        $ = cheerio.load(response.data);
-
-        // Find the CDN button URL
-        const cdnLinkUrl = $('.content-pt a button').parent().attr('href');
-
-        if (!cdnLinkUrl) {
-            console.log("Failed to find CDN link URL on final download page.");
+        // Find embed URL in data-drive attribute
+        const embedUrl = $('li[data-drive]').attr('data-drive');
+        
+        if (!embedUrl) {
+            console.log("Failed to find embed URL in watching page.");
             return finalLinks;
         }
         
-        // --- STEP 5: Scrape CDN Page to get Final Download Buttons ---
-        response = await axios.get(cdnLinkUrl, { headers: { ...headers, Referer: finalDownloadPageUrl } });
-        $ = cheerio.load(response.data);
-
-        // Extract the final direct download buttons
-        $('button[onclick^="download_video"]').each((_, element) => {
-            const btnEl = $(element);
-            const qualityText = btnEl.text().trim(); // e.g., "Normal quality 1128x480, 1.0 GB"
+        // Step 3: Convert embed URL to download URL
+        const downloadUrl = embedUrl.replace('/embed-', '/');
+        
+        // Step 4: Fetch download page and extract download buttons
+        const downloadResponse = await axios.get(downloadUrl, { headers });
+        const $$ = cheerio.load(downloadResponse.data);
+        
+        // Extract download buttons with download_video() calls
+        $$('button[onclick^="download_video"]').each((_, element) => {
+            const btnEl = $$(element);
+            const qualityText = btnEl.text().trim(); // e.g., "Normal quality 1128x480, 1.2 GB"
             
-            // Extract Quality (e.g., Normal/Low) and Size (e.g., 1.0 GB)
+            // Extract Quality (e.g., Normal/Low) and Size (e.g., 1.2 GB)
             const qualityMatch = qualityText.match(/(Normal|Low)\squality/i);
             const quality = qualityMatch ? qualityMatch[1] : 'Unknown';
             const sizeMatch = qualityText.match(/(\d+(\.\d+)?\s(GB|MB))$/i);
             const size = sizeMatch ? sizeMatch[0] : 'Unknown Size';
 
-            // Construct link object for final download buttons
+            // Construct link object for download buttons
             finalLinks.push({
                 title: `${movieTitle} - ${qualityText}`,
-                // Use extracted quality (Normal/Low)
-                quality: quality, 
-                // episodesLink points to the final button page (since direct link is JS-driven)
-                episodesLink: cdnLinkUrl, 
+                quality: quality,
+                episodesLink: downloadUrl, // Points to download page
                 directLinks: [
                     {
                         title: `Download (${size})`,
-                        // Use the button page as the link (requires further processing if a direct file link is needed)
-                        link: cdnLinkUrl, 
+                        link: downloadUrl,
                         type: "movie",
                     },
                 ],
@@ -116,7 +83,7 @@ async function getDownloadLinks(
         });
 
     } catch (error) {
-        console.error("Error during link chaining:", error);
+        console.error("Error during simplified download link extraction:", error);
     }
 
     return finalLinks;
@@ -177,14 +144,9 @@ export const getMeta = async function ({
         // --- LinkList Aggregation ---
         let finalLinks: Link[] = [];
 
-        // 1. Fetch deep download links
-        const watchButton = detailEl.find(".ch_btn_box a.bwac-btn");
-        const watchLinkUrl = watchButton.attr("href");
-        
-        if (watchLinkUrl) {
-            const deepDownloadLinks = await getDownloadLinks(watchLinkUrl, result.title, providerContext);
-            finalLinks = finalLinks.concat(deepDownloadLinks);
-        }
+        // 1. Fetch download links using simplified approach
+        const deepDownloadLinks = await getDownloadLinks(url, result.title, providerContext);
+        finalLinks = finalLinks.concat(deepDownloadLinks);
         
         // 2. Fetch External Links (excluding "Download Android APP")
         detailEl.find(".mobile-btn a.mod-btn").each((index, element) => {
