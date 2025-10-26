@@ -23,6 +23,124 @@ const headers = {
 };
 
 /**
+ * Deobfuscate JavaScript code using external API
+ */
+async function deobfuscateCode(code: string, providerContext: ProviderContext): Promise<string> {
+    const { axios } = providerContext;
+    try {
+        const response = await axios.post('https://js-deobfuscator-api.replit.app/api/deobfuscate', {
+            code: code
+        }, {
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            timeout: 10000
+        });
+
+        if (response.data.success) {
+            return response.data.result;
+        } else {
+            console.log("Deobfuscation failed:", response.data.error);
+            return code; // Return original code if deobfuscation fails
+        }
+    } catch (error: any) {
+        console.log("Deobfuscation API error:", error.message);
+        return code; // Return original code if API fails
+    }
+}
+
+/**
+ * Extract m3u8 links from embed page using deobfuscation
+ */
+async function getM3u8FromEmbed(
+    embedUrl: string,
+    movieTitle: string,
+    providerContext: ProviderContext
+): Promise<Link[]> {
+    const { axios, cheerio } = providerContext;
+    const finalLinks: Link[] = [];
+
+    try {
+        // Step 1: Fetch embed page
+        const embedResponse = await axios.get(embedUrl, { headers });
+        const $ = cheerio.load(embedResponse.data);
+        
+        // Step 2: Find eval packed code in script tags
+        let evalPackedCode = '';
+        $('script').each((_, el) => {
+            const scriptContent = $(el).html();
+            if (scriptContent && scriptContent.includes('eval(')) {
+                // Extract the entire eval code using pattern matching
+                const evalStart = scriptContent.indexOf('eval(');
+                if (evalStart !== -1) {
+                    // Find the end by looking for the pattern that ends with .split('|')))
+                    const evalEndPattern = /\.split\('\|'\)\)\)/;
+                    const match = scriptContent.substring(evalStart).match(evalEndPattern);
+                    
+                    if (match && match.index !== undefined) {
+                        const evalEnd = evalStart + match.index + match[0].length;
+                        evalPackedCode = scriptContent.substring(evalStart, evalEnd);
+                        return false; // Break the loop
+                    }
+                }
+            }
+        });
+
+        if (!evalPackedCode) {
+            console.log("No eval packed code found in embed page");
+            return finalLinks;
+        }
+
+        // Step 3: Deobfuscate the eval packed code
+        console.log("Deobfuscating eval packed code...");
+        const deobfuscatedCode = await deobfuscateCode(evalPackedCode, providerContext);
+        
+        // Step 4: Extract m3u8 links from deobfuscated code
+        const m3u8Links: string[] = [];
+        
+        // Look for jwplayer setup with sources array
+        const sourcesMatch = deobfuscatedCode.match(/sources:\s*\[\s*\{\s*file:\s*["']([^"']+)["']/);
+        
+        if (sourcesMatch) {
+            const fileUrl = sourcesMatch[1];
+            
+            // Check if it's an m3u8 URL
+            if (fileUrl.includes('.m3u8')) {
+                m3u8Links.push(fileUrl);
+            }
+        } else {
+            // Fallback: direct m3u8 search
+            const m3u8Matches = deobfuscatedCode.matchAll(/https?:\/\/[^"'\s]+\.m3u8[^"'\s]*/g);
+            for (const match of m3u8Matches) {
+                const m3u8Url = match[0];
+                if (!m3u8Links.includes(m3u8Url)) {
+                    m3u8Links.push(m3u8Url);
+                }
+            }
+        }
+
+        // Step 5: Create link objects for m3u8 streams
+        if (m3u8Links.length > 0) {
+            finalLinks.push({
+                title: `${movieTitle} - Adaptive Stream`,
+                quality: 'Adaptive',
+                episodesLink: embedUrl,
+                directLinks: m3u8Links.map(m3u8Url => ({
+                    title: 'Adaptive Stream',
+                    link: m3u8Url,
+                    type: "movie",
+                })),
+            });
+        }
+
+    } catch (error) {
+        console.error("Error extracting m3u8 from embed:", error);
+    }
+
+    return finalLinks;
+}
+
+/**
  * Simplified approach: Get download links directly from watching page
  */
 async function getDownloadLinks(
@@ -49,10 +167,14 @@ async function getDownloadLinks(
             return finalLinks;
         }
         
-        // Step 3: Convert embed URL to download URL
+        // Step 3: Get m3u8 links from embed URL
+        const m3u8Links = await getM3u8FromEmbed(embedUrl, movieTitle, providerContext);
+        finalLinks.push(...m3u8Links);
+        
+        // Step 4: Convert embed URL to download URL for direct downloads
         const downloadUrl = embedUrl.replace('/embed-', '/');
         
-        // Step 4: Fetch download page and extract download buttons
+        // Step 5: Fetch download page and extract download buttons
         const downloadResponse = await axios.get(downloadUrl, { headers });
         const $$ = cheerio.load(downloadResponse.data);
         
