@@ -52,6 +52,7 @@ var filepresExtractor_1 = require("./filepresExtractor");
 var streamtapeExtractor_1 = require("./streamtapeExtractor");
 var doodExtractor_1 = require("./doodExtractor");
 var mixdropExtractor_1 = require("./mixdropExtractor");
+var voeExtractor_1 = require("./voeExtractor");
 var react_native_aes_crypto_1 = __importDefault(require("react-native-aes-crypto"));
 /**
  * Context for provider functions.
@@ -69,6 +70,7 @@ var extractors = {
     streamtapeExtractor: streamtapeExtractor_1.streamtapeExtractor,
     doodExtractor: doodExtractor_1.doodExtractor,
     mixdropExtractor: mixdropExtractor_1.mixdropExtractor,
+    voeExtractor: voeExtractor_1.voeExtractor,
 };
 exports.providerContext = {
     axios: axios_1.default,

@@ -164,5 +164,6 @@ export type ProviderContext = {
       headers?: Record<string, string>;
       type?: string;
     } | null>;
+    voeExtractor: (url: string) => Promise<Stream[]>;
   };
 };
