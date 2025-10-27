@@ -1,4 +1,5 @@
 import { Stream, ProviderContext } from "../types";
+import { extractStreamForHost } from "./extractors";
 
 // Blowfish constants inlined (P array and S-boxes)
 const P_ARRAY_BF = [608135816,2242054355,320440878,57701188,2752067618,698298832,137296536,3964562569,1160258022,953160567,3193202383,887688300,3232508343,3380367581,1065670069,3041331479,2450970073,2306472731];
@@ -195,15 +196,6 @@ const QUALITY_MAP: Record<string, Stream["quality"]> = {
 
 type CheerioInstance = any;
 
-const randomAlphaNumeric = (length: number) => {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-};
-
 const mapQuality = (className?: string): Stream["quality"] | undefined => {
   if (!className) {
     return undefined;
@@ -216,17 +208,6 @@ const mapQuality = (className?: string): Stream["quality"] | undefined => {
   }
 
   return undefined;
-};
-
-const getOrigin = (input: string): string => {
-  const match = input.match(/^(https?:\/\/[^/]+)/i);
-  return match ? match[1] : "https://www.primewire.mov";
-};
-
-const getLastPathSegment = (input: string): string => {
-  const cleaned = input.split("?")[0];
-  const segments = cleaned.split("/").filter(Boolean);
-  return segments[segments.length - 1] || "";
 };
 
 async function handlePrimeSrcEmbed(
@@ -286,254 +267,6 @@ async function handlePrimeSrcEmbed(
     return [];
   }
 }
-
-const extractMixdrop = async (
-  mixdropUrl: string,
-  axios: ProviderContext["axios"]
-): Promise<{ link: string; headers: Record<string, string> } | null> => {
-  try {
-    const embedUrl = mixdropUrl.replace("/f/", "/e/");
-    const { data } = await axios.get(embedUrl, {
-      headers: {
-        "User-Agent": USER_AGENT,
-        Referer: mixdropUrl,
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Cache-Control": "no-cache",
-        Pragma: "no-cache",
-      },
-    });
-
-    const functionRegex = /eval\(function\((.*?)\)\{.*?return p\}.*?\('(.*?)'\.split/;
-    const match = functionRegex.exec(data);
-
-    if (!match) {
-      return null;
-    }
-
-    const encodedString = match[2];
-    const header = encodedString.split(",'|MDCore|")[0].split(",");
-    const base = Number(header[header.length - 1]);
-
-    if (Number.isNaN(base)) {
-      return null;
-    }
-
-    const splitMarker = `',${base},`;
-    const [p, remainder] = encodedString.split(splitMarker);
-    if (!p || !remainder) {
-      return null;
-    }
-
-    const body = remainder.slice(2).split("|");
-    const decode = function (
-      payload: string,
-      a: number,
-      c: number,
-      k: string[],
-      e: (value: number) => string,
-      d: Record<string, string>
-    ) {
-      e = function (index: number) {
-        return index.toString(36);
-      };
-
-      if (!"".replace(/^/, String)) {
-        while (c--) {
-          d[c.toString(a)] = k[c] || c.toString(a);
-        }
-        k = [
-          function (value: string) {
-            return d[value];
-          },
-        ] as unknown as string[];
-        e = function () {
-          return "\\w+";
-        } as unknown as (value: number) => string;
-        c = 1;
-      }
-
-      while (c--) {
-        if (k[c]) {
-          const regex = new RegExp(`\\b${e(c)}\\b`, "g");
-          payload = payload.replace(regex, k[c] as string);
-        }
-      }
-
-      return payload;
-    };
-
-    const decoded = decode(p.trim(), base, body.length, body, (value) => value.toString(36), {});
-    const wurl = decoded.match(/MDCore\.wurl="([^"]+)"/);
-
-    if (!wurl || !wurl[1]) {
-      return null;
-    }
-
-    const link = wurl[1].startsWith("http") ? wurl[1] : `https:${wurl[1]}`;
-
-    return {
-      link,
-      headers: {
-        "User-Agent": USER_AGENT,
-        Referer: embedUrl,
-      },
-    };
-  } catch (error) {
-    console.error("Failed extracting Mixdrop stream", error);
-    return null;
-  }
-};
-
-const extractDoodStream = async (
-  doodUrl: string,
-  axios: ProviderContext["axios"]
-): Promise<{ link: string; headers: Record<string, string> } | null> => {
-  try {
-    const id = getLastPathSegment(doodUrl);
-    if (!id) {
-      return null;
-    }
-
-    const candidateHosts = Array.from(
-      new Set([
-        getOrigin(doodUrl),
-        "https://dsvplay.com",
-        "https://dood.la",
-        "https://dood.ws",
-        "https://dood.cx",
-      ])
-    );
-
-    let embedHtml: string | null = null;
-    let activeHost: string | null = null;
-
-    for (const host of candidateHosts) {
-      const embedUrl = `${host}/e/${id}`;
-      try {
-        const { data } = await axios.get(embedUrl, {
-          headers: {
-            "User-Agent": USER_AGENT,
-            Referer: `${host}/d/${id}`,
-            Accept:
-              "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Cache-Control": "no-cache",
-            Pragma: "no-cache",
-          },
-        });
-        embedHtml = data;
-        activeHost = host;
-        break;
-      } catch {
-        continue;
-      }
-    }
-
-    if (!embedHtml || !activeHost) {
-      return null;
-    }
-
-    const passMatch = embedHtml.match(/\/pass_md5\/([^'\"]+)/);
-    const tokenMatch = embedHtml.match(/token=([a-z0-9]+)/i);
-
-    if (!passMatch || !tokenMatch) {
-      return null;
-    }
-
-    const embedUrl = `${activeHost}/e/${id}`;
-    const passUrl = `${activeHost}/pass_md5/${passMatch[1]}`;
-    const response = await axios.get(passUrl, {
-      headers: {
-        "User-Agent": USER_AGENT,
-        Referer: embedUrl,
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Cache-Control": "no-cache",
-        Pragma: "no-cache",
-      },
-    });
-
-    const baseStream = typeof response.data === "string" ? response.data : null;
-    if (!baseStream) {
-      return null;
-    }
-
-    const token = tokenMatch[1];
-    const finalUrl = `${baseStream}${randomAlphaNumeric(10)}?token=${token}&expiry=${Date.now()}`;
-
-    return {
-      link: finalUrl,
-      headers: {
-        "User-Agent": USER_AGENT,
-        Referer: embedUrl,
-      },
-    };
-  } catch (error) {
-    console.error("Failed extracting Dood stream", error);
-    return null;
-  }
-};
-
-const extractStreamTape = async (
-  streamTapeUrl: string,
-  axios: ProviderContext["axios"]
-): Promise<{ link: string; headers: Record<string, string> } | null> => {
-  try {
-    const { data } = await axios.get(streamTapeUrl, {
-      headers: {
-        "User-Agent": USER_AGENT,
-        Referer: streamTapeUrl,
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Cache-Control": "no-cache",
-        Pragma: "no-cache",
-      },
-    });
-
-    const html = data as string;
-    const directMatch =
-      html.match(/id="robotlink"[^>]*>([^<]+)</) ??
-      html.match(/document\.getElementById\('robotlink'\)\.innerHTML\s*=\s*'([^']+)'/);
-
-    if (!directMatch || !directMatch[1]) {
-      return null;
-    }
-
-    const rawLink = directMatch[1]
-      .replace(/\\u0026/g, "&")
-      .replace(/&amp;/g, "&")
-      .trim();
-
-    const normalized =
-      rawLink.startsWith("http") || rawLink.startsWith("https")
-        ? rawLink
-        : rawLink.startsWith("//")
-        ? `https:${rawLink}`
-        : rawLink.startsWith("/")
-        ? `${getOrigin(streamTapeUrl)}${rawLink}`
-        : rawLink;
-
-    const finalUrl =
-      normalized.includes("&stream=") || normalized.includes("stream=")
-        ? normalized
-        : `${normalized}&stream=1`;
-
-    return {
-      link: finalUrl,
-      headers: {
-        "User-Agent": USER_AGENT,
-        Referer: streamTapeUrl,
-      },
-    };
-  } catch (error) {
-    console.error("Failed extracting StreamTape stream", error);
-    return null;
-  }
-};
 
 const resolveGoEntries = async (
   url: string,
@@ -609,32 +342,8 @@ const resolveGoEntries = async (
     }
 
     const hostLabel = (goData?.host || entry.host || "Primewire").trim();
-    const host = hostLabel.toLowerCase();
 
-    let extracted:
-      | { link: string; headers?: Record<string, string>; type?: string }
-      | null = null;
-
-    if (directLink.includes("mixdrop") || host.includes("mixdrop")) {
-      extracted = await extractMixdrop(directLink, axios);
-      if (extracted) {
-        extracted.type = extracted.type || "mp4";
-      }
-    } else if (directLink.includes("dood") || host.includes("dood")) {
-      extracted = await extractDoodStream(directLink, axios);
-      if (extracted) {
-        extracted.type = extracted.type || "mp4";
-      }
-    } else if (
-      directLink.includes("streamtape") ||
-      directLink.includes("streamta") ||
-      host.includes("streamtape")
-    ) {
-      extracted = await extractStreamTape(directLink, axios);
-      if (extracted) {
-        extracted.type = extracted.type || "mp4";
-      }
-    }
+    const extracted = await extractStreamForHost(hostLabel, directLink, axios);
 
     if (extracted) {
       results.push({
@@ -701,12 +410,12 @@ export const getStream = async function ({
     if (mixdropCandidates.length) {
       const streams: Stream[] = [];
       for (const candidate of mixdropCandidates) {
-        const extracted = await extractMixdrop(candidate.link, axios);
+        const extracted = await extractStreamForHost(candidate.server, candidate.link, axios);
         if (extracted) {
           streams.push({
             server: candidate.server,
             link: extracted.link,
-            type: "mp4",
+            type: extracted.type || "mp4",
             headers: extracted.headers,
           });
         }

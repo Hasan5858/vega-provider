@@ -73,6 +73,7 @@ var __values = (this && this.__values) || function(o) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getStream = void 0;
+var extractors_1 = require("./extractors");
 // Blowfish constants inlined (P array and S-boxes)
 var P_ARRAY_BF = [608135816, 2242054355, 320440878, 57701188, 2752067618, 698298832, 137296536, 3964562569, 1160258022, 953160567, 3193202383, 887688300, 3232508343, 3380367581, 1065670069, 3041331479, 2450970073, 2306472731];
 // S-box arrays truncated for brevity - will include full arrays...
@@ -262,14 +263,6 @@ var QUALITY_MAP = {
     quality_dvd: "720",
     quality_hd: "1080",
 };
-var randomAlphaNumeric = function (length) {
-    var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    var result = "";
-    for (var i = 0; i < length; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-};
 var mapQuality = function (className) {
     var e_1, _a;
     if (!className) {
@@ -291,15 +284,6 @@ var mapQuality = function (className) {
         finally { if (e_1) throw e_1.error; }
     }
     return undefined;
-};
-var getOrigin = function (input) {
-    var match = input.match(/^(https?:\/\/[^/]+)/i);
-    return match ? match[1] : "https://www.primewire.mov";
-};
-var getLastPathSegment = function (input) {
-    var cleaned = input.split("?")[0];
-    var segments = cleaned.split("/").filter(Boolean);
-    return segments[segments.length - 1] || "";
 };
 function handlePrimeSrcEmbed(url, axios, cheerioModule) {
     return __awaiter(this, void 0, void 0, function () {
@@ -358,253 +342,9 @@ function handlePrimeSrcEmbed(url, axios, cheerioModule) {
         });
     });
 }
-var extractMixdrop = function (mixdropUrl, axios) { return __awaiter(void 0, void 0, void 0, function () {
-    var embedUrl, data, functionRegex, match, encodedString, header, base, splitMarker, _a, p, remainder, body, decode, decoded, wurl, link, error_2;
-    return __generator(this, function (_b) {
-        switch (_b.label) {
-            case 0:
-                _b.trys.push([0, 2, , 3]);
-                embedUrl = mixdropUrl.replace("/f/", "/e/");
-                return [4 /*yield*/, axios.get(embedUrl, {
-                        headers: {
-                            "User-Agent": USER_AGENT,
-                            Referer: mixdropUrl,
-                            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-                            "Accept-Language": "en-US,en;q=0.9",
-                            "Cache-Control": "no-cache",
-                            Pragma: "no-cache",
-                        },
-                    })];
-            case 1:
-                data = (_b.sent()).data;
-                functionRegex = /eval\(function\((.*?)\)\{.*?return p\}.*?\('(.*?)'\.split/;
-                match = functionRegex.exec(data);
-                if (!match) {
-                    return [2 /*return*/, null];
-                }
-                encodedString = match[2];
-                header = encodedString.split(",'|MDCore|")[0].split(",");
-                base = Number(header[header.length - 1]);
-                if (Number.isNaN(base)) {
-                    return [2 /*return*/, null];
-                }
-                splitMarker = "',".concat(base, ",");
-                _a = __read(encodedString.split(splitMarker), 2), p = _a[0], remainder = _a[1];
-                if (!p || !remainder) {
-                    return [2 /*return*/, null];
-                }
-                body = remainder.slice(2).split("|");
-                decode = function (payload, a, c, k, e, d) {
-                    e = function (index) {
-                        return index.toString(36);
-                    };
-                    if (!"".replace(/^/, String)) {
-                        while (c--) {
-                            d[c.toString(a)] = k[c] || c.toString(a);
-                        }
-                        k = [
-                            function (value) {
-                                return d[value];
-                            },
-                        ];
-                        e = function () {
-                            return "\\w+";
-                        };
-                        c = 1;
-                    }
-                    while (c--) {
-                        if (k[c]) {
-                            var regex = new RegExp("\\b".concat(e(c), "\\b"), "g");
-                            payload = payload.replace(regex, k[c]);
-                        }
-                    }
-                    return payload;
-                };
-                decoded = decode(p.trim(), base, body.length, body, function (value) { return value.toString(36); }, {});
-                wurl = decoded.match(/MDCore\.wurl="([^"]+)"/);
-                if (!wurl || !wurl[1]) {
-                    return [2 /*return*/, null];
-                }
-                link = wurl[1].startsWith("http") ? wurl[1] : "https:".concat(wurl[1]);
-                return [2 /*return*/, {
-                        link: link,
-                        headers: {
-                            "User-Agent": USER_AGENT,
-                            Referer: embedUrl,
-                        },
-                    }];
-            case 2:
-                error_2 = _b.sent();
-                console.error("Failed extracting Mixdrop stream", error_2);
-                return [2 /*return*/, null];
-            case 3: return [2 /*return*/];
-        }
-    });
-}); };
-var extractDoodStream = function (doodUrl, axios) { return __awaiter(void 0, void 0, void 0, function () {
-    var id, candidateHosts, embedHtml, activeHost, candidateHosts_1, candidateHosts_1_1, host, embedUrl_1, data, _a, e_2_1, passMatch, tokenMatch, embedUrl, passUrl, response, baseStream, token, finalUrl, error_3;
-    var e_2, _b;
-    return __generator(this, function (_c) {
-        switch (_c.label) {
-            case 0:
-                _c.trys.push([0, 12, , 13]);
-                id = getLastPathSegment(doodUrl);
-                if (!id) {
-                    return [2 /*return*/, null];
-                }
-                candidateHosts = Array.from(new Set([
-                    getOrigin(doodUrl),
-                    "https://dsvplay.com",
-                    "https://dood.la",
-                    "https://dood.ws",
-                    "https://dood.cx",
-                ]));
-                embedHtml = null;
-                activeHost = null;
-                _c.label = 1;
-            case 1:
-                _c.trys.push([1, 8, 9, 10]);
-                candidateHosts_1 = __values(candidateHosts), candidateHosts_1_1 = candidateHosts_1.next();
-                _c.label = 2;
-            case 2:
-                if (!!candidateHosts_1_1.done) return [3 /*break*/, 7];
-                host = candidateHosts_1_1.value;
-                embedUrl_1 = "".concat(host, "/e/").concat(id);
-                _c.label = 3;
-            case 3:
-                _c.trys.push([3, 5, , 6]);
-                return [4 /*yield*/, axios.get(embedUrl_1, {
-                        headers: {
-                            "User-Agent": USER_AGENT,
-                            Referer: "".concat(host, "/d/").concat(id),
-                            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-                            "Accept-Language": "en-US,en;q=0.9",
-                            "Cache-Control": "no-cache",
-                            Pragma: "no-cache",
-                        },
-                    })];
-            case 4:
-                data = (_c.sent()).data;
-                embedHtml = data;
-                activeHost = host;
-                return [3 /*break*/, 7];
-            case 5:
-                _a = _c.sent();
-                return [3 /*break*/, 6];
-            case 6:
-                candidateHosts_1_1 = candidateHosts_1.next();
-                return [3 /*break*/, 2];
-            case 7: return [3 /*break*/, 10];
-            case 8:
-                e_2_1 = _c.sent();
-                e_2 = { error: e_2_1 };
-                return [3 /*break*/, 10];
-            case 9:
-                try {
-                    if (candidateHosts_1_1 && !candidateHosts_1_1.done && (_b = candidateHosts_1.return)) _b.call(candidateHosts_1);
-                }
-                finally { if (e_2) throw e_2.error; }
-                return [7 /*endfinally*/];
-            case 10:
-                if (!embedHtml || !activeHost) {
-                    return [2 /*return*/, null];
-                }
-                passMatch = embedHtml.match(/\/pass_md5\/([^'\"]+)/);
-                tokenMatch = embedHtml.match(/token=([a-z0-9]+)/i);
-                if (!passMatch || !tokenMatch) {
-                    return [2 /*return*/, null];
-                }
-                embedUrl = "".concat(activeHost, "/e/").concat(id);
-                passUrl = "".concat(activeHost, "/pass_md5/").concat(passMatch[1]);
-                return [4 /*yield*/, axios.get(passUrl, {
-                        headers: {
-                            "User-Agent": USER_AGENT,
-                            Referer: embedUrl,
-                            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-                            "Accept-Language": "en-US,en;q=0.9",
-                            "Cache-Control": "no-cache",
-                            Pragma: "no-cache",
-                        },
-                    })];
-            case 11:
-                response = _c.sent();
-                baseStream = typeof response.data === "string" ? response.data : null;
-                if (!baseStream) {
-                    return [2 /*return*/, null];
-                }
-                token = tokenMatch[1];
-                finalUrl = "".concat(baseStream).concat(randomAlphaNumeric(10), "?token=").concat(token, "&expiry=").concat(Date.now());
-                return [2 /*return*/, {
-                        link: finalUrl,
-                        headers: {
-                            "User-Agent": USER_AGENT,
-                            Referer: embedUrl,
-                        },
-                    }];
-            case 12:
-                error_3 = _c.sent();
-                console.error("Failed extracting Dood stream", error_3);
-                return [2 /*return*/, null];
-            case 13: return [2 /*return*/];
-        }
-    });
-}); };
-var extractStreamTape = function (streamTapeUrl, axios) { return __awaiter(void 0, void 0, void 0, function () {
-    var data, html, directMatch, rawLink, normalized, finalUrl, error_4;
-    var _a;
-    return __generator(this, function (_b) {
-        switch (_b.label) {
-            case 0:
-                _b.trys.push([0, 2, , 3]);
-                return [4 /*yield*/, axios.get(streamTapeUrl, {
-                        headers: {
-                            "User-Agent": USER_AGENT,
-                            Referer: streamTapeUrl,
-                            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-                            "Accept-Language": "en-US,en;q=0.9",
-                            "Cache-Control": "no-cache",
-                            Pragma: "no-cache",
-                        },
-                    })];
-            case 1:
-                data = (_b.sent()).data;
-                html = data;
-                directMatch = (_a = html.match(/id="robotlink"[^>]*>([^<]+)</)) !== null && _a !== void 0 ? _a : html.match(/document\.getElementById\('robotlink'\)\.innerHTML\s*=\s*'([^']+)'/);
-                if (!directMatch || !directMatch[1]) {
-                    return [2 /*return*/, null];
-                }
-                rawLink = directMatch[1]
-                    .replace(/\\u0026/g, "&")
-                    .replace(/&amp;/g, "&")
-                    .trim();
-                normalized = rawLink.startsWith("http") || rawLink.startsWith("https")
-                    ? rawLink
-                    : rawLink.startsWith("//")
-                        ? "https:".concat(rawLink)
-                        : rawLink.startsWith("/")
-                            ? "".concat(getOrigin(streamTapeUrl)).concat(rawLink)
-                            : rawLink;
-                finalUrl = normalized.includes("&stream=") || normalized.includes("stream=")
-                    ? normalized
-                    : "".concat(normalized, "&stream=1");
-                return [2 /*return*/, {
-                        link: finalUrl,
-                        headers: {
-                            "User-Agent": USER_AGENT,
-                            Referer: streamTapeUrl,
-                        },
-                    }];
-            case 2:
-                error_4 = _b.sent();
-                console.error("Failed extracting StreamTape stream", error_4);
-                return [2 /*return*/, null];
-            case 3: return [2 /*return*/];
-        }
-    });
-}); };
 var resolveGoEntries = function (url, $, axios) { return __awaiter(void 0, void 0, void 0, function () {
-    var urlMatch, baseUrl, linkKeys, entries, results, entries_1, entries_1_1, entry, key, goUrl, goData, response, error_5, directLink, hostLabel, host, extracted, e_3_1;
-    var e_3, _a;
+    var urlMatch, baseUrl, linkKeys, entries, results, entries_1, entries_1_1, entry, key, goUrl, goData, response, error_2, directLink, hostLabel, extracted, e_2_1;
+    var e_2, _a;
     return __generator(this, function (_b) {
         switch (_b.label) {
             case 0:
@@ -635,15 +375,15 @@ var resolveGoEntries = function (url, $, axios) { return __awaiter(void 0, void 
                 results = [];
                 _b.label = 1;
             case 1:
-                _b.trys.push([1, 15, 16, 17]);
+                _b.trys.push([1, 10, 11, 12]);
                 entries_1 = __values(entries), entries_1_1 = entries_1.next();
                 _b.label = 2;
             case 2:
-                if (!!entries_1_1.done) return [3 /*break*/, 14];
+                if (!!entries_1_1.done) return [3 /*break*/, 9];
                 entry = entries_1_1.value;
                 key = linkKeys[entry.index] || entry.fallbackKey;
                 if (!key) {
-                    return [3 /*break*/, 13];
+                    return [3 /*break*/, 8];
                 }
                 goUrl = "".concat(baseUrl, "/links/go/").concat(encodeURIComponent(key), "?embed=true");
                 goData = void 0;
@@ -662,46 +402,18 @@ var resolveGoEntries = function (url, $, axios) { return __awaiter(void 0, void 
                 goData = response.data;
                 return [3 /*break*/, 6];
             case 5:
-                error_5 = _b.sent();
-                console.error("Failed to fetch go endpoint", goUrl, error_5);
-                return [3 /*break*/, 13];
+                error_2 = _b.sent();
+                console.error("Failed to fetch go endpoint", goUrl, error_2);
+                return [3 /*break*/, 8];
             case 6:
                 directLink = typeof goData === "string" ? goData : (goData === null || goData === void 0 ? void 0 : goData.link) || (goData === null || goData === void 0 ? void 0 : goData.url) || null;
                 if (!directLink) {
-                    return [3 /*break*/, 13];
+                    return [3 /*break*/, 8];
                 }
                 hostLabel = ((goData === null || goData === void 0 ? void 0 : goData.host) || entry.host || "Primewire").trim();
-                host = hostLabel.toLowerCase();
-                extracted = null;
-                if (!(directLink.includes("mixdrop") || host.includes("mixdrop"))) return [3 /*break*/, 8];
-                return [4 /*yield*/, extractMixdrop(directLink, axios)];
+                return [4 /*yield*/, (0, extractors_1.extractStreamForHost)(hostLabel, directLink, axios)];
             case 7:
                 extracted = _b.sent();
-                if (extracted) {
-                    extracted.type = extracted.type || "mp4";
-                }
-                return [3 /*break*/, 12];
-            case 8:
-                if (!(directLink.includes("dood") || host.includes("dood"))) return [3 /*break*/, 10];
-                return [4 /*yield*/, extractDoodStream(directLink, axios)];
-            case 9:
-                extracted = _b.sent();
-                if (extracted) {
-                    extracted.type = extracted.type || "mp4";
-                }
-                return [3 /*break*/, 12];
-            case 10:
-                if (!(directLink.includes("streamtape") ||
-                    directLink.includes("streamta") ||
-                    host.includes("streamtape"))) return [3 /*break*/, 12];
-                return [4 /*yield*/, extractStreamTape(directLink, axios)];
-            case 11:
-                extracted = _b.sent();
-                if (extracted) {
-                    extracted.type = extracted.type || "mp4";
-                }
-                _b.label = 12;
-            case 12:
                 if (extracted) {
                     results.push({
                         server: hostLabel,
@@ -710,32 +422,32 @@ var resolveGoEntries = function (url, $, axios) { return __awaiter(void 0, void 
                         quality: entry.quality,
                         headers: extracted.headers,
                     });
-                    return [3 /*break*/, 13];
+                    return [3 /*break*/, 8];
                 }
                 console.warn("Primewire: unsupported host", hostLabel, directLink);
-                _b.label = 13;
-            case 13:
+                _b.label = 8;
+            case 8:
                 entries_1_1 = entries_1.next();
                 return [3 /*break*/, 2];
-            case 14: return [3 /*break*/, 17];
-            case 15:
-                e_3_1 = _b.sent();
-                e_3 = { error: e_3_1 };
-                return [3 /*break*/, 17];
-            case 16:
+            case 9: return [3 /*break*/, 12];
+            case 10:
+                e_2_1 = _b.sent();
+                e_2 = { error: e_2_1 };
+                return [3 /*break*/, 12];
+            case 11:
                 try {
                     if (entries_1_1 && !entries_1_1.done && (_a = entries_1.return)) _a.call(entries_1);
                 }
-                finally { if (e_3) throw e_3.error; }
+                finally { if (e_2) throw e_2.error; }
                 return [7 /*endfinally*/];
-            case 17: return [2 /*return*/, results];
+            case 12: return [2 /*return*/, results];
         }
     });
 }); };
 var getStream = function (_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var axios, cheerio, pageResponse, $_2, decodedStreams, mixdropCandidates_2, streams, mixdropCandidates_1, mixdropCandidates_1_1, candidate, extracted, e_4_1, error_6;
-        var e_4, _c;
+        var axios, cheerio, pageResponse, $_2, decodedStreams, mixdropCandidates_2, streams, mixdropCandidates_1, mixdropCandidates_1_1, candidate, extracted, e_3_1, error_3;
+        var e_3, _c;
         var url = _b.link, type = _b.type, providerContext = _b.providerContext;
         return __generator(this, function (_d) {
             switch (_d.label) {
@@ -784,14 +496,14 @@ var getStream = function (_a) {
                 case 7:
                     if (!!mixdropCandidates_1_1.done) return [3 /*break*/, 10];
                     candidate = mixdropCandidates_1_1.value;
-                    return [4 /*yield*/, extractMixdrop(candidate.link, axios)];
+                    return [4 /*yield*/, (0, extractors_1.extractStreamForHost)(candidate.server, candidate.link, axios)];
                 case 8:
                     extracted = _d.sent();
                     if (extracted) {
                         streams.push({
                             server: candidate.server,
                             link: extracted.link,
-                            type: "mp4",
+                            type: extracted.type || "mp4",
                             headers: extracted.headers,
                         });
                     }
@@ -801,14 +513,14 @@ var getStream = function (_a) {
                     return [3 /*break*/, 7];
                 case 10: return [3 /*break*/, 13];
                 case 11:
-                    e_4_1 = _d.sent();
-                    e_4 = { error: e_4_1 };
+                    e_3_1 = _d.sent();
+                    e_3 = { error: e_3_1 };
                     return [3 /*break*/, 13];
                 case 12:
                     try {
                         if (mixdropCandidates_1_1 && !mixdropCandidates_1_1.done && (_c = mixdropCandidates_1.return)) _c.call(mixdropCandidates_1);
                     }
-                    finally { if (e_4) throw e_4.error; }
+                    finally { if (e_3) throw e_3.error; }
                     return [7 /*endfinally*/];
                 case 13:
                     if (streams.length) {
@@ -817,8 +529,8 @@ var getStream = function (_a) {
                     _d.label = 14;
                 case 14: return [2 /*return*/, []];
                 case 15:
-                    error_6 = _d.sent();
-                    console.error("Primewire getStream failed", error_6);
+                    error_3 = _d.sent();
+                    console.error("Primewire getStream failed", error_3);
                     return [2 /*return*/, []];
                 case 16: return [2 /*return*/];
             }
