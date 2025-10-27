@@ -267,7 +267,7 @@ var extractDood = function (url, axios) { return __awaiter(void 0, void 0, void 
  * Extracts direct video links from StreamTape embed pages
  */
 var extractStreamTape = function (url, axios) { return __awaiter(void 0, void 0, void 0, function () {
-    var data, html, directMatch, rawLink, normalized, finalUrl, error_3;
+    var data, html, directMatch, rawLink, normalized, pathMatch, finalUrl, error_3;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -302,13 +302,30 @@ var extractStreamTape = function (url, axios) { return __awaiter(void 0, void 0,
                     .replace(/&amp;/g, "&")
                     .trim();
                 console.log("StreamTape: Extracted raw link: ".concat(rawLink));
-                normalized = rawLink.startsWith("http") || rawLink.startsWith("https")
-                    ? rawLink
-                    : rawLink.startsWith("//")
-                        ? "https:".concat(rawLink)
-                        : rawLink.startsWith("/")
-                            ? "".concat(getOrigin(url)).concat(rawLink)
-                            : rawLink;
+                normalized = void 0;
+                if (rawLink.startsWith("http") || rawLink.startsWith("https")) {
+                    // Already a complete URL
+                    normalized = rawLink;
+                }
+                else if (rawLink.startsWith("//")) {
+                    // Protocol-relative URL
+                    normalized = "https:".concat(rawLink);
+                }
+                else if (rawLink.startsWith("/")) {
+                    pathMatch = rawLink.match(/^\/([^\/]+)\//);
+                    if (pathMatch && (pathMatch[1].includes("streamta") || pathMatch[1].includes("streamtape"))) {
+                        // Path includes domain, just add protocol
+                        normalized = "https:/".concat(rawLink);
+                    }
+                    else {
+                        // Normal path, prepend origin
+                        normalized = "".concat(getOrigin(url)).concat(rawLink);
+                    }
+                }
+                else {
+                    // Relative path
+                    normalized = "".concat(getOrigin(url), "/").concat(rawLink);
+                }
                 finalUrl = normalized.includes("&stream=") || normalized.includes("stream=")
                     ? normalized
                     : "".concat(normalized, "&stream=1");

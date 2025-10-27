@@ -230,14 +230,28 @@ const extractStreamTape: Extractor = async (url, axios) => {
 
     console.log(`StreamTape: Extracted raw link: ${rawLink}`);
 
-    const normalized =
-      rawLink.startsWith("http") || rawLink.startsWith("https")
-        ? rawLink
-        : rawLink.startsWith("//")
-        ? `https:${rawLink}`
-        : rawLink.startsWith("/")
-        ? `${getOrigin(url)}${rawLink}`
-        : rawLink;
+    // Handle different URL formats
+    let normalized: string;
+    if (rawLink.startsWith("http") || rawLink.startsWith("https")) {
+      // Already a complete URL
+      normalized = rawLink;
+    } else if (rawLink.startsWith("//")) {
+      // Protocol-relative URL
+      normalized = `https:${rawLink}`;
+    } else if (rawLink.startsWith("/")) {
+      // Check if the path already contains the domain (e.g., /streamta.site/get_video)
+      const pathMatch = rawLink.match(/^\/([^\/]+)\//);
+      if (pathMatch && (pathMatch[1].includes("streamta") || pathMatch[1].includes("streamtape"))) {
+        // Path includes domain, just add protocol
+        normalized = `https:/${rawLink}`;
+      } else {
+        // Normal path, prepend origin
+        normalized = `${getOrigin(url)}${rawLink}`;
+      }
+    } else {
+      // Relative path
+      normalized = `${getOrigin(url)}/${rawLink}`;
+    }
 
     const finalUrl =
       normalized.includes("&stream=") || normalized.includes("stream=")
