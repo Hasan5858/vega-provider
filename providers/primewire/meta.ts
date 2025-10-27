@@ -68,14 +68,13 @@ export const getMeta = async function ({
       });
     });
     if (type === "movie") {
-      // If we found an embed URL, use that instead of the movie page
-      const streamLink = iframeSrc ? iframeSrc : link;
-      
+      // Always use the original link for movies, not the embed URL
+      // The stream module will scrape the actual Primewire page to find direct streams
       linkList.push({
         title: "Movie",
         directLinks: [
           {
-            link: streamLink,
+            link: link,
             title: "Movie",
             type: "movie",
           },

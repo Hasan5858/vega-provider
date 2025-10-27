@@ -39,7 +39,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getMeta = void 0;
 var getMeta = function (_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var axios, cheerio, url, baseUrl_1, res, html, $_1, title, image, synopsis, imdbId, type, linkList_1, iframeSrc, streamLink, error_1;
+        var axios, cheerio, url, baseUrl_1, res, html, $_1, title, image, synopsis, imdbId, type, linkList_1, iframeSrc, error_1;
         var _c;
         var link = _b.link, providerContext = _b.providerContext;
         return __generator(this, function (_d) {
@@ -96,12 +96,13 @@ var getMeta = function (_a) {
                         });
                     });
                     if (type === "movie") {
-                        streamLink = iframeSrc ? iframeSrc : link;
+                        // Always use the original link for movies, not the embed URL
+                        // The stream module will scrape the actual Primewire page to find direct streams
                         linkList_1.push({
                             title: "Movie",
                             directLinks: [
                                 {
-                                    link: streamLink,
+                                    link: link,
                                     title: "Movie",
                                     type: "movie",
                                 },
