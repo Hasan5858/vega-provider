@@ -218,6 +218,17 @@ const mapQuality = (className?: string): Stream["quality"] | undefined => {
   return undefined;
 };
 
+const getOrigin = (input: string): string => {
+  const match = input.match(/^(https?:\/\/[^/]+)/i);
+  return match ? match[1] : "https://www.primewire.mov";
+};
+
+const getLastPathSegment = (input: string): string => {
+  const cleaned = input.split("?")[0];
+  const segments = cleaned.split("/").filter(Boolean);
+  return segments[segments.length - 1] || "";
+};
+
 async function handlePrimeSrcEmbed(
   url: string,
   axios: ProviderContext["axios"],
@@ -380,15 +391,14 @@ const extractDoodStream = async (
   axios: ProviderContext["axios"]
 ): Promise<{ link: string; headers: Record<string, string> } | null> => {
   try {
-    const url = new URL(doodUrl);
-    const id = url.pathname.split("/").pop();
+    const id = getLastPathSegment(doodUrl);
     if (!id) {
       return null;
     }
 
     const candidateHosts = Array.from(
       new Set([
-        `${url.protocol}//${url.hostname}`,
+        getOrigin(doodUrl),
         "https://dsvplay.com",
         "https://dood.la",
         "https://dood.ws",
@@ -504,7 +514,7 @@ const extractStreamTape = async (
         : rawLink.startsWith("//")
         ? `https:${rawLink}`
         : rawLink.startsWith("/")
-        ? `https://${new URL(streamTapeUrl).hostname}${rawLink}`
+        ? `${getOrigin(streamTapeUrl)}${rawLink}`
         : rawLink;
 
     const finalUrl =
@@ -637,18 +647,7 @@ const resolveGoEntries = async (
       continue;
     }
 
-    const fallbackType = directLink.includes(".m3u8")
-      ? "m3u8"
-      : directLink.match(/\.(mp4|mkv|webm)(\?|$)/)
-      ? "mp4"
-      : "iframe";
-
-    results.push({
-      server: hostLabel,
-      link: directLink,
-      type: fallbackType,
-      quality: entry.quality,
-    });
+    console.warn("Primewire: unsupported host", hostLabel, directLink);
   }
 
   return results;

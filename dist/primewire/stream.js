@@ -292,6 +292,15 @@ var mapQuality = function (className) {
     }
     return undefined;
 };
+var getOrigin = function (input) {
+    var match = input.match(/^(https?:\/\/[^/]+)/i);
+    return match ? match[1] : "https://www.primewire.mov";
+};
+var getLastPathSegment = function (input) {
+    var cleaned = input.split("?")[0];
+    var segments = cleaned.split("/").filter(Boolean);
+    return segments[segments.length - 1] || "";
+};
 function handlePrimeSrcEmbed(url, axios, cheerioModule) {
     return __awaiter(this, void 0, void 0, function () {
         var embedRes, $_1, streams_1, error_1;
@@ -433,19 +442,18 @@ var extractMixdrop = function (mixdropUrl, axios) { return __awaiter(void 0, voi
     });
 }); };
 var extractDoodStream = function (doodUrl, axios) { return __awaiter(void 0, void 0, void 0, function () {
-    var url, id, candidateHosts, embedHtml, activeHost, candidateHosts_1, candidateHosts_1_1, host, embedUrl_1, data, _a, e_2_1, passMatch, tokenMatch, embedUrl, passUrl, response, baseStream, token, finalUrl, error_3;
+    var id, candidateHosts, embedHtml, activeHost, candidateHosts_1, candidateHosts_1_1, host, embedUrl_1, data, _a, e_2_1, passMatch, tokenMatch, embedUrl, passUrl, response, baseStream, token, finalUrl, error_3;
     var e_2, _b;
     return __generator(this, function (_c) {
         switch (_c.label) {
             case 0:
                 _c.trys.push([0, 12, , 13]);
-                url = new URL(doodUrl);
-                id = url.pathname.split("/").pop();
+                id = getLastPathSegment(doodUrl);
                 if (!id) {
                     return [2 /*return*/, null];
                 }
                 candidateHosts = Array.from(new Set([
-                    "".concat(url.protocol, "//").concat(url.hostname),
+                    getOrigin(doodUrl),
                     "https://dsvplay.com",
                     "https://dood.la",
                     "https://dood.ws",
@@ -574,7 +582,7 @@ var extractStreamTape = function (streamTapeUrl, axios) { return __awaiter(void 
                     : rawLink.startsWith("//")
                         ? "https:".concat(rawLink)
                         : rawLink.startsWith("/")
-                            ? "https://".concat(new URL(streamTapeUrl).hostname).concat(rawLink)
+                            ? "".concat(getOrigin(streamTapeUrl)).concat(rawLink)
                             : rawLink;
                 finalUrl = normalized.includes("&stream=") || normalized.includes("stream=")
                     ? normalized
@@ -595,7 +603,7 @@ var extractStreamTape = function (streamTapeUrl, axios) { return __awaiter(void 
     });
 }); };
 var resolveGoEntries = function (url, $, axios) { return __awaiter(void 0, void 0, void 0, function () {
-    var urlMatch, baseUrl, linkKeys, entries, results, entries_1, entries_1_1, entry, key, goUrl, goData, response, error_5, directLink, hostLabel, host, extracted, fallbackType, e_3_1;
+    var urlMatch, baseUrl, linkKeys, entries, results, entries_1, entries_1_1, entry, key, goUrl, goData, response, error_5, directLink, hostLabel, host, extracted, e_3_1;
     var e_3, _a;
     return __generator(this, function (_b) {
         switch (_b.label) {
@@ -704,17 +712,7 @@ var resolveGoEntries = function (url, $, axios) { return __awaiter(void 0, void 
                     });
                     return [3 /*break*/, 13];
                 }
-                fallbackType = directLink.includes(".m3u8")
-                    ? "m3u8"
-                    : directLink.match(/\.(mp4|mkv|webm)(\?|$)/)
-                        ? "mp4"
-                        : "iframe";
-                results.push({
-                    server: hostLabel,
-                    link: directLink,
-                    type: fallbackType,
-                    quality: entry.quality,
-                });
+                console.warn("Primewire: unsupported host", hostLabel, directLink);
                 _b.label = 13;
             case 13:
                 entries_1_1 = entries_1.next();
