@@ -60,8 +60,20 @@ const extractStreamForHost = async (
     return providerContext.extractors.mixdropExtractor(directLink, axios);
   }
   
+  if (host.includes("voe")) {
+    const streams = await providerContext.extractors.voeExtractor(directLink);
+    if (streams && streams.length > 0) {
+      const stream = streams[0];
+      return {
+        link: stream.link,
+        headers: stream.headers,
+        type: stream.type,
+      };
+    }
+    return null;
+  }
+  
   // TODO: Add more extractors as they're implemented in providerContext
-  // if (host.includes("voe")) return providerContext.extractors.voeExtractor(directLink, axios);
   // if (host.includes("filemoon")) return providerContext.extractors.fileMoonExtractor(directLink, axios);
   // if (host.includes("filelions")) return providerContext.extractors.fileLionsExtractor(directLink, axios);
   // ... etc

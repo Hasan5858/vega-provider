@@ -96,26 +96,42 @@ var getLastPathSegment = function (input) {
  * This approach scales to 30+ extractors without bloating this file
  */
 var extractStreamForHost = function (hostLabel, directLink, axios, providerContext) { return __awaiter(void 0, void 0, void 0, function () {
-    var host;
+    var host, streams, stream;
     return __generator(this, function (_a) {
-        host = normalizeHost(hostLabel);
-        // Route to extractors from providerContext
-        // Easy to add 20-30 more hosts - just add more if statements or use a map
-        if (host.includes("streamtape") || directLink.includes("streamtape") || directLink.includes("streamta")) {
-            return [2 /*return*/, providerContext.extractors.streamtapeExtractor(directLink, axios)];
+        switch (_a.label) {
+            case 0:
+                host = normalizeHost(hostLabel);
+                // Route to extractors from providerContext
+                // Easy to add 20-30 more hosts - just add more if statements or use a map
+                if (host.includes("streamtape") || directLink.includes("streamtape") || directLink.includes("streamta")) {
+                    return [2 /*return*/, providerContext.extractors.streamtapeExtractor(directLink, axios)];
+                }
+                if (host.includes("dood") || directLink.includes("dood")) {
+                    return [2 /*return*/, providerContext.extractors.doodExtractor(directLink, axios)];
+                }
+                if (host.includes("mixdrop") || directLink.includes("mixdrop")) {
+                    return [2 /*return*/, providerContext.extractors.mixdropExtractor(directLink, axios)];
+                }
+                if (!host.includes("voe")) return [3 /*break*/, 2];
+                return [4 /*yield*/, providerContext.extractors.voeExtractor(directLink)];
+            case 1:
+                streams = _a.sent();
+                if (streams && streams.length > 0) {
+                    stream = streams[0];
+                    return [2 /*return*/, {
+                            link: stream.link,
+                            headers: stream.headers,
+                            type: stream.type,
+                        }];
+                }
+                return [2 /*return*/, null];
+            case 2: 
+            // TODO: Add more extractors as they're implemented in providerContext
+            // if (host.includes("filemoon")) return providerContext.extractors.fileMoonExtractor(directLink, axios);
+            // if (host.includes("filelions")) return providerContext.extractors.fileLionsExtractor(directLink, axios);
+            // ... etc
+            return [2 /*return*/, null];
         }
-        if (host.includes("dood") || directLink.includes("dood")) {
-            return [2 /*return*/, providerContext.extractors.doodExtractor(directLink, axios)];
-        }
-        if (host.includes("mixdrop") || directLink.includes("mixdrop")) {
-            return [2 /*return*/, providerContext.extractors.mixdropExtractor(directLink, axios)];
-        }
-        // TODO: Add more extractors as they're implemented in providerContext
-        // if (host.includes("voe")) return providerContext.extractors.voeExtractor(directLink, axios);
-        // if (host.includes("filemoon")) return providerContext.extractors.fileMoonExtractor(directLink, axios);
-        // if (host.includes("filelions")) return providerContext.extractors.fileLionsExtractor(directLink, axios);
-        // ... etc
-        return [2 /*return*/, null];
     });
 }); };
 // Blowfish constants inlined (P array and S-boxes)
