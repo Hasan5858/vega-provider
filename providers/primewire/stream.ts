@@ -63,6 +63,10 @@ const extractStreamForHost = async (
   if (host.includes("filelions") || directLink.includes("filelions")) {
     return providerContext.extractors.filelionsExtractor(directLink, axios);
   }
+
+  if (host.includes("filemoon") || directLink.includes("filemoon")) {
+    return providerContext.extractors.filemoonExtractor(directLink, axios);
+  }
   
   if (host.includes("voe")) {
     const streams = await providerContext.extractors.voeExtractor(directLink);

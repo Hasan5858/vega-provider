@@ -115,6 +115,9 @@ var extractStreamForHost = function (hostLabel, directLink, axios, providerConte
                 if (host.includes("filelions") || directLink.includes("filelions")) {
                     return [2 /*return*/, providerContext.extractors.filelionsExtractor(directLink, axios)];
                 }
+                if (host.includes("filemoon") || directLink.includes("filemoon")) {
+                    return [2 /*return*/, providerContext.extractors.filemoonExtractor(directLink, axios)];
+                }
                 if (!host.includes("voe")) return [3 /*break*/, 2];
                 return [4 /*yield*/, providerContext.extractors.voeExtractor(directLink)];
             case 1:
