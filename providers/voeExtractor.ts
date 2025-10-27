@@ -32,7 +32,8 @@ export async function voeExtractor(
     const locationMatch = initialHtml.match(/location\.href\s*=\s*["']([^"']+)["']/);
     const windowLocationMatch = initialHtml.match(/window\.location\s*=\s*["']([^"']+)["']/);
     
-    let redirectedUrl = redirectResponse.request.res.responseUrl || url;
+    // React Native axios doesn't have request.res.responseUrl, use config.url or parse from response
+    let redirectedUrl = redirectResponse.config?.url || url;
     
     if (locationMatch || windowLocationMatch) {
       redirectedUrl = (locationMatch || windowLocationMatch)[1];
@@ -61,7 +62,7 @@ export async function voeExtractor(
     // Check for another JS redirect to final download page (e.g., jilliandescribecompany.com)
     const finalLocationMatch = downloadPageHtml.match(/window\.location\.href\s*=\s*["']([^"']+)["']/);
     
-    let finalDownloadUrl = downloadPageResponse.request.res.responseUrl || downloadUrl;
+    let finalDownloadUrl = downloadPageResponse.config?.url || downloadUrl;
     
     if (finalLocationMatch) {
       finalDownloadUrl = finalLocationMatch[1];
@@ -77,7 +78,7 @@ export async function voeExtractor(
       });
       
       downloadPageHtml = finalPageResponse.data;
-      finalDownloadUrl = finalPageResponse.request.res.responseUrl || finalDownloadUrl;
+      finalDownloadUrl = finalPageResponse.config?.url || finalDownloadUrl;
     }
 
     console.log(`VOE: Final download page: ${finalDownloadUrl}`);
