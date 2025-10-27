@@ -16,6 +16,7 @@ import { mixdropExtractor } from "./mixdropExtractor";
 import { voeExtractor } from "./voeExtractor";
 import { filelionsExtractor } from "./filelionsExtractor";
 import { filemoonExtractor } from "./filemoonExtractor";
+import { streamwishExtractor } from "./streamwishExtractor";
 import { ProviderContext } from "./types";
 import Aes from "react-native-aes-crypto";
 
@@ -39,6 +40,7 @@ const extractors = {
   filelionsExtractor,
   filemoonExtractor,
   voeExtractor,
+  streamwishExtractor,
 };
 
 export const providerContext: ProviderContext = {
