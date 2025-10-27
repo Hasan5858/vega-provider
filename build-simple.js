@@ -314,10 +314,11 @@ class ProviderBuilder {
     this.copyDataFiles();
 
     // Add minification step (skip if SKIP_MINIFY is set)
-    if (!process.env.SKIP_MINIFY) {
+    // Currently disabled due to scientific notation issues with large numbers
+    if (process.env.ENABLE_MINIFY === "true" && !process.env.SKIP_MINIFY) {
       await this.minifyFiles();
     } else {
-      log.info("Skipping minification (SKIP_MINIFY=true)");
+      log.info("Skipping minification (minification disabled due to number formatting issues)");
     }
 
     const buildTime = Date.now() - this.startTime;
