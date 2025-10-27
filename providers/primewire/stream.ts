@@ -18,21 +18,32 @@ export const getStream = async function ({
     const res = await axios.get(url);
     const data = res.data;
     const $ = cheerio.load(data);
-    $('tr:contains("mixdrop")').map((i, element) => {
-      const id = $(element).find(".wp-menu-btn").attr("data-wp-menu");
-      const size = $(element).find(".wp-menu-btn").next().text();
-      if (id) {
-        urls.push({ id: baseUrl + "/links/go/" + id, size });
+    
+    // Filter tr elements that contain mixdrop
+    $('tr').each((i, element) => {
+      const text = $(element).text().toLowerCase();
+      if (text.includes('mixdrop')) {
+        const id = $(element).find(".wp-menu-btn").attr("data-wp-menu");
+        const size = $(element).find(".wp-menu-btn").next().text();
+        if (id) {
+          urls.push({ id: baseUrl + "/links/go/" + id, size });
+        }
       }
     });
 
     console.log("urls", urls);
+    
+    if (urls.length === 0) {
+      console.log("No mixdrop links found");
+      return [];
+    }
 
     for (const url of urls) {
-      const res2 = await axios.head(url.id);
-      const location = res2.request?.responseURL.replace("/f/", "/e/");
+      try {
+        const res2 = await axios.head(url.id);
+        const location = res2.request?.responseURL.replace("/f/", "/e/");
 
-      const res3 = await fetch(location, {
+        const res3 = await fetch(location, {
         credentials: "include",
         headers: {
           "User-Agent":
@@ -122,29 +133,36 @@ export const getStream = async function ({
         // get MDCore.wurl=
         const wurl = decoded.match(/MDCore\.wurl="([^"]+)"/)?.[1];
         console.log("wurl:", wurl);
-        const streamUrl = "https:" + wurl;
-        console.log("streamUrl:", streamUrl);
-        streamLinks.push({
-          server: "Mixdrop " + url.size,
-          link: streamUrl,
-          type: "mp4",
-          headers: {
-            "User-Agent":
-              "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:101.0) Gecko/20100101 Firefox/101.0",
-            Accept:
-              "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5",
-            "Upgrade-Insecure-Requests": "1",
-            "Sec-Fetch-Dest": "iframe",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "same-origin",
-            Pragma: "no-cache",
-            "Cache-Control": "no-cache",
-            referer: res2.request?.responseURL,
-          },
-        });
+        if (wurl) {
+          const streamUrl = "https:" + wurl;
+          console.log("streamUrl:", streamUrl);
+          streamLinks.push({
+            server: "Mixdrop " + url.size,
+            link: streamUrl,
+            type: "mp4",
+            headers: {
+              "User-Agent":
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:101.0) Gecko/20100101 Firefox/101.0",
+              Accept:
+                "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+              "Accept-Language": "en-US,en;q=0.5",
+              "Upgrade-Insecure-Requests": "1",
+              "Sec-Fetch-Dest": "iframe",
+              "Sec-Fetch-Mode": "navigate",
+              "Sec-Fetch-Site": "same-origin",
+              Pragma: "no-cache",
+              "Cache-Control": "no-cache",
+              referer: res2.request?.responseURL,
+            },
+          });
+        } else {
+          console.log("Could not extract wurl from decoded string");
+        }
       } else {
-        console.log("No match found");
+        console.log("No match found in response");
+      }
+      } catch (fetchErr) {
+        console.error("Error processing stream link:", fetchErr);
       }
     }
     return streamLinks;
