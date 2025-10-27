@@ -65,6 +65,7 @@ async function posts({
     const seen = new Set<string>(); // Deduplication by link
     const seenTitles = new Set<string>(); // Additional deduplication by title
     
+    // Try regular filter page selector first
     $(".index_item.index_item_ie").each((i, element) => {
       const title = $(element).find("a").attr("title");
       const link = $(element).find("a").attr("href");
@@ -94,6 +95,36 @@ async function posts({
         image: image,
       });
     });
+
+    // If no results, try playlist table row selector
+    if (catalog.length === 0) {
+      $("table tbody tr").each((i, element) => {
+        const titleLink = $(element).find("a");
+        const title = titleLink.text().trim();
+        const link = titleLink.attr("href");
+        const image = $(element).find("img").attr("src") || "";
+        
+        if (!title || !link) return;
+        
+        const fullLink = baseUrl + link;
+        
+        // Deduplication by link
+        if (seen.has(fullLink)) return;
+        
+        // Deduplication by title
+        if (seenTitles.has(title.toLowerCase())) return;
+        
+        seen.add(fullLink);
+        seenTitles.add(title.toLowerCase());
+        
+        catalog.push({
+          title: title,
+          link: fullLink,
+          image: image,
+        });
+      });
+    }
+
     return catalog;
   } catch (err) {
     console.error("primewire error ", err);

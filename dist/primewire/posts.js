@@ -102,6 +102,7 @@ function posts(_a) {
                     catalog_1 = [];
                     seen_1 = new Set();
                     seenTitles_1 = new Set();
+                    // Try regular filter page selector first
                     $_1(".index_item.index_item_ie").each(function (i, element) {
                         var title = $_1(element).find("a").attr("title");
                         var link = $_1(element).find("a").attr("href");
@@ -127,6 +128,31 @@ function posts(_a) {
                             image: image,
                         });
                     });
+                    // If no results, try playlist table row selector
+                    if (catalog_1.length === 0) {
+                        $_1("table tbody tr").each(function (i, element) {
+                            var titleLink = $_1(element).find("a");
+                            var title = titleLink.text().trim();
+                            var link = titleLink.attr("href");
+                            var image = $_1(element).find("img").attr("src") || "";
+                            if (!title || !link)
+                                return;
+                            var fullLink = baseUrl + link;
+                            // Deduplication by link
+                            if (seen_1.has(fullLink))
+                                return;
+                            // Deduplication by title
+                            if (seenTitles_1.has(title.toLowerCase()))
+                                return;
+                            seen_1.add(fullLink);
+                            seenTitles_1.add(title.toLowerCase());
+                            catalog_1.push({
+                                title: title,
+                                link: fullLink,
+                                image: image,
+                            });
+                        });
+                    }
                     return [2 /*return*/, catalog_1];
                 case 2:
                     err_1 = _c.sent();
