@@ -98,26 +98,27 @@ async function posts({
 
     // If no results, try playlist table row selector
     if (catalog.length === 0) {
-      $("table tbody tr").each((i, element) => {
-        // Skip info header rows (first row in playlists)
-        if ($(element).find(".playlist_item_info").length > 0) return;
+      $("tr.playlist-item").each((i, element) => {
+        const row = $(element);
         
-        // Find link in first td (may be inside a or standalone)
-        const firstTd = $(element).find("td").first();
-        const titleLink = firstTd.find("a").first();
-        
-        if (titleLink.length === 0) return;
-        
-        const title = titleLink.text().trim();
-        const link = titleLink.attr("href");
-        
-        // Image is inside the playlist_thumb div, specifically in the img tag
-        let image = firstTd.find(".playlist_thumb img").attr("src") || "";
+        // Get thumbnail from first td with .playlist_thumb
+        const thumbDiv = row.find(".playlist_thumb");
+        const thumbLink = thumbDiv.find("a");
+        let image = thumbLink.find("img").attr("src") || "";
         
         // Convert relative image URLs to absolute URLs
         if (image && image.startsWith("/")) {
           image = baseUrl + image;
         }
+        
+        // Get title and link from second td with .playlist_info
+        const infoDiv = row.find(".playlist_info");
+        const titleLink = infoDiv.find("a").first();
+        
+        if (titleLink.length === 0) return;
+        
+        const title = titleLink.text().trim();
+        const link = titleLink.attr("href");
         
         if (!title || !link) return;
         
