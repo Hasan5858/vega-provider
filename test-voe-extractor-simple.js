@@ -1,27 +1,14 @@
-import { Stream } from './types';
-import axios from 'axios';
+const axios = require('axios');
 
-/**
- * VOE.sx Video Extractor
- * 
- * Extracts direct download links from voe.sx using the download page.
- * Flow:
- * 1. voe.sx/e/{id} redirects to lukesitturn.com/{id}
- * 2. Append /download to get lukesitturn.com/{id}/download
- * 3. Follow redirect to final download page (e.g., jilliandescribecompany.com/{id}/download)
- * 4. Extract direct download link from the download button
- */
-
-export async function voeExtractor(
-  url: string
-): Promise<Stream[]> {
+// Simulate React Native axios behavior (no request.res.responseUrl)
+async function voeExtractor(url) {
   try {
     console.log(`VOE: Starting extraction from ${url}`);
     
     // Step 1: Follow redirect from voe.sx/e/{id} to lukesitturn.com/e/{id}
     const redirectResponse = await axios.get(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Referer': url,
       },
       maxRedirects: 5,
@@ -36,36 +23,36 @@ export async function voeExtractor(
     
     if (locationMatch || windowLocationMatch) {
       redirectedUrl = (locationMatch || windowLocationMatch)[1];
-      console.log(`VOE: Found JS redirect to ${redirectedUrl}`);
+      console.log(`✓ VOE: Found JS redirect to ${redirectedUrl}`);
     } else {
-      console.log(`VOE: No JS redirect found, using original URL`);
+      console.log(`✓ VOE: No JS redirect found, using original URL`);
     }
 
     // Step 2: Construct download URL (remove /e/ if present)
     const baseUrl = redirectedUrl.replace(/\/e\//, '/').split('?')[0].replace(/\/$/, '');
     const downloadUrl = `${baseUrl}/download`;
-    console.log(`VOE: Constructed download URL: ${downloadUrl}`);
+    console.log(`✓ VOE: Constructed download URL: ${downloadUrl}`);
 
     // Step 3: Follow redirect to intermediate download page
     const downloadPageResponse = await axios.get(downloadUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Referer': redirectedUrl,
       },
-      maxRedirects: 0, // Don't follow HTTP redirects, handle JS redirects
-      validateStatus: (status) => status < 400, // Accept all non-error responses
+      maxRedirects: 0,
+      validateStatus: (status) => status < 400,
     });
 
     let downloadPageHtml = downloadPageResponse.data;
     
-    // Check for another JS redirect to final download page (e.g., jilliandescribecompany.com)
+    // Check for another JS redirect to final download page
     const finalLocationMatch = downloadPageHtml.match(/window\.location\.href\s*=\s*["']([^"']+)["']/);
     
     let finalDownloadUrl = downloadUrl; // Default to download URL
     
     if (finalLocationMatch) {
       finalDownloadUrl = finalLocationMatch[1];
-      console.log(`VOE: Found final JS redirect to ${finalDownloadUrl}`);
+      console.log(`✓ VOE: Found final JS redirect to ${finalDownloadUrl}`);
       
       // Fetch the actual final download page
       const finalPageResponse = await axios.get(finalDownloadUrl, {
@@ -80,18 +67,13 @@ export async function voeExtractor(
       finalDownloadUrl = finalLocationMatch[1]; // Use the matched URL
     }
 
-    console.log(`VOE: Final download page: ${finalDownloadUrl}`);
+    console.log(`✓ VOE: Final download page: ${finalDownloadUrl}`);
 
-    // Step 4: Extract download link from the page
-    // Look for the download button with direct download link
+    // Step 4: Extract download link
     const patterns = [
-      // Specific CDN pattern (edgeon-bandwidth, etc.)
       /href=["']([^"']*(?:edgeon-bandwidth|cdn)[^"']*\.mp4[^"']*)[^"']*["']/i,
-      // Direct download link with quality text
       /<a[^>]*href=["'](https?:\/\/[^"']+\.(?:mp4|mkv)(?:\?[^"']*)?)[^"']*["'][^>]*>[\s\S]*?Quality\s+(\d+)p[\s\S]*?<\/a>/i,
-      // More specific pattern for VOE download button
       /<a[^>]*href=["']([^"']+)["'][^>]*>[\s\S]*?Quality[\s\S]*?Direct\s+Download\s+Link[\s\S]*?<\/a>/i,
-      // Download button with download attribute
       /<a[^>]*href=["']([^"']+)["'][^>]*download[^>]*>/i,
     ];
 
@@ -100,7 +82,7 @@ export async function voeExtractor(
       if (match && match[1]) {
         let videoUrl = match[1];
         
-        // Decode HTML entities (&amp; -> &)
+        // Decode HTML entities
         videoUrl = videoUrl.replace(/&amp;/g, '&');
         
         // Skip non-video URLs
@@ -108,35 +90,45 @@ export async function voeExtractor(
           continue;
         }
         
-        const quality = match[2] || '720'; // Extract quality if available
+        const quality = match[2] || '720';
 
-        // Make sure URL is absolute
         if (videoUrl.startsWith('/')) {
           const urlObj = new URL(finalDownloadUrl);
           videoUrl = `${urlObj.protocol}//${urlObj.host}${videoUrl}`;
         }
 
-        console.log(`VOE: Found download link: ${videoUrl}`);
-
-        return [
-          {
-            server: 'VOE',
-            quality: quality,
-            link: videoUrl,
-            type: 'mkv',
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-              'Referer': finalDownloadUrl,
-            },
+        console.log(`\n✅ SUCCESS! VOE: Found download link`);
+        console.log(`Quality: ${quality}p`);
+        console.log(`URL: ${videoUrl.substring(0, 100)}...`);
+        
+        return [{
+          server: 'VOE',
+          quality: quality,
+          link: videoUrl,
+          type: 'mkv',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Referer': finalDownloadUrl,
           },
-        ];
+        }];
       }
     }
 
-    console.log('VOE: No download link found on page');
+    console.log('❌ VOE: No download link found');
     return [];
-  } catch (error: any) {
-    console.error(`VOE: Extraction failed - ${error.message}`);
+  } catch (error) {
+    console.error(`❌ VOE: Extraction failed - ${error.message}`);
     return [];
   }
 }
+
+// Test with the URL from logs
+voeExtractor('https://voe.sx/e/vtyacxsw3cxu').then(result => {
+  console.log('\n='.repeat(60));
+  if (result.length > 0) {
+    console.log('✅ VOE Extractor Test: PASSED');
+    console.log('Result:', result[0]);
+  } else {
+    console.log('❌ VOE Extractor Test: FAILED - No streams returned');
+  }
+});

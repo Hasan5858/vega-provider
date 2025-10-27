@@ -66,11 +66,10 @@ function voeExtractor(url) {
     return __awaiter(this, void 0, void 0, function () {
         var redirectResponse, initialHtml, locationMatch, windowLocationMatch, redirectedUrl, baseUrl, downloadUrl, downloadPageResponse, downloadPageHtml, finalLocationMatch, finalDownloadUrl, finalPageResponse, patterns, patterns_1, patterns_1_1, pattern, match, videoUrl, quality, urlObj, error_1;
         var e_1, _a;
-        var _b, _c, _d;
-        return __generator(this, function (_e) {
-            switch (_e.label) {
+        return __generator(this, function (_b) {
+            switch (_b.label) {
                 case 0:
-                    _e.trys.push([0, 5, , 6]);
+                    _b.trys.push([0, 5, , 6]);
                     console.log("VOE: Starting extraction from ".concat(url));
                     return [4 /*yield*/, axios_1.default.get(url, {
                             headers: {
@@ -80,17 +79,17 @@ function voeExtractor(url) {
                             maxRedirects: 5,
                         })];
                 case 1:
-                    redirectResponse = _e.sent();
+                    redirectResponse = _b.sent();
                     initialHtml = redirectResponse.data;
                     locationMatch = initialHtml.match(/location\.href\s*=\s*["']([^"']+)["']/);
                     windowLocationMatch = initialHtml.match(/window\.location\s*=\s*["']([^"']+)["']/);
-                    redirectedUrl = ((_b = redirectResponse.config) === null || _b === void 0 ? void 0 : _b.url) || url;
+                    redirectedUrl = url;
                     if (locationMatch || windowLocationMatch) {
                         redirectedUrl = (locationMatch || windowLocationMatch)[1];
                         console.log("VOE: Found JS redirect to ".concat(redirectedUrl));
                     }
                     else {
-                        console.log("VOE: Redirected to ".concat(redirectedUrl));
+                        console.log("VOE: No JS redirect found, using original URL");
                     }
                     baseUrl = redirectedUrl.replace(/\/e\//, '/').split('?')[0].replace(/\/$/, '');
                     downloadUrl = "".concat(baseUrl, "/download");
@@ -104,10 +103,10 @@ function voeExtractor(url) {
                             validateStatus: function (status) { return status < 400; }, // Accept all non-error responses
                         })];
                 case 2:
-                    downloadPageResponse = _e.sent();
+                    downloadPageResponse = _b.sent();
                     downloadPageHtml = downloadPageResponse.data;
                     finalLocationMatch = downloadPageHtml.match(/window\.location\.href\s*=\s*["']([^"']+)["']/);
-                    finalDownloadUrl = ((_c = downloadPageResponse.config) === null || _c === void 0 ? void 0 : _c.url) || downloadUrl;
+                    finalDownloadUrl = downloadUrl;
                     if (!finalLocationMatch) return [3 /*break*/, 4];
                     finalDownloadUrl = finalLocationMatch[1];
                     console.log("VOE: Found final JS redirect to ".concat(finalDownloadUrl));
@@ -119,10 +118,10 @@ function voeExtractor(url) {
                             maxRedirects: 5,
                         })];
                 case 3:
-                    finalPageResponse = _e.sent();
+                    finalPageResponse = _b.sent();
                     downloadPageHtml = finalPageResponse.data;
-                    finalDownloadUrl = ((_d = finalPageResponse.config) === null || _d === void 0 ? void 0 : _d.url) || finalDownloadUrl;
-                    _e.label = 4;
+                    finalDownloadUrl = finalLocationMatch[1]; // Use the matched URL
+                    _b.label = 4;
                 case 4:
                     console.log("VOE: Final download page: ".concat(finalDownloadUrl));
                     patterns = [
@@ -179,7 +178,7 @@ function voeExtractor(url) {
                     console.log('VOE: No download link found on page');
                     return [2 /*return*/, []];
                 case 5:
-                    error_1 = _e.sent();
+                    error_1 = _b.sent();
                     console.error("VOE: Extraction failed - ".concat(error_1.message));
                     return [2 /*return*/, []];
                 case 6: return [2 /*return*/];
