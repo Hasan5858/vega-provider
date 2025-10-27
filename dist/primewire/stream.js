@@ -124,6 +124,11 @@ var extractStreamForHost = function (hostLabel, directLink, axios, providerConte
                 if (host.includes("savefiles") || directLink.includes("savefiles")) {
                     return [2 /*return*/, providerContext.extractors.savefilesExtractor(directLink, axios)];
                 }
+                if (host.includes("luluvdoo") || directLink.includes("luluvdoo")) {
+                    console.log("LuluVDoo: Matched host, calling extractor");
+                    console.log("LuluVDoo: Extractor exists?", !!providerContext.extractors.luluvdooExtractor);
+                    return [2 /*return*/, providerContext.extractors.luluvdooExtractor(directLink, axios)];
+                }
                 if (!host.includes("voe")) return [3 /*break*/, 2];
                 return [4 /*yield*/, providerContext.extractors.voeExtractor(directLink)];
             case 1:
@@ -138,10 +143,11 @@ var extractStreamForHost = function (hostLabel, directLink, axios, providerConte
                 }
                 return [2 /*return*/, null];
             case 2: 
-            // TODO: Add more extractors as they're implemented in providerContext
-            // if (host.includes("filemoon")) return providerContext.extractors.fileMoonExtractor(directLink, axios);
-            // if (host.includes("filelions")) return providerContext.extractors.fileLionsExtractor(directLink, axios);
-            // ... etc
+            // Unsupported hosts (Cloudflare protected, Captcha protected, or no extractor):
+            // - bigwarp.cc (Cloudflare protected - cannot extract)
+            // - streamplay.to (Google Captcha protected - cannot extract)
+            // - vidmoly.me (no extractor yet)
+            // Only return streams for hosts we have working extractors for
             return [2 /*return*/, null];
         }
     });

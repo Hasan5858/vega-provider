@@ -77,6 +77,8 @@ const extractStreamForHost = async (
   }
 
   if (host.includes("luluvdoo") || directLink.includes("luluvdoo")) {
+    console.log("LuluVDoo: Matched host, calling extractor");
+    console.log("LuluVDoo: Extractor exists?", !!providerContext.extractors.luluvdooExtractor);
     return providerContext.extractors.luluvdooExtractor(directLink, axios);
   }
   
