@@ -31,17 +31,19 @@ export const getStream = async function ({
       }
     });
 
-    console.log("urls", urls);
+    console.log("Found mixdrop URLs:", urls.length);
     
     if (urls.length === 0) {
-      console.log("No mixdrop links found");
+      console.log("⚠️ No mixdrop links found on page");
       return [];
     }
 
     for (const url of urls) {
       try {
+        console.log("Processing URL:", url.id);
         const res2 = await axios.head(url.id);
         const location = res2.request?.responseURL.replace("/f/", "/e/");
+        console.log("Redirect location:", location);
 
         const res3 = await fetch(location, {
         credentials: "include",
@@ -130,12 +132,15 @@ export const getStream = async function ({
         };
 
         const decoded = decode(p, a, c, k, 0, {});
+        console.log("Decoded string length:", decoded.length);
+        
         // get MDCore.wurl=
         const wurl = decoded.match(/MDCore\.wurl="([^"]+)"/)?.[1];
-        console.log("wurl:", wurl);
+        console.log("Extracted wurl:", wurl);
+        
         if (wurl) {
           const streamUrl = "https:" + wurl;
-          console.log("streamUrl:", streamUrl);
+          console.log("✅ Extracted playable stream URL:", streamUrl);
           streamLinks.push({
             server: "Mixdrop " + url.size,
             link: streamUrl,
@@ -162,9 +167,11 @@ export const getStream = async function ({
         console.log("No match found in response");
       }
       } catch (fetchErr) {
-        console.error("Error processing stream link:", fetchErr);
+        console.error("❌ Error processing stream link:", fetchErr);
       }
     }
+    
+    console.log(`✅ Successfully extracted ${streamLinks.length} playable stream(s)`);
     return streamLinks;
   } catch (err) {
     console.error(err);
