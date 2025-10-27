@@ -14,6 +14,7 @@ import { streamtapeExtractor } from "./streamtapeExtractor";
 import { doodExtractor } from "./doodExtractor";
 import { mixdropExtractor } from "./mixdropExtractor";
 import { voeExtractor } from "./voeExtractor";
+import { filelionsExtractor } from "./filelionsExtractor";
 import { ProviderContext } from "./types";
 import Aes from "react-native-aes-crypto";
 
@@ -34,6 +35,7 @@ const extractors = {
   streamtapeExtractor,
   doodExtractor,
   mixdropExtractor,
+  filelionsExtractor,
   voeExtractor,
 };
 
