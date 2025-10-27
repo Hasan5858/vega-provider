@@ -193,6 +193,7 @@ const extractDood: Extractor = async (url, axios) => {
  */
 const extractStreamTape: Extractor = async (url, axios) => {
   try {
+    console.log(`StreamTape: Fetching embed page: ${url}`);
     const { data } = await axios.get(url, {
       headers: {
         "User-Agent":
@@ -207,11 +208,18 @@ const extractStreamTape: Extractor = async (url, axios) => {
     });
 
     const html = data as string;
-    const directMatch =
-      html.match(/id="robotlink"[^>]*>([^<]+)</) ??
-      html.match(/document\.getElementById\('robotlink'\)\.innerHTML\s*=\s*'([^']+)'/);
+    
+    // Try multiple extraction patterns
+    let directMatch = html.match(/id="robotlink"[^>]*>([^<]+)</);
+    if (!directMatch) {
+      directMatch = html.match(/document\.getElementById\('robotlink'\)\.innerHTML\s*=\s*'([^']+)'/);
+    }
+    if (!directMatch) {
+      directMatch = html.match(/'robotlink'\)\.innerHTML\s*=\s*'([^']+)'/);
+    }
 
     if (!directMatch || !directMatch[1]) {
+      console.warn("StreamTape: Could not find video link in page");
       return null;
     }
 
@@ -219,6 +227,8 @@ const extractStreamTape: Extractor = async (url, axios) => {
       .replace(/\\u0026/g, "&")
       .replace(/&amp;/g, "&")
       .trim();
+
+    console.log(`StreamTape: Extracted raw link: ${rawLink}`);
 
     const normalized =
       rawLink.startsWith("http") || rawLink.startsWith("https")
@@ -233,6 +243,8 @@ const extractStreamTape: Extractor = async (url, axios) => {
       normalized.includes("&stream=") || normalized.includes("stream=")
         ? normalized
         : `${normalized}&stream=1`;
+
+    console.log(`StreamTape: Final URL: ${finalUrl}`);
 
     return {
       link: finalUrl,
@@ -628,9 +640,11 @@ const resolveGoEntries = async (
 
     const hostLabel = (goData?.host || entry.host || "Primewire").trim();
 
+    console.log(`Primewire: Trying to extract from ${hostLabel}: ${directLink}`);
     const extracted = await extractStreamForHost(hostLabel, directLink, axios);
 
     if (extracted) {
+      console.log(`Primewire: Successfully extracted from ${hostLabel}`);
       results.push({
         server: hostLabel,
         link: extracted.link,
@@ -641,7 +655,7 @@ const resolveGoEntries = async (
       continue;
     }
 
-    console.warn("Primewire: unsupported host", hostLabel, directLink);
+    console.warn(`Primewire: unsupported host ${hostLabel}`, directLink);
   }
 
   return results;

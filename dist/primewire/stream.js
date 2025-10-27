@@ -268,11 +268,11 @@ var extractDood = function (url, axios) { return __awaiter(void 0, void 0, void 
  */
 var extractStreamTape = function (url, axios) { return __awaiter(void 0, void 0, void 0, function () {
     var data, html, directMatch, rawLink, normalized, finalUrl, error_3;
-    var _a;
-    return __generator(this, function (_b) {
-        switch (_b.label) {
+    return __generator(this, function (_a) {
+        switch (_a.label) {
             case 0:
-                _b.trys.push([0, 2, , 3]);
+                _a.trys.push([0, 2, , 3]);
+                console.log("StreamTape: Fetching embed page: ".concat(url));
                 return [4 /*yield*/, axios.get(url, {
                         headers: {
                             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
@@ -284,16 +284,24 @@ var extractStreamTape = function (url, axios) { return __awaiter(void 0, void 0,
                         },
                     })];
             case 1:
-                data = (_b.sent()).data;
+                data = (_a.sent()).data;
                 html = data;
-                directMatch = (_a = html.match(/id="robotlink"[^>]*>([^<]+)</)) !== null && _a !== void 0 ? _a : html.match(/document\.getElementById\('robotlink'\)\.innerHTML\s*=\s*'([^']+)'/);
+                directMatch = html.match(/id="robotlink"[^>]*>([^<]+)</);
+                if (!directMatch) {
+                    directMatch = html.match(/document\.getElementById\('robotlink'\)\.innerHTML\s*=\s*'([^']+)'/);
+                }
+                if (!directMatch) {
+                    directMatch = html.match(/'robotlink'\)\.innerHTML\s*=\s*'([^']+)'/);
+                }
                 if (!directMatch || !directMatch[1]) {
+                    console.warn("StreamTape: Could not find video link in page");
                     return [2 /*return*/, null];
                 }
                 rawLink = directMatch[1]
                     .replace(/\\u0026/g, "&")
                     .replace(/&amp;/g, "&")
                     .trim();
+                console.log("StreamTape: Extracted raw link: ".concat(rawLink));
                 normalized = rawLink.startsWith("http") || rawLink.startsWith("https")
                     ? rawLink
                     : rawLink.startsWith("//")
@@ -304,6 +312,7 @@ var extractStreamTape = function (url, axios) { return __awaiter(void 0, void 0,
                 finalUrl = normalized.includes("&stream=") || normalized.includes("stream=")
                     ? normalized
                     : "".concat(normalized, "&stream=1");
+                console.log("StreamTape: Final URL: ".concat(finalUrl));
                 return [2 /*return*/, {
                         link: finalUrl,
                         headers: {
@@ -313,7 +322,7 @@ var extractStreamTape = function (url, axios) { return __awaiter(void 0, void 0,
                         type: "mp4",
                     }];
             case 2:
-                error_3 = _b.sent();
+                error_3 = _a.sent();
                 console.error("StreamTape extractor failed", error_3);
                 return [2 /*return*/, null];
             case 3: return [2 /*return*/];
@@ -702,10 +711,12 @@ var resolveGoEntries = function (url, $, axios) { return __awaiter(void 0, void 
                     return [3 /*break*/, 8];
                 }
                 hostLabel = ((goData === null || goData === void 0 ? void 0 : goData.host) || entry.host || "Primewire").trim();
+                console.log("Primewire: Trying to extract from ".concat(hostLabel, ": ").concat(directLink));
                 return [4 /*yield*/, extractStreamForHost(hostLabel, directLink, axios)];
             case 7:
                 extracted = _b.sent();
                 if (extracted) {
+                    console.log("Primewire: Successfully extracted from ".concat(hostLabel));
                     results.push({
                         server: hostLabel,
                         link: extracted.link,
@@ -715,7 +726,7 @@ var resolveGoEntries = function (url, $, axios) { return __awaiter(void 0, void 
                     });
                     return [3 /*break*/, 8];
                 }
-                console.warn("Primewire: unsupported host", hostLabel, directLink);
+                console.warn("Primewire: unsupported host ".concat(hostLabel), directLink);
                 _b.label = 8;
             case 8:
                 entries_1_1 = entries_1.next();
