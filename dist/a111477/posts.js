@@ -1,1 +1,262 @@
-"use strict";var __awaiter=this&&this.__awaiter||function(thisArg,_arguments,P,generator){return new(P||(P=Promise))(function(resolve,reject){function fulfilled(value){try{step(generator.next(value))}catch(e){reject(e)}}function rejected(value){try{step(generator.throw(value))}catch(e){reject(e)}}function step(result){var value;result.done?resolve(result.value):(value=result.value,value instanceof P?value:new P(function(resolve){resolve(value)})).then(fulfilled,rejected)}step((generator=generator.apply(thisArg,_arguments||[])).next())})};Object.defineProperty(exports,"__esModule",{value:!0}),exports.getSearchPosts=exports.getPosts=void 0;const getPosts=function(_a){return __awaiter(this,arguments,void 0,function*({filter:filter,page:page,signal:signal,providerContext:providerContext}){const{axios:axios,cheerio:cheerio,getBaseUrl:getBaseUrl}=providerContext,baseUrl=yield getBaseUrl("a111477");if(page>1)return[];try{const url=`${baseUrl}${filter}`;return(yield posts({baseUrl:baseUrl,url:url,signal:signal,axios:axios,cheerio:cheerio})).slice(0,50)}catch(error){return[]}})};exports.getPosts=getPosts;const getSearchPosts=function(_a){return __awaiter(this,arguments,void 0,function*({searchQuery:searchQuery,page:page,signal:signal,providerContext:providerContext}){const{axios:axios,cheerio:cheerio,getBaseUrl:getBaseUrl}=providerContext,baseUrl=yield getBaseUrl("a111477");if(page>1)return[];try{const moviesPosts=yield posts({baseUrl:baseUrl,url:`${baseUrl}/movies/`,signal:signal,axios:axios,cheerio:cheerio}),tvsPosts=yield posts({baseUrl:baseUrl,url:`${baseUrl}/tvs/`,signal:signal,axios:axios,cheerio:cheerio}),allPosts=[...moviesPosts,...tvsPosts];return allPosts.filter(post=>{const title=post.title.toLowerCase(),query=searchQuery.toLowerCase();if(title.includes(query))return!0;const queryWords=query.split(/\s+/).filter(word=>word.length>0),titleWords=title.split(/[\s\-\.\(\)\[\]]+/).filter(word=>word.length>0);if(queryWords.every(queryWord=>titleWords.some(titleWord=>titleWord.includes(queryWord))))return!0;if(1===queryWords.length){const queryWord=queryWords[0];if(queryWord.length>=3){if(titleWords.some(titleWord=>titleWord.startsWith(queryWord)))return!0;if(titleWords.some(titleWord=>{if(Math.abs(titleWord.length-queryWord.length)>2)return!1;return levenshteinDistance(titleWord,queryWord)<=Math.max(1,Math.floor(.2*queryWord.length))}))return!0}}return!1})}catch(error){return[]}})};function posts(_a){return __awaiter(this,arguments,void 0,function*({baseUrl:baseUrl,url:url,signal:signal,axios:axios,cheerio:cheerio}){var _b;try{let res;yield new Promise(resolve=>setTimeout(resolve,500));let retryCount=0;const maxRetries=3;for(;retryCount<maxRetries;)try{res=yield axios.get(url,{signal:signal,headers:{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",Accept:"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8","Accept-Language":"en-US,en;q=0.9","Cache-Control":"no-cache",Pragma:"no-cache"}});break}catch(error){if(!(429===(null===(_b=null==error?void 0:error.response)||void 0===_b?void 0:_b.status)&&retryCount<maxRetries-1))throw error;yield new Promise(resolve=>setTimeout(resolve,1e3*(retryCount+1))),retryCount++}if(!res||!res.data)return[];const data=res.data,$=cheerio.load(data),catalog=[],rows=$("table tbody tr");for(let i=0;i<rows.length;i++){const linkElement=$(rows[i]).find("td:first-child a"),title=linkElement.text().trim(),link=linkElement.attr("href");if(title&&link&&"../"!==title&&"Parent Directory"!==title&&title.endsWith("/")){const cleanTitle=title.replace(/\/$/,""),fullLink=url.endsWith("/")?url+link:url+"/"+link;let omdbSearchTitle=cleanTitle;const yearMatch=cleanTitle.match(/^(.+?)\s*\(\d{4}\)$/);yearMatch?omdbSearchTitle=yearMatch[1].trim():(omdbSearchTitle=cleanTitle.replace(/[\s\.]*(S\d{2}|Season\s*\d+)[\.\s]*(E\d{2}|Episode\s*\d+)?.*$/i,"").replace(/[\s\.]*(BATCH|COMPLETE|Collection|Series).*$/i,"").replace(/[\s\.]*\d{3,4}p.*$/i,"").replace(/[\s\.]*WEB-DL.*$/i,"").replace(/[\s\.]*\[.*\].*$/i,"").replace(/\.[a-zA-Z0-9]+$/,"").trim(),omdbSearchTitle=omdbSearchTitle.replace(/\./g," ").trim(),omdbSearchTitle=omdbSearchTitle.replace(/\s+/g," ").trim());const posterTitle=cleanTitle.substring(0,40),placeholderImage=`https://via.placeholder.com/300x450/2a2a2a/ff6b35?text=${encodeURIComponent(posterTitle)}`,omdbUrl=`https://www.omdbapi.com/?apikey=trilogy&t=${encodeURIComponent(omdbSearchTitle)}&type=movie`,image=placeholderImage;catalog.push({title:cleanTitle,link:fullLink,image:image,poster_url:omdbUrl})}}return catalog}catch(err){return[]}})}function levenshteinDistance(str1,str2){const matrix=Array(str2.length+1).fill(null).map(()=>Array(str1.length+1).fill(null));for(let i=0;i<=str1.length;i++)matrix[0][i]=i;for(let j=0;j<=str2.length;j++)matrix[j][0]=j;for(let j=1;j<=str2.length;j++)for(let i=1;i<=str1.length;i++){const indicator=str1[i-1]===str2[j-1]?0:1;matrix[j][i]=Math.min(matrix[j][i-1]+1,matrix[j-1][i]+1,matrix[j-1][i-1]+indicator)}return matrix[str2.length][str1.length]}exports.getSearchPosts=getSearchPosts;
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getSearchPosts = exports.getPosts = void 0;
+// Helper function to fetch movie poster from OMDB API
+// DISABLED: This was causing massive performance issues (100+ minutes load time)
+// async function getMoviePoster(title: string): Promise<string> {
+//   // Clean the title for better matching
+//   const cleanTitle = title
+//     .replace(/[#\$]/g, '') // Remove special characters
+//     .replace(/\([^)]*\)/g, '') // Remove year in parentheses
+//     .replace(/\s+/g, ' ') // Normalize spaces
+//     .trim();
+//   
+//   try {
+//     const searchUrl = `http://www.omdbapi.com/?apikey=trilogy&t=${encodeURIComponent(cleanTitle)}`;
+//     const response = await axios.get(searchUrl, {
+//       headers: {
+//         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+//       }
+//     });
+//     
+//     if (response.data && response.data.Response === 'True' && response.data.Poster && response.data.Poster !== 'N/A') {
+//       return response.data.Poster;
+//     }
+//   } catch (error) {
+//     console.log(`Error fetching poster for "${title}":`, error instanceof Error ? error.message : error);
+//   }
+//   
+//   // Fallback to placeholder if API fails
+//   const imageTitle = cleanTitle.length > 30 ? cleanTitle.slice(0, 30) : cleanTitle;
+//   return `https://via.placeholder.com/200x300/2c2c2c/ffffff.png?text=${encodeURIComponent(imageTitle)}`;
+// }
+const getPosts = function (_a) {
+    return __awaiter(this, arguments, void 0, function* ({ filter, page, signal, providerContext, }) {
+        const { axios, cheerio, getBaseUrl } = providerContext;
+        const baseUrl = yield getBaseUrl("a111477");
+        if (page > 1) {
+            return [];
+        }
+        try {
+            const url = `${baseUrl}${filter}`;
+            const result = yield posts({ baseUrl, url, signal, axios, cheerio });
+            return result.slice(0, 50); // Limit only for getPosts
+        }
+        catch (error) {
+            console.error("Error in getPosts:", error);
+            return [];
+        }
+    });
+};
+exports.getPosts = getPosts;
+const getSearchPosts = function (_a) {
+    return __awaiter(this, arguments, void 0, function* ({ searchQuery, page, signal, providerContext, }) {
+        const { axios, cheerio, getBaseUrl } = providerContext;
+        const baseUrl = yield getBaseUrl("a111477");
+        if (page > 1) {
+            return [];
+        }
+        try {
+            // Search through both movies and TV shows directories
+            const moviesPosts = yield posts({
+                baseUrl,
+                url: `${baseUrl}/movies/`,
+                signal,
+                axios,
+                cheerio,
+            });
+            const tvsPosts = yield posts({
+                baseUrl,
+                url: `${baseUrl}/tvs/`,
+                signal,
+                axios,
+                cheerio,
+            });
+            // Combine all posts
+            const allPosts = [...moviesPosts, ...tvsPosts];
+            // Filter posts based on search query with improved matching
+            const filteredPosts = allPosts.filter((post) => {
+                const title = post.title.toLowerCase();
+                const query = searchQuery.toLowerCase();
+                // Direct substring match
+                if (title.includes(query)) {
+                    return true;
+                }
+                // Word boundary matching
+                const queryWords = query.split(/\s+/).filter((word) => word.length > 0);
+                const titleWords = title
+                    .split(/[\s\-\.\(\)\[\]]+/)
+                    .filter((word) => word.length > 0);
+                // Check if all query words are found in title words
+                const allWordsMatch = queryWords.every((queryWord) => titleWords.some((titleWord) => titleWord.includes(queryWord)));
+                if (allWordsMatch) {
+                    return true;
+                }
+                // Fuzzy matching for single word queries
+                if (queryWords.length === 1) {
+                    const queryWord = queryWords[0];
+                    if (queryWord.length >= 3) {
+                        // Check if any title word starts with the query
+                        const startsWithMatch = titleWords.some((titleWord) => titleWord.startsWith(queryWord));
+                        if (startsWithMatch) {
+                            return true;
+                        }
+                        // Levenshtein distance for close matches
+                        const hasCloseMatch = titleWords.some((titleWord) => {
+                            if (Math.abs(titleWord.length - queryWord.length) > 2)
+                                return false;
+                            const distance = levenshteinDistance(titleWord, queryWord);
+                            return distance <= Math.max(1, Math.floor(queryWord.length * 0.2));
+                        });
+                        if (hasCloseMatch) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            });
+            return filteredPosts;
+        }
+        catch (error) {
+            console.error("Error in getSearchPosts:", error);
+            return [];
+        }
+    });
+};
+exports.getSearchPosts = getSearchPosts;
+function posts(_a) {
+    return __awaiter(this, arguments, void 0, function* ({ baseUrl, url, signal, axios, cheerio, }) {
+        var _b;
+        try {
+            // Add a longer delay to prevent rate limiting
+            yield new Promise(resolve => setTimeout(resolve, 500));
+            // Retry logic for rate limiting
+            let res;
+            let retryCount = 0;
+            const maxRetries = 3;
+            while (retryCount < maxRetries) {
+                try {
+                    res = yield axios.get(url, {
+                        signal,
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+                            'Accept-Language': 'en-US,en;q=0.9',
+                            'Cache-Control': 'no-cache',
+                            'Pragma': 'no-cache'
+                        }
+                    });
+                    break; // Success, exit retry loop
+                }
+                catch (error) {
+                    if (((_b = error === null || error === void 0 ? void 0 : error.response) === null || _b === void 0 ? void 0 : _b.status) === 429 && retryCount < maxRetries - 1) {
+                        console.log(`Rate limited, retrying in ${(retryCount + 1) * 1000}ms...`);
+                        yield new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 1000));
+                        retryCount++;
+                    }
+                    else {
+                        throw error; // Re-throw if not rate limit or max retries reached
+                    }
+                }
+            }
+            if (!res || !res.data) {
+                console.log('No data received from', url);
+                return [];
+            }
+            const data = res.data;
+            const $ = cheerio.load(data);
+            const catalog = [];
+            // Parse the directory listing
+            const rows = $("table tbody tr");
+            for (let i = 0; i < rows.length; i++) {
+                const $row = $(rows[i]);
+                const linkElement = $row.find("td:first-child a");
+                const title = linkElement.text().trim();
+                const link = linkElement.attr("href");
+                // Skip parent directory and files, only get folders
+                if (title &&
+                    link &&
+                    title !== "../" &&
+                    title !== "Parent Directory" &&
+                    title.endsWith("/")) {
+                    const cleanTitle = title.replace(/\/$/, ""); // Remove trailing slash
+                    const fullLink = url.endsWith('/') ? url + link : url + '/' + link;
+                    // ✅ Extract real movie title and year from directory name for OMDB search
+                    // Directory names are like: "(500) Days of Summer (2009)" or "'Twas the Night Before Christmas (1974)"
+                    // Or TV shows: "Show.Name.S04E01-E05.1080p.WEB-DL"
+                    let omdbSearchTitle = cleanTitle;
+                    // Try to extract movie title and year
+                    // Pattern: "Title (YYYY)" -> extract just "Title"
+                    const yearMatch = cleanTitle.match(/^(.+?)\s*\(\d{4}\)$/);
+                    if (yearMatch) {
+                        omdbSearchTitle = yearMatch[1].trim();
+                    }
+                    else {
+                        // First remove season/episode patterns (can have dots or spaces before)
+                        // Patterns: S01E05, S01-E05, S01.E05, etc.
+                        omdbSearchTitle = cleanTitle
+                            .replace(/[\s\.]*(S\d{2}|Season\s*\d+)[\.\s]*(E\d{2}|Episode\s*\d+)?.*$/i, '') // Remove season/episode and everything after
+                            .replace(/[\s\.]*(BATCH|COMPLETE|Collection|Series).*$/i, '') // Remove batch/complete/collection labels
+                            .replace(/[\s\.]*\d{3,4}p.*$/i, '') // Remove resolution info (720p, 1080p, etc.)
+                            .replace(/[\s\.]*WEB-DL.*$/i, '') // Remove quality info
+                            .replace(/[\s\.]*\[.*\].*$/i, '') // Remove bracketed info
+                            .replace(/\.[a-zA-Z0-9]+$/, '') // Remove file extensions
+                            .trim();
+                        // Convert dots to spaces for better OMDB matching (show.name.2020 -> show name 2020)
+                        omdbSearchTitle = omdbSearchTitle.replace(/\./g, ' ').trim();
+                        // Remove extra spaces
+                        omdbSearchTitle = omdbSearchTitle.replace(/\s+/g, ' ').trim();
+                    }
+                    // ✅ Create better placeholder with gradient and title
+                    // Using a service that creates better-looking placeholder images
+                    const posterTitle = cleanTitle.substring(0, 40);
+                    const placeholderImage = `https://via.placeholder.com/300x450/2a2a2a/ff6b35?text=${encodeURIComponent(posterTitle)}`;
+                    // ✅ Create OMDB search URL for lazy-loading real posters
+                    const omdbUrl = `https://www.omdbapi.com/?apikey=trilogy&t=${encodeURIComponent(omdbSearchTitle)}&type=movie`;
+                    const image = placeholderImage;
+                    catalog.push({
+                        title: cleanTitle,
+                        link: fullLink,
+                        image: image,
+                        poster_url: omdbUrl, // For lazy-loading real posters (with fallback to placeholder)
+                    });
+                }
+            }
+            // Only limit for regular getPosts, not for search
+            return catalog;
+        }
+        catch (err) {
+            console.error("111477 directory listing error:", err);
+            return [];
+        }
+    });
+}
+// Levenshtein distance function for fuzzy matching
+function levenshteinDistance(str1, str2) {
+    const matrix = Array(str2.length + 1)
+        .fill(null)
+        .map(() => Array(str1.length + 1).fill(null));
+    for (let i = 0; i <= str1.length; i++)
+        matrix[0][i] = i;
+    for (let j = 0; j <= str2.length; j++)
+        matrix[j][0] = j;
+    for (let j = 1; j <= str2.length; j++) {
+        for (let i = 1; i <= str1.length; i++) {
+            const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
+            matrix[j][i] = Math.min(matrix[j][i - 1] + 1, // deletion
+            matrix[j - 1][i] + 1, // insertion
+            matrix[j - 1][i - 1] + indicator // substitution
+            );
+        }
+    }
+    return matrix[str2.length][str1.length];
+}

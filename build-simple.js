@@ -107,8 +107,11 @@ class ProviderBuilder {
       try {
         const code = fs.readFileSync(filePath, "utf8");
         const result = await minify(code, {
+          parse: {
+            ecma: 2020,
+          },
           compress: {
-            drop_console: !keepConsole, // Remove console logs unless KEEP_CONSOLE=true
+            drop_console: !keepConsole,
             drop_debugger: true,
             pure_funcs: keepConsole
               ? ["console.debug"]
@@ -118,10 +121,14 @@ class ProviderBuilder {
                   "console.info",
                   "console.warn",
                 ],
+            // Prevent number formatting issues
+            ecma: 2020,
+            passes: 1,
           },
-          mangle: false, // Disable variable name mangling to keep original names
+          mangle: false,
           format: {
-            comments: false, // Remove comments
+            ecma: 5, // Output ES5 to prevent scientific notation
+            comments: false,
           },
         });
 

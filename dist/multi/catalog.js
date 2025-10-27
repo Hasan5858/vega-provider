@@ -1,1 +1,115 @@
-"use strict";Object.defineProperty(exports,"__esModule",{value:!0}),exports.genres=exports.catalog=void 0,exports.catalog=[{title:"Trending",filter:"/trending/"},{title:"Netflix",filter:"/genre/netflix/"},{title:"Amazon Prime",filter:"/genre/amazon-prime/"},{title:"Disney Hotstar",filter:"/genre/disney-hotstar/"},{title:"Jio OTT",filter:"/genre/jio-ott/"},{title:"K-Drama",filter:"/genre/k-drama/"},{title:"Sony LIV",filter:"/genre/sony-liv/"},{title:"Zee5",filter:"/genre/zee-5/"},{title:"Anime Hindi",filter:"/genre/anime-hindi/"},{title:"Cartoon Network",filter:"/genre/cartoon-network/"},{title:"Marvel Collection",filter:"/genre/marvel-collection/"},{title:"Bollywood Movies",filter:"/genre/bollywood-movies/"},{title:"South Indian",filter:"/genre/south-indian/"}],exports.genres=[{title:"Action",filter:"/genre/action/"},{title:"Adventure",filter:"/genre/adventure/"},{title:"Animation",filter:"/genre/animation/"},{title:"Comedy",filter:"/genre/comedy/"},{title:"Crime",filter:"/genre/crime/"},{title:"Drama",filter:"/genre/drama/"},{title:"Family",filter:"/genre/family/"},{title:"Fantasy",filter:"/genre/fantasy/"},{title:"History",filter:"/genre/history/"},{title:"Horror",filter:"/genre/horror/"},{title:"Mystery",filter:"/genre/mystery/"},{title:"Romance",filter:"/genre/romance/"},{title:"Science Fiction",filter:"/genre/science-fiction/"},{title:"Thriller",filter:"/genre/thriller/"}];
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.genres = exports.catalog = void 0;
+exports.catalog = [
+    {
+        title: "Trending",
+        filter: "/trending/",
+    },
+    {
+        title: "Netflix",
+        filter: "/genre/netflix/",
+    },
+    {
+        title: "Amazon Prime",
+        filter: "/genre/amazon-prime/",
+    },
+    {
+        title: "Disney Hotstar",
+        filter: "/genre/disney-hotstar/",
+    },
+    {
+        title: "Jio OTT",
+        filter: "/genre/jio-ott/",
+    },
+    {
+        title: "K-Drama",
+        filter: "/genre/k-drama/",
+    },
+    {
+        title: "Sony LIV",
+        filter: "/genre/sony-liv/",
+    },
+    {
+        title: "Zee5",
+        filter: "/genre/zee-5/",
+    },
+    {
+        title: "Anime Hindi",
+        filter: "/genre/anime-hindi/",
+    },
+    {
+        title: "Cartoon Network",
+        filter: "/genre/cartoon-network/",
+    },
+    {
+        title: "Marvel Collection",
+        filter: "/genre/marvel-collection/",
+    },
+    {
+        title: "Bollywood Movies",
+        filter: "/genre/bollywood-movies/",
+    },
+    {
+        title: "South Indian",
+        filter: "/genre/south-indian/",
+    },
+];
+exports.genres = [
+    {
+        title: "Action",
+        filter: "/genre/action/",
+    },
+    {
+        title: "Adventure",
+        filter: "/genre/adventure/",
+    },
+    {
+        title: "Animation",
+        filter: "/genre/animation/",
+    },
+    {
+        title: "Comedy",
+        filter: "/genre/comedy/",
+    },
+    {
+        title: "Crime",
+        filter: "/genre/crime/",
+    },
+    {
+        title: "Drama",
+        filter: "/genre/drama/",
+    },
+    {
+        title: "Family",
+        filter: "/genre/family/",
+    },
+    {
+        title: "Fantasy",
+        filter: "/genre/fantasy/",
+    },
+    {
+        title: "History",
+        filter: "/genre/history/",
+    },
+    {
+        title: "Horror",
+        filter: "/genre/horror/",
+    },
+    {
+        title: "Mystery",
+        filter: "/genre/mystery/",
+    },
+    {
+        title: "Romance",
+        filter: "/genre/romance/",
+    },
+    {
+        title: "Science Fiction",
+        filter: "/genre/science-fiction/",
+    },
+    {
+        title: "Thriller",
+        filter: "/genre/thriller/",
+    },
+];

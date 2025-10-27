@@ -1,1 +1,79 @@
-"use strict";Object.defineProperty(exports,"__esModule",{value:!0}),exports.genres=exports.catalog=void 0,exports.catalog=[{title:"Latest",filter:""},{title:"Bollywood Movies",filter:"/category/bollywood-movies/"},{title:"South Hindi Movies",filter:"/category/south-hindi-movies/"},{title:"Adult",filter:"/category/adult/"},{title:"Wrestling Shows",filter:"/category/wrestling-shows/"},{title:"Unofficial South Hindi Dubs",filter:"/category/unofficial-south-hindi-dubs/"},{title:"Web Series",filter:"/category/web-series"},{title:"Hollywood ",filter:"/category/hollywood-movies"}],exports.genres=[{title:"Action",filter:"/category/action"},{title:"Crime",filter:"/category/crime"},{title:"Comedy",filter:"/category/comedy"},{title:"Drama",filter:"/category/drama"},{title:"Horror",filter:"/category/horror"},{title:"Family",filter:"/category/family"},{title:"Sci-Fi",filter:"/category/sifi"},{title:"Thriller",filter:"/category/triller"},{title:"Romance",filter:"/category/romance"},{title:"Fight",filter:"/category/fight"}];
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.genres = exports.catalog = void 0;
+exports.catalog = [
+    {
+        title: "Latest",
+        filter: "",
+    },
+    {
+        title: "Bollywood Movies",
+        filter: "/category/bollywood-movies/",
+    },
+    {
+        title: "South Hindi Movies",
+        filter: "/category/south-hindi-movies/",
+    },
+    {
+        title: "Adult",
+        filter: "/category/adult/",
+    },
+    {
+        title: "Wrestling Shows",
+        filter: "/category/wrestling-shows/",
+    },
+    {
+        title: "Unofficial South Hindi Dubs",
+        filter: "/category/unofficial-south-hindi-dubs/",
+    },
+    {
+        title: "Web Series",
+        filter: "/category/web-series",
+    },
+    {
+        title: "Hollywood ",
+        filter: "/category/hollywood-movies",
+    },
+];
+exports.genres = [
+    {
+        title: "Action",
+        filter: "/category/action",
+    },
+    {
+        title: "Crime",
+        filter: "/category/crime",
+    },
+    {
+        title: "Comedy",
+        filter: "/category/comedy",
+    },
+    {
+        title: "Drama",
+        filter: "/category/drama",
+    },
+    {
+        title: "Horror",
+        filter: "/category/horror",
+    },
+    {
+        title: "Family",
+        filter: "/category/family",
+    },
+    {
+        title: "Sci-Fi",
+        filter: "/category/sifi",
+    },
+    {
+        title: "Thriller",
+        filter: "/category/triller",
+    },
+    {
+        title: "Romance",
+        filter: "/category/romance",
+    },
+    {
+        title: "Fight",
+        filter: "/category/fight",
+    },
+];

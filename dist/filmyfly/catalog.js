@@ -1,1 +1,38 @@
-"use strict";Object.defineProperty(exports,"__esModule",{value:!0}),exports.genres=exports.catalog=void 0,exports.catalog=[{title:"Home",filter:""},{title:"Web Series",filter:"/page-cat/42/Web-Series.html"},{title:"Bollywood 2025",filter:"/page-cat/75/New-Bollywood-Movies-2025.html"},{title:"Hollywood Dubbed",filter:"/page-cat/9/New-Hollywood-Hindi-Dubbed-Movie-2016-2025.html"},{title:"South 2025",filter:"/page-cat/76/New-South-Hindi-Dubbed-Movies-2025.html"},{title:"HQ UnCut",filter:"/page-cat/58/HQ-Dubbed-Movies-UnCut.html"},{title:"Bollywood 2024",filter:"/page-cat/71/Bollywood-Movies-2024.html"},{title:"South Movies",filter:"/page-cat/11/South-Hindi-Dubbed-Movies-Collection.html"}],exports.genres=[];
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.genres = exports.catalog = void 0;
+exports.catalog = [
+    {
+        title: "Home",
+        filter: "",
+    },
+    {
+        title: "Web Series",
+        filter: "/page-cat/42/Web-Series.html",
+    },
+    {
+        title: "Bollywood 2025",
+        filter: "/page-cat/75/New-Bollywood-Movies-2025.html",
+    },
+    {
+        title: "Hollywood Dubbed",
+        filter: "/page-cat/9/New-Hollywood-Hindi-Dubbed-Movie-2016-2025.html",
+    },
+    {
+        title: "South 2025",
+        filter: "/page-cat/76/New-South-Hindi-Dubbed-Movies-2025.html",
+    },
+    {
+        title: "HQ UnCut",
+        filter: "/page-cat/58/HQ-Dubbed-Movies-UnCut.html",
+    },
+    {
+        title: "Bollywood 2024",
+        filter: "/page-cat/71/Bollywood-Movies-2024.html",
+    },
+    {
+        title: "South Movies",
+        filter: "/page-cat/11/South-Hindi-Dubbed-Movies-Collection.html",
+    },
+];
+exports.genres = [];
