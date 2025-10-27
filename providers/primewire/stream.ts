@@ -400,6 +400,12 @@ const resolveGoEntries = async (
 
   const results: Stream[] = [];
 
+  // PERFORMANCE OPTIMIZATION: Extract only first server immediately
+  // Remaining servers will be extracted on-demand when user selects them
+  console.log(`Primewire: Found ${entries.length} servers, extracting first server only...`);
+
+  let firstServerExtracted = false;
+
   for (const entry of entries) {
     const key = linkKeys[entry.index] || entry.fallbackKey;
     if (!key) {
@@ -408,49 +414,147 @@ const resolveGoEntries = async (
 
     const goUrl = `${baseUrl}/links/go/${encodeURIComponent(key)}?embed=true`;
 
+    // If we haven't extracted the first server yet, try to extract it
+    if (!firstServerExtracted) {
+      let goData: any;
+      try {
+        const response = await axios.get(goUrl, {
+          headers: {
+            "User-Agent": USER_AGENT,
+            Referer: url,
+            Accept: "application/json, text/plain, */*",
+          },
+        });
+
+        goData = response.data;
+      } catch (error) {
+        console.error("Primewire: Failed to fetch go endpoint", goUrl, error);
+        continue; // Try next server
+      }
+
+      const directLink =
+        typeof goData === "string" ? goData : goData?.link || goData?.url || null;
+      if (!directLink) {
+        continue; // Try next server
+      }
+
+      const hostLabel = (goData?.host || entry.host || "Primewire").trim();
+
+      console.log(`Primewire: Extracting first server ${hostLabel}: ${directLink}`);
+      const extracted = await extractStreamForHost(hostLabel, directLink, axios, providerContext);
+
+      if (extracted) {
+        console.log(`Primewire: Successfully extracted first server ${hostLabel}`);
+        results.push({
+          server: hostLabel,
+          link: extracted.link,
+          type: extracted.type || "mp4",
+          quality: entry.quality,
+          headers: extracted.headers,
+        });
+        firstServerExtracted = true;
+        // Continue to add remaining servers as unextracted
+      } else {
+        console.warn(`Primewire: First server ${hostLabel} extraction failed, trying next...`);
+        continue; // Try next server
+      }
+    } else {
+      // Add remaining servers as unextracted (metadata only)
+      // These will be extracted on-demand when user selects them
+      results.push({
+        server: entry.host || "Primewire",
+        link: JSON.stringify({
+          type: "primewire-lazy",
+          goUrl: goUrl,
+          host: entry.host,
+          key: key,
+          baseUrl: baseUrl,
+          originalUrl: url,
+        }),
+        type: "lazy", // Special type to indicate lazy extraction needed
+        quality: entry.quality,
+      });
+    }
+  }
+
+  if (!firstServerExtracted) {
+    console.error("Primewire: Failed to extract any server");
+  } else {
+    console.log(`Primewire: Returned 1 extracted + ${results.length - 1} lazy-load servers`);
+  }
+
+  return results;
+};
+
+/**
+ * Extract a single Primewire server on-demand (lazy extraction)
+ * Used when user selects a lazy-loaded server from the player
+ */
+export const extractLazyServer = async function ({
+  link,
+  providerContext,
+}: {
+  link: string;
+  providerContext: ProviderContext;
+}): Promise<Stream[]> {
+  const { axios } = providerContext;
+
+  try {
+    // Parse lazy-load metadata
+    const metadata = JSON.parse(link);
+    
+    if (metadata.type !== "primewire-lazy") {
+      console.error("Primewire: Invalid lazy-load metadata");
+      return [];
+    }
+
+    console.log(`Primewire: On-demand extraction for ${metadata.host}`);
+
+    // Fetch the go endpoint
     let goData: any;
     try {
-      const response = await axios.get(goUrl, {
+      const response = await axios.get(metadata.goUrl, {
         headers: {
           "User-Agent": USER_AGENT,
-          Referer: url,
+          Referer: metadata.originalUrl,
           Accept: "application/json, text/plain, */*",
         },
       });
 
       goData = response.data;
     } catch (error) {
-      console.error("Failed to fetch go endpoint", goUrl, error);
-      continue;
+      console.error("Primewire: Failed to fetch lazy-load go endpoint", error);
+      return [];
     }
 
     const directLink =
       typeof goData === "string" ? goData : goData?.link || goData?.url || null;
     if (!directLink) {
-      continue;
+      console.error("Primewire: No direct link in lazy-load response");
+      return [];
     }
 
-    const hostLabel = (goData?.host || entry.host || "Primewire").trim();
+    const hostLabel = (goData?.host || metadata.host || "Primewire").trim();
 
-    console.log(`Primewire: Trying to extract from ${hostLabel}: ${directLink}`);
+    console.log(`Primewire: Lazy-extracting ${hostLabel}: ${directLink}`);
     const extracted = await extractStreamForHost(hostLabel, directLink, axios, providerContext);
 
     if (extracted) {
-      console.log(`Primewire: Successfully extracted from ${hostLabel}`);
-      results.push({
+      console.log(`Primewire: Successfully lazy-extracted ${hostLabel}`);
+      return [{
         server: hostLabel,
         link: extracted.link,
         type: extracted.type || "mp4",
-        quality: entry.quality,
         headers: extracted.headers,
-      });
-      continue;
+      }];
     }
 
-    console.warn(`Primewire: unsupported host ${hostLabel}`, directLink);
+    console.error(`Primewire: Lazy extraction failed for ${hostLabel}`);
+    return [];
+  } catch (error) {
+    console.error("Primewire: extractLazyServer error", error);
+    return [];
   }
-
-  return results;
 };
 
 export const getStream = async function ({
@@ -465,6 +569,12 @@ export const getStream = async function ({
   const { axios, cheerio } = providerContext;
 
   try {
+    // Handle lazy-load extraction (when user selects unextracted server)
+    if (url.startsWith("{") && url.includes("primewire-lazy")) {
+      console.log("Primewire: Detected lazy-load request");
+      return await extractLazyServer({ link: url, providerContext });
+    }
+
     if (url.includes("primesrc.me")) {
       return await handlePrimeSrcEmbed(url, axios, cheerio);
     }

@@ -72,7 +72,7 @@ var __values = (this && this.__values) || function(o) {
     throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getStream = void 0;
+exports.getStream = exports.extractLazyServer = void 0;
 var normalizeHost = function (value) { return value.toLowerCase(); };
 var randomAlphaNumeric = function (length) {
     var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -409,7 +409,7 @@ function handlePrimeSrcEmbed(url, axios, cheerioModule) {
     });
 }
 var resolveGoEntries = function (url, $, axios, providerContext) { return __awaiter(void 0, void 0, void 0, function () {
-    var urlMatch, baseUrl, linkKeys, entries, results, entries_1, entries_1_1, entry, key, goUrl, goData, response, error_2, directLink, hostLabel, extracted, e_2_1;
+    var urlMatch, baseUrl, linkKeys, entries, results, firstServerExtracted, entries_1, entries_1_1, entry, key, goUrl, goData, response, error_2, directLink, hostLabel, extracted, e_2_1;
     var e_2, _a;
     return __generator(this, function (_b) {
         switch (_b.label) {
@@ -439,19 +439,24 @@ var resolveGoEntries = function (url, $, axios, providerContext) { return __awai
                     return [2 /*return*/, []];
                 }
                 results = [];
+                // PERFORMANCE OPTIMIZATION: Extract only first server immediately
+                // Remaining servers will be extracted on-demand when user selects them
+                console.log("Primewire: Found ".concat(entries.length, " servers, extracting first server only..."));
+                firstServerExtracted = false;
                 _b.label = 1;
             case 1:
-                _b.trys.push([1, 10, 11, 12]);
+                _b.trys.push([1, 11, 12, 13]);
                 entries_1 = __values(entries), entries_1_1 = entries_1.next();
                 _b.label = 2;
             case 2:
-                if (!!entries_1_1.done) return [3 /*break*/, 9];
+                if (!!entries_1_1.done) return [3 /*break*/, 10];
                 entry = entries_1_1.value;
                 key = linkKeys[entry.index] || entry.fallbackKey;
                 if (!key) {
-                    return [3 /*break*/, 8];
+                    return [3 /*break*/, 9];
                 }
                 goUrl = "".concat(baseUrl, "/links/go/").concat(encodeURIComponent(key), "?embed=true");
+                if (!!firstServerExtracted) return [3 /*break*/, 8];
                 goData = void 0;
                 _b.label = 3;
             case 3:
@@ -469,20 +474,20 @@ var resolveGoEntries = function (url, $, axios, providerContext) { return __awai
                 return [3 /*break*/, 6];
             case 5:
                 error_2 = _b.sent();
-                console.error("Failed to fetch go endpoint", goUrl, error_2);
-                return [3 /*break*/, 8];
+                console.error("Primewire: Failed to fetch go endpoint", goUrl, error_2);
+                return [3 /*break*/, 9]; // Try next server
             case 6:
                 directLink = typeof goData === "string" ? goData : (goData === null || goData === void 0 ? void 0 : goData.link) || (goData === null || goData === void 0 ? void 0 : goData.url) || null;
                 if (!directLink) {
-                    return [3 /*break*/, 8];
+                    return [3 /*break*/, 9]; // Try next server
                 }
                 hostLabel = ((goData === null || goData === void 0 ? void 0 : goData.host) || entry.host || "Primewire").trim();
-                console.log("Primewire: Trying to extract from ".concat(hostLabel, ": ").concat(directLink));
+                console.log("Primewire: Extracting first server ".concat(hostLabel, ": ").concat(directLink));
                 return [4 /*yield*/, extractStreamForHost(hostLabel, directLink, axios, providerContext)];
             case 7:
                 extracted = _b.sent();
                 if (extracted) {
-                    console.log("Primewire: Successfully extracted from ".concat(hostLabel));
+                    console.log("Primewire: Successfully extracted first server ".concat(hostLabel));
                     results.push({
                         server: hostLabel,
                         link: extracted.link,
@@ -490,31 +495,131 @@ var resolveGoEntries = function (url, $, axios, providerContext) { return __awai
                         quality: entry.quality,
                         headers: extracted.headers,
                     });
-                    return [3 /*break*/, 8];
+                    firstServerExtracted = true;
+                    // Continue to add remaining servers as unextracted
                 }
-                console.warn("Primewire: unsupported host ".concat(hostLabel), directLink);
-                _b.label = 8;
+                else {
+                    console.warn("Primewire: First server ".concat(hostLabel, " extraction failed, trying next..."));
+                    return [3 /*break*/, 9]; // Try next server
+                }
+                return [3 /*break*/, 9];
             case 8:
+                // Add remaining servers as unextracted (metadata only)
+                // These will be extracted on-demand when user selects them
+                results.push({
+                    server: entry.host || "Primewire",
+                    link: JSON.stringify({
+                        type: "primewire-lazy",
+                        goUrl: goUrl,
+                        host: entry.host,
+                        key: key,
+                        baseUrl: baseUrl,
+                        originalUrl: url,
+                    }),
+                    type: "lazy", // Special type to indicate lazy extraction needed
+                    quality: entry.quality,
+                });
+                _b.label = 9;
+            case 9:
                 entries_1_1 = entries_1.next();
                 return [3 /*break*/, 2];
-            case 9: return [3 /*break*/, 12];
-            case 10:
+            case 10: return [3 /*break*/, 13];
+            case 11:
                 e_2_1 = _b.sent();
                 e_2 = { error: e_2_1 };
-                return [3 /*break*/, 12];
-            case 11:
+                return [3 /*break*/, 13];
+            case 12:
                 try {
                     if (entries_1_1 && !entries_1_1.done && (_a = entries_1.return)) _a.call(entries_1);
                 }
                 finally { if (e_2) throw e_2.error; }
                 return [7 /*endfinally*/];
-            case 12: return [2 /*return*/, results];
+            case 13:
+                if (!firstServerExtracted) {
+                    console.error("Primewire: Failed to extract any server");
+                }
+                else {
+                    console.log("Primewire: Returned 1 extracted + ".concat(results.length - 1, " lazy-load servers"));
+                }
+                return [2 /*return*/, results];
         }
     });
 }); };
+/**
+ * Extract a single Primewire server on-demand (lazy extraction)
+ * Used when user selects a lazy-loaded server from the player
+ */
+var extractLazyServer = function (_a) {
+    return __awaiter(this, arguments, void 0, function (_b) {
+        var axios, metadata, goData, response, error_3, directLink, hostLabel, extracted, error_4;
+        var link = _b.link, providerContext = _b.providerContext;
+        return __generator(this, function (_c) {
+            switch (_c.label) {
+                case 0:
+                    axios = providerContext.axios;
+                    _c.label = 1;
+                case 1:
+                    _c.trys.push([1, 7, , 8]);
+                    metadata = JSON.parse(link);
+                    if (metadata.type !== "primewire-lazy") {
+                        console.error("Primewire: Invalid lazy-load metadata");
+                        return [2 /*return*/, []];
+                    }
+                    console.log("Primewire: On-demand extraction for ".concat(metadata.host));
+                    goData = void 0;
+                    _c.label = 2;
+                case 2:
+                    _c.trys.push([2, 4, , 5]);
+                    return [4 /*yield*/, axios.get(metadata.goUrl, {
+                            headers: {
+                                "User-Agent": USER_AGENT,
+                                Referer: metadata.originalUrl,
+                                Accept: "application/json, text/plain, */*",
+                            },
+                        })];
+                case 3:
+                    response = _c.sent();
+                    goData = response.data;
+                    return [3 /*break*/, 5];
+                case 4:
+                    error_3 = _c.sent();
+                    console.error("Primewire: Failed to fetch lazy-load go endpoint", error_3);
+                    return [2 /*return*/, []];
+                case 5:
+                    directLink = typeof goData === "string" ? goData : (goData === null || goData === void 0 ? void 0 : goData.link) || (goData === null || goData === void 0 ? void 0 : goData.url) || null;
+                    if (!directLink) {
+                        console.error("Primewire: No direct link in lazy-load response");
+                        return [2 /*return*/, []];
+                    }
+                    hostLabel = ((goData === null || goData === void 0 ? void 0 : goData.host) || metadata.host || "Primewire").trim();
+                    console.log("Primewire: Lazy-extracting ".concat(hostLabel, ": ").concat(directLink));
+                    return [4 /*yield*/, extractStreamForHost(hostLabel, directLink, axios, providerContext)];
+                case 6:
+                    extracted = _c.sent();
+                    if (extracted) {
+                        console.log("Primewire: Successfully lazy-extracted ".concat(hostLabel));
+                        return [2 /*return*/, [{
+                                    server: hostLabel,
+                                    link: extracted.link,
+                                    type: extracted.type || "mp4",
+                                    headers: extracted.headers,
+                                }]];
+                    }
+                    console.error("Primewire: Lazy extraction failed for ".concat(hostLabel));
+                    return [2 /*return*/, []];
+                case 7:
+                    error_4 = _c.sent();
+                    console.error("Primewire: extractLazyServer error", error_4);
+                    return [2 /*return*/, []];
+                case 8: return [2 /*return*/];
+            }
+        });
+    });
+};
+exports.extractLazyServer = extractLazyServer;
 var getStream = function (_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var axios, cheerio, pageResponse, $_2, decodedStreams, mixdropCandidates_2, streams, mixdropCandidates_1, mixdropCandidates_1_1, candidate, extracted, e_3_1, error_3;
+        var axios, cheerio, pageResponse, $_2, decodedStreams, mixdropCandidates_2, streams, mixdropCandidates_1, mixdropCandidates_1_1, candidate, extracted, e_3_1, error_5;
         var e_3, _c;
         var url = _b.link, type = _b.type, providerContext = _b.providerContext;
         return __generator(this, function (_d) {
@@ -523,22 +628,27 @@ var getStream = function (_a) {
                     axios = providerContext.axios, cheerio = providerContext.cheerio;
                     _d.label = 1;
                 case 1:
-                    _d.trys.push([1, 15, , 16]);
-                    if (!url.includes("primesrc.me")) return [3 /*break*/, 3];
-                    return [4 /*yield*/, handlePrimeSrcEmbed(url, axios, cheerio)];
+                    _d.trys.push([1, 17, , 18]);
+                    if (!(url.startsWith("{") && url.includes("primewire-lazy"))) return [3 /*break*/, 3];
+                    console.log("Primewire: Detected lazy-load request");
+                    return [4 /*yield*/, (0, exports.extractLazyServer)({ link: url, providerContext: providerContext })];
                 case 2: return [2 /*return*/, _d.sent()];
-                case 3: return [4 /*yield*/, axios.get(url, {
+                case 3:
+                    if (!url.includes("primesrc.me")) return [3 /*break*/, 5];
+                    return [4 /*yield*/, handlePrimeSrcEmbed(url, axios, cheerio)];
+                case 4: return [2 /*return*/, _d.sent()];
+                case 5: return [4 /*yield*/, axios.get(url, {
                         headers: {
                             "User-Agent": USER_AGENT,
                             Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
                             "Accept-Language": "en-US,en;q=0.9",
                         },
                     })];
-                case 4:
+                case 6:
                     pageResponse = _d.sent();
                     $_2 = cheerio.load(pageResponse.data);
                     return [4 /*yield*/, resolveGoEntries(url, $_2, axios, providerContext)];
-                case 5:
+                case 7:
                     decodedStreams = _d.sent();
                     if (decodedStreams.length) {
                         return [2 /*return*/, decodedStreams];
@@ -554,18 +664,18 @@ var getStream = function (_a) {
                             });
                         }
                     });
-                    if (!mixdropCandidates_2.length) return [3 /*break*/, 14];
+                    if (!mixdropCandidates_2.length) return [3 /*break*/, 16];
                     streams = [];
-                    _d.label = 6;
-                case 6:
-                    _d.trys.push([6, 11, 12, 13]);
+                    _d.label = 8;
+                case 8:
+                    _d.trys.push([8, 13, 14, 15]);
                     mixdropCandidates_1 = __values(mixdropCandidates_2), mixdropCandidates_1_1 = mixdropCandidates_1.next();
-                    _d.label = 7;
-                case 7:
-                    if (!!mixdropCandidates_1_1.done) return [3 /*break*/, 10];
+                    _d.label = 9;
+                case 9:
+                    if (!!mixdropCandidates_1_1.done) return [3 /*break*/, 12];
                     candidate = mixdropCandidates_1_1.value;
                     return [4 /*yield*/, extractStreamForHost(candidate.server, candidate.link, axios, providerContext)];
-                case 8:
+                case 10:
                     extracted = _d.sent();
                     if (extracted) {
                         streams.push({
@@ -575,32 +685,32 @@ var getStream = function (_a) {
                             headers: extracted.headers,
                         });
                     }
-                    _d.label = 9;
-                case 9:
-                    mixdropCandidates_1_1 = mixdropCandidates_1.next();
-                    return [3 /*break*/, 7];
-                case 10: return [3 /*break*/, 13];
+                    _d.label = 11;
                 case 11:
+                    mixdropCandidates_1_1 = mixdropCandidates_1.next();
+                    return [3 /*break*/, 9];
+                case 12: return [3 /*break*/, 15];
+                case 13:
                     e_3_1 = _d.sent();
                     e_3 = { error: e_3_1 };
-                    return [3 /*break*/, 13];
-                case 12:
+                    return [3 /*break*/, 15];
+                case 14:
                     try {
                         if (mixdropCandidates_1_1 && !mixdropCandidates_1_1.done && (_c = mixdropCandidates_1.return)) _c.call(mixdropCandidates_1);
                     }
                     finally { if (e_3) throw e_3.error; }
                     return [7 /*endfinally*/];
-                case 13:
+                case 15:
                     if (streams.length) {
                         return [2 /*return*/, streams];
                     }
-                    _d.label = 14;
-                case 14: return [2 /*return*/, []];
-                case 15:
-                    error_3 = _d.sent();
-                    console.error("Primewire getStream failed", error_3);
+                    _d.label = 16;
+                case 16: return [2 /*return*/, []];
+                case 17:
+                    error_5 = _d.sent();
+                    console.error("Primewire getStream failed", error_5);
                     return [2 /*return*/, []];
-                case 16: return [2 /*return*/];
+                case 18: return [2 /*return*/];
             }
         });
     });
