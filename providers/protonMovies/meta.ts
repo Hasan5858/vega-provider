@@ -15,7 +15,7 @@ export const getMeta = async function ({
     const res = await axios.get(`${baseUrl}${link}`);
     const data = res.data;
 
-    function decodeHtml(encodedArray: string[]): string {
+    const decodeHtml = function (encodedArray: string[]): string {
       // Join array elements into a single string
       const joined = encodedArray.join("");
 
@@ -36,7 +36,7 @@ export const getMeta = async function ({
         .replace(/&amp;/g, "&");
 
       return decoded;
-    }
+    };
 
     const $$ = cheerio.load(data);
     const htmlArray = $$('script:contains("decodeURIComponent")')

@@ -8,88 +8,120 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getMeta = void 0;
-const getMeta = function (_a) {
-    return __awaiter(this, arguments, void 0, function* ({ link: data, }) {
-        var _b, _c;
-        try {
-            const dataJson = JSON.parse(data);
-            const title = (dataJson === null || dataJson === void 0 ? void 0 : dataJson.kn) || (dataJson === null || dataJson === void 0 ? void 0 : dataJson.mn);
-            const image = (dataJson === null || dataJson === void 0 ? void 0 : dataJson.IH) || (dataJson === null || dataJson === void 0 ? void 0 : dataJson.IV);
-            const tags = dataJson === null || dataJson === void 0 ? void 0 : dataJson.gn.split(",").slice(0, 3).map((tag) => tag.trim());
-            const type = (dataJson === null || dataJson === void 0 ? void 0 : dataJson.cg) === "webSeries" ? "series" : "movie";
-            const linkList = [];
-            if ((dataJson === null || dataJson === void 0 ? void 0 : dataJson.cg) === "webSeries") {
-                (_b = ["1", "2", "3", "4"]) === null || _b === void 0 ? void 0 : _b.forEach((item) => {
-                    var _a;
-                    const directLinks = [];
-                    if (typeof (dataJson === null || dataJson === void 0 ? void 0 : dataJson["eServer" + item]) === "object" &&
-                        ((_a = Object === null || Object === void 0 ? void 0 : Object.keys(dataJson === null || dataJson === void 0 ? void 0 : dataJson["eServer" + item])) === null || _a === void 0 ? void 0 : _a.length) > 0) {
-                        Object.keys(dataJson === null || dataJson === void 0 ? void 0 : dataJson["eServer" + item]).forEach((key) => {
-                            directLinks.push({
-                                title: "Episode " + key,
+var getMeta = function (_a) {
+    return __awaiter(this, arguments, void 0, function (_b) {
+        var dataJson_1, title, image, tags, type, linkList_1, directLinks_1;
+        var _c, _d;
+        var data = _b.link;
+        return __generator(this, function (_e) {
+            try {
+                dataJson_1 = JSON.parse(data);
+                title = (dataJson_1 === null || dataJson_1 === void 0 ? void 0 : dataJson_1.kn) || (dataJson_1 === null || dataJson_1 === void 0 ? void 0 : dataJson_1.mn);
+                image = (dataJson_1 === null || dataJson_1 === void 0 ? void 0 : dataJson_1.IH) || (dataJson_1 === null || dataJson_1 === void 0 ? void 0 : dataJson_1.IV);
+                tags = dataJson_1 === null || dataJson_1 === void 0 ? void 0 : dataJson_1.gn.split(",").slice(0, 3).map(function (tag) { return tag.trim(); });
+                type = (dataJson_1 === null || dataJson_1 === void 0 ? void 0 : dataJson_1.cg) === "webSeries" ? "series" : "movie";
+                linkList_1 = [];
+                if ((dataJson_1 === null || dataJson_1 === void 0 ? void 0 : dataJson_1.cg) === "webSeries") {
+                    (_c = ["1", "2", "3", "4"]) === null || _c === void 0 ? void 0 : _c.forEach(function (item) {
+                        var _a;
+                        var directLinks = [];
+                        if (typeof (dataJson_1 === null || dataJson_1 === void 0 ? void 0 : dataJson_1["eServer" + item]) === "object" &&
+                            ((_a = Object === null || Object === void 0 ? void 0 : Object.keys(dataJson_1 === null || dataJson_1 === void 0 ? void 0 : dataJson_1["eServer" + item])) === null || _a === void 0 ? void 0 : _a.length) > 0) {
+                            Object.keys(dataJson_1 === null || dataJson_1 === void 0 ? void 0 : dataJson_1["eServer" + item]).forEach(function (key) {
+                                directLinks.push({
+                                    title: "Episode " + key,
+                                    link: JSON.stringify({
+                                        url: dataJson_1 === null || dataJson_1 === void 0 ? void 0 : dataJson_1["eServer" + item][key],
+                                        server: "Server " + item,
+                                    }),
+                                });
+                            });
+                            linkList_1.push({
+                                title: (dataJson_1 === null || dataJson_1 === void 0 ? void 0 : dataJson_1.pn) + " (Server " + item + ")",
+                                directLinks: directLinks,
+                            });
+                        }
+                    });
+                }
+                else {
+                    directLinks_1 = [];
+                    (_d = ["1", "2", "3", "4"]) === null || _d === void 0 ? void 0 : _d.forEach(function (item) {
+                        if (dataJson_1 === null || dataJson_1 === void 0 ? void 0 : dataJson_1["s" + item]) {
+                            directLinks_1.push({
+                                title: "Server " + item + " (HD)",
                                 link: JSON.stringify({
-                                    url: dataJson === null || dataJson === void 0 ? void 0 : dataJson["eServer" + item][key],
+                                    url: dataJson_1 === null || dataJson_1 === void 0 ? void 0 : dataJson_1.s1,
                                     server: "Server " + item,
                                 }),
                             });
-                        });
-                        linkList.push({
-                            title: (dataJson === null || dataJson === void 0 ? void 0 : dataJson.pn) + " (Server " + item + ")",
-                            directLinks,
-                        });
-                    }
-                });
+                        }
+                        if (dataJson_1 === null || dataJson_1 === void 0 ? void 0 : dataJson_1["4s" + item]) {
+                            directLinks_1.push({
+                                title: "Server " + item + " (480p)",
+                                link: JSON.stringify({
+                                    url: dataJson_1 === null || dataJson_1 === void 0 ? void 0 : dataJson_1["4s" + item],
+                                    server: "Server " + item,
+                                }),
+                            });
+                        }
+                    });
+                    linkList_1.push({
+                        title: dataJson_1 === null || dataJson_1 === void 0 ? void 0 : dataJson_1.pn,
+                        directLinks: directLinks_1,
+                    });
+                }
+                return [2 /*return*/, {
+                        title: title,
+                        image: image,
+                        imdbId: "",
+                        synopsis: "",
+                        type: type,
+                        linkList: linkList_1,
+                        tags: tags,
+                    }];
             }
-            else {
-                const directLinks = [];
-                (_c = ["1", "2", "3", "4"]) === null || _c === void 0 ? void 0 : _c.forEach((item) => {
-                    if (dataJson === null || dataJson === void 0 ? void 0 : dataJson["s" + item]) {
-                        directLinks.push({
-                            title: "Server " + item + " (HD)",
-                            link: JSON.stringify({
-                                url: dataJson === null || dataJson === void 0 ? void 0 : dataJson.s1,
-                                server: "Server " + item,
-                            }),
-                        });
-                    }
-                    if (dataJson === null || dataJson === void 0 ? void 0 : dataJson["4s" + item]) {
-                        directLinks.push({
-                            title: "Server " + item + " (480p)",
-                            link: JSON.stringify({
-                                url: dataJson === null || dataJson === void 0 ? void 0 : dataJson["4s" + item],
-                                server: "Server " + item,
-                            }),
-                        });
-                    }
-                });
-                linkList.push({
-                    title: dataJson === null || dataJson === void 0 ? void 0 : dataJson.pn,
-                    directLinks,
-                });
+            catch (err) {
+                return [2 /*return*/, {
+                        title: "",
+                        image: "",
+                        imdbId: "",
+                        synopsis: "",
+                        type: "movie",
+                        linkList: [],
+                        tags: [],
+                    }];
             }
-            return {
-                title,
-                image,
-                imdbId: "",
-                synopsis: "",
-                type,
-                linkList,
-                tags,
-            };
-        }
-        catch (err) {
-            return {
-                title: "",
-                image: "",
-                imdbId: "",
-                synopsis: "",
-                type: "movie",
-                linkList: [],
-                tags: [],
-            };
-        }
+            return [2 /*return*/];
+        });
     });
 };
 exports.getMeta = getMeta;

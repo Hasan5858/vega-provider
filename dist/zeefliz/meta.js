@@ -1,4 +1,15 @@
 "use strict";
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -8,10 +19,37 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getMeta = void 0;
 // Headers
-const headers = {
+var headers = {
     Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
     "Cache-Control": "no-store",
     "Accept-Language": "en-US,en;q=0.9",
@@ -26,114 +64,120 @@ const headers = {
     "Upgrade-Insecure-Requests": "1",
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
 };
-const getMeta = function (_a) {
-    return __awaiter(this, arguments, void 0, function* ({ link, providerContext, }) {
-        const { axios, cheerio } = providerContext;
-        const url = link;
-        const baseUrl = url.split("/").slice(0, 3).join("/");
-        const emptyResult = {
-            title: "",
-            synopsis: "",
-            image: "",
-            imdbId: "",
-            type: "movie",
-            linkList: [],
-        };
-        try {
-            const response = yield axios.get(url, {
-                headers: Object.assign(Object.assign({}, headers), { Referer: baseUrl }),
-            });
-            const $ = cheerio.load(response.data);
-            const content = $(".entry-content, .post-inner").length
-                ? $(".entry-content, .post-inner")
-                : $("body");
-            const result = {
-                title: "",
-                synopsis: "",
-                image: "",
-                imdbId: "",
-                type: "movie",
-                linkList: [],
-            };
-            // --- Title ---
-            let rawTitle = content.find("h1, h2").first().text().trim();
-            rawTitle = rawTitle.replace(/^Download\s*/i, ""); // Download text remove
-            result.title = rawTitle;
-            // --- Type Detect ---
-            const pageText = content.text();
-            if (/Season\s*\d+/i.test(pageText) || /Episode\s*\d+/i.test(pageText)) {
-                result.type = "series";
-            }
-            else {
-                result.type = "movie";
-            }
-            // --- IMDb ID ---
-            const imdbHref = content.find("a[href*='imdb.com/title/']").attr("href");
-            const imdbMatch = imdbHref === null || imdbHref === void 0 ? void 0 : imdbHref.match(/tt\d+/);
-            result.imdbId = imdbMatch ? imdbMatch[0] : "";
-            // --- Image ---
-            let image = content.find("img").first().attr("data-src") ||
-                content.find("img").first().attr("src") ||
-                "";
-            if (image.startsWith("//"))
-                image = "https:" + image;
-            else if (image.startsWith("/"))
-                image = baseUrl + image;
-            if (image.includes("no-thumbnail") || image.includes("placeholder"))
-                image = "";
-            result.image = image;
-            // --- Synopsis ---
-            result.synopsis = content.find("p").first().text().trim() || "";
-            // --- Download Links Extraction ---
-            const links = [];
-            if (result.type === "series") {
-                // ✅ Series case: सिर्फ V-Cloud वाला और title = पूरा <h3> का text
-                content.find("h3").each((_, h3) => {
-                    var _a;
-                    const h3Text = $(h3).text().trim();
-                    const qualityMatch = ((_a = h3Text.match(/\d+p/)) === null || _a === void 0 ? void 0 : _a[0]) || "";
-                    const vcloudLink = $(h3)
-                        .next("p")
-                        .find("a")
-                        .filter((_, a) => /v-cloud/i.test($(a).text()))
-                        .first();
-                    const href = vcloudLink.attr("href");
-                    if (href) {
-                        links.push({
-                            title: h3Text,
-                            quality: qualityMatch,
-                            episodesLink: href, // Episode button
-                            directLinks: [], // Empty for series
+var getMeta = function (_a) {
+    return __awaiter(this, arguments, void 0, function (_b) {
+        var axios, cheerio, url, baseUrl, emptyResult, response, $_1, content, result, rawTitle, pageText, imdbHref, imdbMatch, image, links_1, err_1;
+        var link = _b.link, providerContext = _b.providerContext;
+        return __generator(this, function (_c) {
+            switch (_c.label) {
+                case 0:
+                    axios = providerContext.axios, cheerio = providerContext.cheerio;
+                    url = link;
+                    baseUrl = url.split("/").slice(0, 3).join("/");
+                    emptyResult = {
+                        title: "",
+                        synopsis: "",
+                        image: "",
+                        imdbId: "",
+                        type: "movie",
+                        linkList: [],
+                    };
+                    _c.label = 1;
+                case 1:
+                    _c.trys.push([1, 3, , 4]);
+                    return [4 /*yield*/, axios.get(url, {
+                            headers: __assign(__assign({}, headers), { Referer: baseUrl }),
+                        })];
+                case 2:
+                    response = _c.sent();
+                    $_1 = cheerio.load(response.data);
+                    content = $_1(".entry-content, .post-inner").length
+                        ? $_1(".entry-content, .post-inner")
+                        : $_1("body");
+                    result = {
+                        title: "",
+                        synopsis: "",
+                        image: "",
+                        imdbId: "",
+                        type: "movie",
+                        linkList: [],
+                    };
+                    rawTitle = content.find("h1, h2").first().text().trim();
+                    rawTitle = rawTitle.replace(/^Download\s*/i, ""); // Download text remove
+                    result.title = rawTitle;
+                    pageText = content.text();
+                    if (/Season\s*\d+/i.test(pageText) || /Episode\s*\d+/i.test(pageText)) {
+                        result.type = "series";
+                    }
+                    else {
+                        result.type = "movie";
+                    }
+                    imdbHref = content.find("a[href*='imdb.com/title/']").attr("href");
+                    imdbMatch = imdbHref === null || imdbHref === void 0 ? void 0 : imdbHref.match(/tt\d+/);
+                    result.imdbId = imdbMatch ? imdbMatch[0] : "";
+                    image = content.find("img").first().attr("data-src") ||
+                        content.find("img").first().attr("src") ||
+                        "";
+                    if (image.startsWith("//"))
+                        image = "https:" + image;
+                    else if (image.startsWith("/"))
+                        image = baseUrl + image;
+                    if (image.includes("no-thumbnail") || image.includes("placeholder"))
+                        image = "";
+                    result.image = image;
+                    // --- Synopsis ---
+                    result.synopsis = content.find("p").first().text().trim() || "";
+                    links_1 = [];
+                    if (result.type === "series") {
+                        // ✅ Series case: सिर्फ V-Cloud वाला और title = पूरा <h3> का text
+                        content.find("h3").each(function (_, h3) {
+                            var _a;
+                            var h3Text = $_1(h3).text().trim();
+                            var qualityMatch = ((_a = h3Text.match(/\d+p/)) === null || _a === void 0 ? void 0 : _a[0]) || "";
+                            var vcloudLink = $_1(h3)
+                                .next("p")
+                                .find("a")
+                                .filter(function (_, a) { return /v-cloud/i.test($_1(a).text()); })
+                                .first();
+                            var href = vcloudLink.attr("href");
+                            if (href) {
+                                links_1.push({
+                                    title: h3Text,
+                                    quality: qualityMatch,
+                                    episodesLink: href, // Episode button
+                                    directLinks: [], // Empty for series
+                                });
+                            }
                         });
                     }
-                });
-            }
-            else {
-                // ✅ Movie case: h5 text as title + download link
-                content.find("h5").each((_, h5) => {
-                    var _a;
-                    const h5Text = $(h5).text().trim();
-                    const qualityMatch = ((_a = h5Text.match(/\d+p/)) === null || _a === void 0 ? void 0 : _a[0]) || "";
-                    const href = $(h5).next("p").find("a").attr("href");
-                    if (href) {
-                        links.push({
-                            title: h5Text,
-                            quality: qualityMatch,
-                            episodesLink: "",
-                            directLinks: [
-                                { title: "Movie", link: href, type: "movie" }, // Play/Download button
-                            ],
+                    else {
+                        // ✅ Movie case: h5 text as title + download link
+                        content.find("h5").each(function (_, h5) {
+                            var _a;
+                            var h5Text = $_1(h5).text().trim();
+                            var qualityMatch = ((_a = h5Text.match(/\d+p/)) === null || _a === void 0 ? void 0 : _a[0]) || "";
+                            var href = $_1(h5).next("p").find("a").attr("href");
+                            if (href) {
+                                links_1.push({
+                                    title: h5Text,
+                                    quality: qualityMatch,
+                                    episodesLink: "",
+                                    directLinks: [
+                                        { title: "Movie", link: href, type: "movie" }, // Play/Download button
+                                    ],
+                                });
+                            }
                         });
                     }
-                });
+                    result.linkList = links_1;
+                    return [2 /*return*/, result];
+                case 3:
+                    err_1 = _c.sent();
+                    console.error("getMeta error:", err_1 instanceof Error ? err_1.message : err_1);
+                    return [2 /*return*/, emptyResult];
+                case 4: return [2 /*return*/];
             }
-            result.linkList = links;
-            return result;
-        }
-        catch (err) {
-            console.error("getMeta error:", err instanceof Error ? err.message : err);
-            return emptyResult;
-        }
+        });
     });
 };
 exports.getMeta = getMeta;

@@ -8,95 +8,131 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getMeta = void 0;
-const getMeta = function (_a) {
-    return __awaiter(this, arguments, void 0, function* ({ link, providerContext, }) {
-        var _b, _c, _d, _e, _f;
-        try {
-            const { axios, cheerio, getBaseUrl } = providerContext;
-            const baseUrl = yield getBaseUrl("protonMovies");
-            console.log("all", link);
-            const res = yield axios.get(`${baseUrl}${link}`);
-            const data = res.data;
-            function decodeHtml(encodedArray) {
-                // Join array elements into a single string
-                const joined = encodedArray.join("");
-                // Replace escaped quotes
-                const unescaped = joined.replace(/\\"/g, '"').replace(/\\'/g, "'");
-                // Remove remaining escape characters
-                const cleaned = unescaped
-                    .replace(/\\n/g, "\n")
-                    .replace(/\\t/g, "\t")
-                    .replace(/\\r/g, "\r");
-                // Convert literal string representations back to characters
-                const decoded = cleaned
-                    .replace(/&quot;/g, '"')
-                    .replace(/&lt;/g, "<")
-                    .replace(/&gt;/g, ">")
-                    .replace(/&amp;/g, "&");
-                return decoded;
+var getMeta = function (_a) {
+    return __awaiter(this, arguments, void 0, function (_b) {
+        var axios, cheerio, getBaseUrl, baseUrl_1, res, data, decodeHtml, $$, htmlArray, html, $_1, title, image, type, synopsis, tags, links_1, directLinks, err_1;
+        var _c, _d, _e, _f, _g;
+        var link = _b.link, providerContext = _b.providerContext;
+        return __generator(this, function (_h) {
+            switch (_h.label) {
+                case 0:
+                    _h.trys.push([0, 3, , 4]);
+                    axios = providerContext.axios, cheerio = providerContext.cheerio, getBaseUrl = providerContext.getBaseUrl;
+                    return [4 /*yield*/, getBaseUrl("protonMovies")];
+                case 1:
+                    baseUrl_1 = _h.sent();
+                    console.log("all", link);
+                    return [4 /*yield*/, axios.get("".concat(baseUrl_1).concat(link))];
+                case 2:
+                    res = _h.sent();
+                    data = res.data;
+                    decodeHtml = function (encodedArray) {
+                        // Join array elements into a single string
+                        var joined = encodedArray.join("");
+                        // Replace escaped quotes
+                        var unescaped = joined.replace(/\\"/g, '"').replace(/\\'/g, "'");
+                        // Remove remaining escape characters
+                        var cleaned = unescaped
+                            .replace(/\\n/g, "\n")
+                            .replace(/\\t/g, "\t")
+                            .replace(/\\r/g, "\r");
+                        // Convert literal string representations back to characters
+                        var decoded = cleaned
+                            .replace(/&quot;/g, '"')
+                            .replace(/&lt;/g, "<")
+                            .replace(/&gt;/g, ">")
+                            .replace(/&amp;/g, "&");
+                        return decoded;
+                    };
+                    $$ = cheerio.load(data);
+                    htmlArray = (_g = (_f = (_e = (_d = (_c = $$('script:contains("decodeURIComponent")')
+                        .text()
+                        .split(" = ")) === null || _c === void 0 ? void 0 : _c[1]) === null || _d === void 0 ? void 0 : _d.split("protomovies")) === null || _e === void 0 ? void 0 : _e[0]) === null || _f === void 0 ? void 0 : _f.trim()) === null || _g === void 0 ? void 0 : _g.slice(0, -1);
+                    html = decodeHtml(JSON.parse(htmlArray));
+                    $_1 = cheerio.load(html);
+                    title = $_1(".trending-text.fw-bold.texture-text.text-uppercase.my-0.fadeInLeft.animated.d-inline-block").text();
+                    image = $_1("#thumbnail").attr("src");
+                    type = link.includes("series") ? "series" : "movie";
+                    synopsis = $_1(".col-12.iq-mb-30.animated.fadeIn").first().text() ||
+                        $_1(".description-content").text();
+                    tags = $_1(".p-0.mt-2.list-inline.d-flex.flex-wrap.movie-tag")
+                        .find("li")
+                        .map(function (i, el) { return $_1(el).text(); })
+                        .slice(0, 3)
+                        .get();
+                    links_1 = [];
+                    if (type === "movie") {
+                        directLinks = [];
+                        directLinks.push({ title: "Movie", link: baseUrl_1 + link });
+                        links_1.push({ title: "Movie", directLinks: directLinks });
+                    }
+                    else {
+                        $_1("#episodes")
+                            .children()
+                            .map(function (i, element) {
+                            var directLinks = [];
+                            $_1(element)
+                                .find(".episode-block")
+                                .map(function (j, ep) {
+                                var link = baseUrl_1 + $_1(ep).find("a").attr("href") || "";
+                                var title = "Episode " + $_1(ep).find(".episode-number").text().split("E")[1];
+                                directLinks.push({ title: title, link: link });
+                            });
+                            links_1.push({ title: "Season " + (i + 1), directLinks: directLinks });
+                        });
+                    }
+                    return [2 /*return*/, {
+                            image: image || "",
+                            imdbId: "",
+                            linkList: links_1,
+                            title: title || "",
+                            synopsis: synopsis,
+                            tags: tags,
+                            type: type,
+                        }];
+                case 3:
+                    err_1 = _h.sent();
+                    console.error("prton", err_1);
+                    return [2 /*return*/, {
+                            title: "",
+                            synopsis: "",
+                            image: "",
+                            imdbId: "",
+                            type: "movie",
+                            linkList: [],
+                        }];
+                case 4: return [2 /*return*/];
             }
-            const $$ = cheerio.load(data);
-            const htmlArray = (_f = (_e = (_d = (_c = (_b = $$('script:contains("decodeURIComponent")')
-                .text()
-                .split(" = ")) === null || _b === void 0 ? void 0 : _b[1]) === null || _c === void 0 ? void 0 : _c.split("protomovies")) === null || _d === void 0 ? void 0 : _d[0]) === null || _e === void 0 ? void 0 : _e.trim()) === null || _f === void 0 ? void 0 : _f.slice(0, -1); // remove the last character
-            // console.log('protonGetInfo', htmlArray);
-            const html = decodeHtml(JSON.parse(htmlArray));
-            // console.log('all', html);
-            const $ = cheerio.load(html);
-            const title = $(".trending-text.fw-bold.texture-text.text-uppercase.my-0.fadeInLeft.animated.d-inline-block").text();
-            const image = $("#thumbnail").attr("src");
-            const type = link.includes("series") ? "series" : "movie";
-            const synopsis = $(".col-12.iq-mb-30.animated.fadeIn").first().text() ||
-                $(".description-content").text();
-            const tags = $(".p-0.mt-2.list-inline.d-flex.flex-wrap.movie-tag")
-                .find("li")
-                .map((i, el) => $(el).text())
-                .slice(0, 3)
-                .get();
-            const links = [];
-            if (type === "movie") {
-                const directLinks = [];
-                directLinks.push({ title: "Movie", link: baseUrl + link });
-                links.push({ title: "Movie", directLinks: directLinks });
-            }
-            else {
-                $("#episodes")
-                    .children()
-                    .map((i, element) => {
-                    let directLinks = [];
-                    $(element)
-                        .find(".episode-block")
-                        .map((j, ep) => {
-                        const link = baseUrl + $(ep).find("a").attr("href") || "";
-                        const title = "Episode " + $(ep).find(".episode-number").text().split("E")[1];
-                        directLinks.push({ title, link });
-                    });
-                    links.push({ title: "Season " + (i + 1), directLinks: directLinks });
-                });
-            }
-            return {
-                image: image || "",
-                imdbId: "",
-                linkList: links,
-                title: title || "",
-                synopsis: synopsis,
-                tags: tags,
-                type: type,
-            };
-        }
-        catch (err) {
-            console.error("prton", err);
-            return {
-                title: "",
-                synopsis: "",
-                image: "",
-                imdbId: "",
-                type: "movie",
-                linkList: [],
-            };
-        }
+        });
     });
 };
 exports.getMeta = getMeta;

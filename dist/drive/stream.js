@@ -8,38 +8,81 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getStream = void 0;
-const getStream = function (_a) {
-    return __awaiter(this, arguments, void 0, function* ({ link: url, type, signal, providerContext, }) {
-        var _b, _c;
-        const headers = providerContext.commonHeaders;
-        try {
-            if (type === "movie") {
-                const res = yield providerContext.axios.get(url, { headers });
-                const html = res.data;
-                const $ = providerContext.cheerio.load(html);
-                const link = $('a:contains("HubCloud")').attr("href");
-                url = link || url;
+var getStream = function (_a) {
+    return __awaiter(this, arguments, void 0, function (_b) {
+        var headers, res_1, html, $_1, link, res, redirectUrl, res2, data, $, hubcloudLink, err_1;
+        var _c, _d;
+        var url = _b.link, type = _b.type, signal = _b.signal, providerContext = _b.providerContext;
+        return __generator(this, function (_e) {
+            switch (_e.label) {
+                case 0:
+                    headers = providerContext.commonHeaders;
+                    _e.label = 1;
+                case 1:
+                    _e.trys.push([1, 9, , 10]);
+                    if (!(type === "movie")) return [3 /*break*/, 3];
+                    return [4 /*yield*/, providerContext.axios.get(url, { headers: headers })];
+                case 2:
+                    res_1 = _e.sent();
+                    html = res_1.data;
+                    $_1 = providerContext.cheerio.load(html);
+                    link = $_1('a:contains("HubCloud")').attr("href");
+                    url = link || url;
+                    _e.label = 3;
+                case 3: return [4 /*yield*/, providerContext.axios.get(url, { headers: headers })];
+                case 4:
+                    res = _e.sent();
+                    redirectUrl = (_c = res.data.match(/<meta\s+http-equiv="refresh"\s+content="[^"]*?;\s*url=([^"]+)"\s*\/?>/i)) === null || _c === void 0 ? void 0 : _c[1];
+                    if (url.includes("/archives/")) {
+                        redirectUrl = (_d = res.data.match(/<a\s+[^>]*href="(https:\/\/hubcloud\.[^\/]+\/[^"]+)"/i)) === null || _d === void 0 ? void 0 : _d[1];
+                    }
+                    if (!!redirectUrl) return [3 /*break*/, 6];
+                    return [4 /*yield*/, providerContext.extractors.hubcloudExtracter(url, signal)];
+                case 5: return [2 /*return*/, _e.sent()];
+                case 6: return [4 /*yield*/, providerContext.axios.get(redirectUrl, { headers: headers })];
+                case 7:
+                    res2 = _e.sent();
+                    data = res2.data;
+                    $ = providerContext.cheerio.load(data);
+                    hubcloudLink = $(".fa-file-download").parent().attr("href");
+                    return [4 /*yield*/, providerContext.extractors.hubcloudExtracter((hubcloudLink === null || hubcloudLink === void 0 ? void 0 : hubcloudLink.includes("https://hubcloud")) ? hubcloudLink : redirectUrl, signal)];
+                case 8: return [2 /*return*/, _e.sent()];
+                case 9:
+                    err_1 = _e.sent();
+                    console.error("Movies Drive err", err_1);
+                    return [2 /*return*/, []];
+                case 10: return [2 /*return*/];
             }
-            const res = yield providerContext.axios.get(url, { headers });
-            let redirectUrl = (_b = res.data.match(/<meta\s+http-equiv="refresh"\s+content="[^"]*?;\s*url=([^"]+)"\s*\/?>/i)) === null || _b === void 0 ? void 0 : _b[1];
-            if (url.includes("/archives/")) {
-                redirectUrl = (_c = res.data.match(/<a\s+[^>]*href="(https:\/\/hubcloud\.[^\/]+\/[^"]+)"/i)) === null || _c === void 0 ? void 0 : _c[1];
-            }
-            if (!redirectUrl) {
-                return yield providerContext.extractors.hubcloudExtracter(url, signal);
-            }
-            const res2 = yield providerContext.axios.get(redirectUrl, { headers });
-            const data = res2.data;
-            const $ = providerContext.cheerio.load(data);
-            const hubcloudLink = $(".fa-file-download").parent().attr("href");
-            return yield providerContext.extractors.hubcloudExtracter((hubcloudLink === null || hubcloudLink === void 0 ? void 0 : hubcloudLink.includes("https://hubcloud")) ? hubcloudLink : redirectUrl, signal);
-        }
-        catch (err) {
-            console.error("Movies Drive err", err);
-            return [];
-        }
+        });
     });
 };
 exports.getStream = getStream;

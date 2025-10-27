@@ -50,7 +50,7 @@ async function posts({
   cheerio: ProviderContext["cheerio"];
 }): Promise<Post[]> {
   try {
-    function decodeHtml(encodedArray: string[]): string {
+    const decodeHtml = function (encodedArray: string[]): string {
       // Join array elements into a single string
       const joined = encodedArray.join("");
 
@@ -71,7 +71,7 @@ async function posts({
         .replace(/&amp;/g, "&");
 
       return decoded;
-    }
+    };
     const res = await axios.get(url, {
       headers: {
         referer: baseUrl,

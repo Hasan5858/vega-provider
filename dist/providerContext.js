@@ -37,24 +37,24 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.providerContext = void 0;
-const axios_1 = __importDefault(require("axios"));
-const getBaseUrl_1 = require("./getBaseUrl");
-const headers_1 = require("./headers");
-const cheerio = __importStar(require("cheerio"));
-const hubcloudExtractor_1 = require("./hubcloudExtractor");
-const gofileExtracter_1 = require("./gofileExtracter");
-const superVideoExtractor_1 = require("./superVideoExtractor");
-const gdflixExtractor_1 = require("./gdflixExtractor");
-const nexdriveExtractor_1 = require("./nexdriveExtractor");
-const fastdlExtractor_1 = require("./fastdlExtractor");
-const vcloudExtractor_1 = require("./vcloudExtractor");
-const filepresExtractor_1 = require("./filepresExtractor");
-const react_native_aes_crypto_1 = __importDefault(require("react-native-aes-crypto"));
+var axios_1 = __importDefault(require("axios"));
+var getBaseUrl_1 = require("./getBaseUrl");
+var headers_1 = require("./headers");
+var cheerio = __importStar(require("cheerio"));
+var hubcloudExtractor_1 = require("./hubcloudExtractor");
+var gofileExtracter_1 = require("./gofileExtracter");
+var superVideoExtractor_1 = require("./superVideoExtractor");
+var gdflixExtractor_1 = require("./gdflixExtractor");
+var nexdriveExtractor_1 = require("./nexdriveExtractor");
+var fastdlExtractor_1 = require("./fastdlExtractor");
+var vcloudExtractor_1 = require("./vcloudExtractor");
+var filepresExtractor_1 = require("./filepresExtractor");
+var react_native_aes_crypto_1 = __importDefault(require("react-native-aes-crypto"));
 /**
  * Context for provider functions.
  * This context is used to pass common dependencies to provider functions.
  */
-const extractors = {
+var extractors = {
     hubcloudExtracter: hubcloudExtractor_1.hubcloudExtracter,
     gofileExtracter: gofileExtracter_1.gofileExtracter,
     superVideoExtractor: superVideoExtractor_1.superVideoExtractor,
@@ -69,6 +69,6 @@ exports.providerContext = {
     getBaseUrl: getBaseUrl_1.getBaseUrl,
     commonHeaders: headers_1.headers,
     Aes: react_native_aes_crypto_1.default,
-    cheerio,
-    extractors,
+    cheerio: cheerio,
+    extractors: extractors,
 };

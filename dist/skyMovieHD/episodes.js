@@ -1,37 +1,38 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getEpisodes = void 0;
-const getEpisodes = function ({ url, providerContext, }) {
-    const { axios, cheerio, commonHeaders: headers } = providerContext;
+var getEpisodes = function (_a) {
+    var url = _a.url, providerContext = _a.providerContext;
+    var axios = providerContext.axios, cheerio = providerContext.cheerio, headers = providerContext.commonHeaders;
     console.log("getEpisodeLinks", url);
     return axios
-        .get(url, { headers })
-        .then((res) => {
-        const $ = cheerio.load(res.data);
-        const container = $(".entry-content, .entry-inner");
+        .get(url, { headers: headers })
+        .then(function (res) {
+        var $ = cheerio.load(res.data);
+        var container = $(".entry-content, .entry-inner");
         // Remove unnecessary elements
         $(".unili-content, .code-block-1").remove();
-        const episodes = [];
-        container.find("h4, h3").each((_, element) => {
-            const el = $(element);
-            let title = el.text().replace(/[-:]/g, "").trim();
+        var episodes = [];
+        container.find("h4, h3").each(function (_, element) {
+            var el = $(element);
+            var title = el.text().replace(/[-:]/g, "").trim();
             if (!title)
                 return;
             // Saare V-Cloud links fetch
             el.next("p")
                 .find("a[href*='vcloud.lol']")
-                .each((_, a) => {
+                .each(function (_, a) {
                 var _a;
-                const anchor = $(a);
-                const href = (_a = anchor.attr("href")) === null || _a === void 0 ? void 0 : _a.trim();
+                var anchor = $(a);
+                var href = (_a = anchor.attr("href")) === null || _a === void 0 ? void 0 : _a.trim();
                 if (href) {
-                    episodes.push({ title, link: href });
+                    episodes.push({ title: title, link: href });
                 }
             });
         });
         return episodes;
     })
-        .catch((err) => {
+        .catch(function (err) {
         console.log("getEpisodeLinks error:", err);
         return [];
     });

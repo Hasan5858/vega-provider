@@ -8,9 +8,36 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getMeta = void 0;
-const headers = {
+var headers = {
     Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
     "Cache-Control": "no-store",
     "Accept-Language": "en-US,en;q=0.9",
@@ -25,97 +52,105 @@ const headers = {
     "Upgrade-Insecure-Requests": "1",
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
 };
-const getMeta = function (_a) {
-    return __awaiter(this, arguments, void 0, function* ({ link, providerContext, }) {
-        var _b;
-        try {
-            const { axios, cheerio } = providerContext;
-            console.log("Fetching metadata from UHD...", link, providerContext);
-            const url = link;
-            const res = yield axios.get(url, { headers });
-            const html = yield res.data;
-            const $ = cheerio.load(html);
-            const title = $("h2:first").text() || "";
-            const image = $("h2").siblings().find("img").attr("src") || "";
-            // const trailer = $('iframe').attr('src') || '';
-            // console.log({ title, image, trailer });
-            // Links
-            const episodes = [];
-            // new structure
-            $(".mks_separator,p:contains('mks_separator')").each((index, element) => {
-                $(element)
-                    .nextUntil(".mks_separator")
-                    .each((index, element) => {
-                    const title = $(element).text();
-                    const episodesList = [];
-                    $(element)
-                        .next("p")
-                        .find("a")
-                        .each((index, element) => {
-                        const title = $(element).text();
-                        const link = $(element).attr("href");
-                        if (title && link && !title.toLocaleLowerCase().includes("zip")) {
-                            episodesList.push({ title, link });
-                            //   console.log({ title, link });
-                        }
-                    });
-                    if (title && episodesList.length > 0) {
-                        episodes.push({
-                            title,
-                            directLinks: episodesList,
+var getMeta = function (_a) {
+    return __awaiter(this, arguments, void 0, function (_b) {
+        var axios, cheerio, url, res, html, $_1, title, image, episodes_1, error_1;
+        var _c;
+        var link = _b.link, providerContext = _b.providerContext;
+        return __generator(this, function (_d) {
+            switch (_d.label) {
+                case 0:
+                    _d.trys.push([0, 3, , 4]);
+                    axios = providerContext.axios, cheerio = providerContext.cheerio;
+                    console.log("Fetching metadata from UHD...", link, providerContext);
+                    url = link;
+                    return [4 /*yield*/, axios.get(url, { headers: headers })];
+                case 1:
+                    res = _d.sent();
+                    return [4 /*yield*/, res.data];
+                case 2:
+                    html = _d.sent();
+                    $_1 = cheerio.load(html);
+                    title = $_1("h2:first").text() || "";
+                    image = $_1("h2").siblings().find("img").attr("src") || "";
+                    episodes_1 = [];
+                    // new structure
+                    $_1(".mks_separator,p:contains('mks_separator')").each(function (index, element) {
+                        $_1(element)
+                            .nextUntil(".mks_separator")
+                            .each(function (index, element) {
+                            var title = $_1(element).text();
+                            var episodesList = [];
+                            $_1(element)
+                                .next("p")
+                                .find("a")
+                                .each(function (index, element) {
+                                var title = $_1(element).text();
+                                var link = $_1(element).attr("href");
+                                if (title && link && !title.toLocaleLowerCase().includes("zip")) {
+                                    episodesList.push({ title: title, link: link });
+                                    //   console.log({ title, link });
+                                }
+                            });
+                            if (title && episodesList.length > 0) {
+                                episodes_1.push({
+                                    title: title,
+                                    directLinks: episodesList,
+                                });
+                            }
                         });
-                    }
-                });
-            });
-            // old structure
-            $("hr").each((index, element) => {
-                $(element)
-                    .nextUntil("hr")
-                    .each((index, element) => {
-                    const title = $(element).text();
-                    const episodesList = [];
-                    $(element)
-                        .next("p")
-                        .find("a")
-                        .each((index, element) => {
-                        const title = $(element).text();
-                        const link = $(element).attr("href");
-                        if (title && link && !title.toLocaleLowerCase().includes("zip")) {
-                            episodesList.push({ title, link });
-                            //   console.log({ title, link });
-                        }
                     });
-                    if (title && episodesList.length > 0) {
-                        episodes.push({
-                            title,
-                            directLinks: episodesList,
+                    // old structure
+                    $_1("hr").each(function (index, element) {
+                        $_1(element)
+                            .nextUntil("hr")
+                            .each(function (index, element) {
+                            var title = $_1(element).text();
+                            var episodesList = [];
+                            $_1(element)
+                                .next("p")
+                                .find("a")
+                                .each(function (index, element) {
+                                var title = $_1(element).text();
+                                var link = $_1(element).attr("href");
+                                if (title && link && !title.toLocaleLowerCase().includes("zip")) {
+                                    episodesList.push({ title: title, link: link });
+                                    //   console.log({ title, link });
+                                }
+                            });
+                            if (title && episodesList.length > 0) {
+                                episodes_1.push({
+                                    title: title,
+                                    directLinks: episodesList,
+                                });
+                            }
                         });
-                    }
-                });
-            });
-            // console.log(episodes);
-            return {
-                title: title.match(/^Download\s+([^(\[]+)/i)
-                    ? ((_b = title === null || title === void 0 ? void 0 : title.match(/^Download\s+([^(\[]+)/i)) === null || _b === void 0 ? void 0 : _b[1]) || ""
-                    : title.replace("Download", "") || "",
-                image,
-                imdbId: "",
-                synopsis: title,
-                type: "",
-                linkList: episodes,
-            };
-        }
-        catch (error) {
-            console.error(error);
-            return {
-                title: "",
-                image: "",
-                imdbId: "",
-                synopsis: "",
-                linkList: [],
-                type: "uhd",
-            };
-        }
+                    });
+                    // console.log(episodes);
+                    return [2 /*return*/, {
+                            title: title.match(/^Download\s+([^(\[]+)/i)
+                                ? ((_c = title === null || title === void 0 ? void 0 : title.match(/^Download\s+([^(\[]+)/i)) === null || _c === void 0 ? void 0 : _c[1]) || ""
+                                : title.replace("Download", "") || "",
+                            image: image,
+                            imdbId: "",
+                            synopsis: title,
+                            type: "",
+                            linkList: episodes_1,
+                        }];
+                case 3:
+                    error_1 = _d.sent();
+                    console.error(error_1);
+                    return [2 /*return*/, {
+                            title: "",
+                            image: "",
+                            imdbId: "",
+                            synopsis: "",
+                            linkList: [],
+                            type: "uhd",
+                        }];
+                case 4: return [2 /*return*/];
+            }
+        });
     });
 };
 exports.getMeta = getMeta;

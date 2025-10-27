@@ -8,10 +8,37 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getPosts = getPosts;
 exports.getSearchPosts = getSearchPosts;
-const defaultHeaders = {
+var defaultHeaders = {
     Referer: "https://www.google.com",
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
         "(KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
@@ -22,92 +49,110 @@ const defaultHeaders = {
 };
 // --- Normal catalog posts ---
 function getPosts(_a) {
-    return __awaiter(this, arguments, void 0, function* ({ filter, page = 1, signal, providerContext, }) {
-        return fetchPosts({ filter, page, query: "", signal, providerContext });
+    return __awaiter(this, arguments, void 0, function (_b) {
+        var filter = _b.filter, _c = _b.page, page = _c === void 0 ? 1 : _c, signal = _b.signal, providerContext = _b.providerContext;
+        return __generator(this, function (_d) {
+            return [2 /*return*/, fetchPosts({ filter: filter, page: page, query: "", signal: signal, providerContext: providerContext })];
+        });
     });
 }
 // --- Search posts ---
 function getSearchPosts(_a) {
-    return __awaiter(this, arguments, void 0, function* ({ searchQuery, page = 1, signal, providerContext, }) {
-        return fetchPosts({
-            filter: "",
-            page,
-            query: searchQuery,
-            signal,
-            providerContext,
+    return __awaiter(this, arguments, void 0, function (_b) {
+        var searchQuery = _b.searchQuery, _c = _b.page, page = _c === void 0 ? 1 : _c, signal = _b.signal, providerContext = _b.providerContext;
+        return __generator(this, function (_d) {
+            return [2 /*return*/, fetchPosts({
+                    filter: "",
+                    page: page,
+                    query: searchQuery,
+                    signal: signal,
+                    providerContext: providerContext,
+                })];
         });
     });
 }
 // --- Core function ---
 function fetchPosts(_a) {
-    return __awaiter(this, arguments, void 0, function* ({ filter, query, page = 1, signal, providerContext, }) {
-        try {
-            const baseUrl = yield providerContext.getBaseUrl("kmmovies");
-            console.log("KM Movies baseUrl:", baseUrl);
-            let url;
-            // --- Build URL for category filter or search query
-            if (query && query.trim()) {
-                url = `${baseUrl}/?s=${encodeURIComponent(query)}${page > 1 ? `&paged=${page}` : ""}`;
+    return __awaiter(this, arguments, void 0, function (_b) {
+        var baseUrl_1, url, axios, cheerio, res, $_1, resolveUrl_1, seen_1, catalog_1, POST_SELECTORS, err_1;
+        var filter = _b.filter, query = _b.query, _c = _b.page, page = _c === void 0 ? 1 : _c, signal = _b.signal, providerContext = _b.providerContext;
+        return __generator(this, function (_d) {
+            switch (_d.label) {
+                case 0:
+                    _d.trys.push([0, 3, , 4]);
+                    return [4 /*yield*/, providerContext.getBaseUrl("kmmovies")];
+                case 1:
+                    baseUrl_1 = _d.sent();
+                    console.log("KM Movies baseUrl:", baseUrl_1);
+                    url = void 0;
+                    // --- Build URL for category filter or search query
+                    if (query && query.trim()) {
+                        url = "".concat(baseUrl_1, "/?s=").concat(encodeURIComponent(query)).concat(page > 1 ? "&paged=".concat(page) : "");
+                    }
+                    else if (filter) {
+                        url = filter.startsWith("/")
+                            ? "".concat(baseUrl_1).concat(filter.replace(/\/$/, "")).concat(page > 1 ? "/page/".concat(page) : "")
+                            : "".concat(baseUrl_1, "/").concat(filter).concat(page > 1 ? "/page/".concat(page) : "");
+                    }
+                    else {
+                        url = "".concat(baseUrl_1).concat(page > 1 ? "/page/".concat(page) : "");
+                    }
+                    axios = providerContext.axios, cheerio = providerContext.cheerio;
+                    return [4 /*yield*/, axios.get(url, { headers: defaultHeaders, signal: signal })];
+                case 2:
+                    res = _d.sent();
+                    $_1 = cheerio.load(res.data || "");
+                    resolveUrl_1 = function (href) {
+                        return (href === null || href === void 0 ? void 0 : href.startsWith("http"))
+                            ? href
+                            : "".concat(baseUrl_1).concat(href.startsWith("/") ? "" : "/").concat(href);
+                    };
+                    seen_1 = new Set();
+                    catalog_1 = [];
+                    POST_SELECTORS = [
+                        ".pstr_box",
+                        "article",
+                        ".result-item",
+                        ".post",
+                        ".item",
+                        ".thumbnail",
+                        ".latest-movies",
+                        ".movie-item",
+                    ].join(",");
+                    $_1(POST_SELECTORS).each(function (_, el) {
+                        var _a;
+                        var card = $_1(el);
+                        var link = card.find("a[href]").first().attr("href") || "";
+                        if (!link)
+                            return;
+                        link = resolveUrl_1(link);
+                        if (seen_1.has(link))
+                            return;
+                        var title = card.find("h2").first().text().trim() ||
+                            ((_a = card.find("a[title]").first().attr("title")) === null || _a === void 0 ? void 0 : _a.trim()) ||
+                            card.text().trim();
+                        title = title
+                            .replace(/\[.*?\]/g, "")
+                            .replace(/\(.+?\)/g, "")
+                            .replace(/\s{2,}/g, " ")
+                            .trim();
+                        if (!title)
+                            return;
+                        var img = card.find("img").first().attr("src") ||
+                            card.find("img").first().attr("data-src") ||
+                            card.find("img").first().attr("data-original") ||
+                            "";
+                        var image = img ? resolveUrl_1(img) : "";
+                        seen_1.add(link);
+                        catalog_1.push({ title: title, link: link, image: image });
+                    });
+                    return [2 /*return*/, catalog_1.slice(0, 100)];
+                case 3:
+                    err_1 = _d.sent();
+                    console.error("Cinevood fetchPosts error:", err_1 instanceof Error ? err_1.message : String(err_1));
+                    return [2 /*return*/, []];
+                case 4: return [2 /*return*/];
             }
-            else if (filter) {
-                url = filter.startsWith("/")
-                    ? `${baseUrl}${filter.replace(/\/$/, "")}${page > 1 ? `/page/${page}` : ""}`
-                    : `${baseUrl}/${filter}${page > 1 ? `/page/${page}` : ""}`;
-            }
-            else {
-                url = `${baseUrl}${page > 1 ? `/page/${page}` : ""}`;
-            }
-            const { axios, cheerio } = providerContext;
-            const res = yield axios.get(url, { headers: defaultHeaders, signal });
-            const $ = cheerio.load(res.data || "");
-            const resolveUrl = (href) => (href === null || href === void 0 ? void 0 : href.startsWith("http"))
-                ? href
-                : `${baseUrl}${href.startsWith("/") ? "" : "/"}${href}`;
-            const seen = new Set();
-            const catalog = [];
-            // --- selectors
-            const POST_SELECTORS = [
-                ".pstr_box",
-                "article",
-                ".result-item",
-                ".post",
-                ".item",
-                ".thumbnail",
-                ".latest-movies",
-                ".movie-item",
-            ].join(",");
-            $(POST_SELECTORS).each((_, el) => {
-                var _a;
-                const card = $(el);
-                let link = card.find("a[href]").first().attr("href") || "";
-                if (!link)
-                    return;
-                link = resolveUrl(link);
-                if (seen.has(link))
-                    return;
-                let title = card.find("h2").first().text().trim() ||
-                    ((_a = card.find("a[title]").first().attr("title")) === null || _a === void 0 ? void 0 : _a.trim()) ||
-                    card.text().trim();
-                title = title
-                    .replace(/\[.*?\]/g, "")
-                    .replace(/\(.+?\)/g, "")
-                    .replace(/\s{2,}/g, " ")
-                    .trim();
-                if (!title)
-                    return;
-                const img = card.find("img").first().attr("src") ||
-                    card.find("img").first().attr("data-src") ||
-                    card.find("img").first().attr("data-original") ||
-                    "";
-                const image = img ? resolveUrl(img) : "";
-                seen.add(link);
-                catalog.push({ title, link, image });
-            });
-            return catalog.slice(0, 100);
-        }
-        catch (err) {
-            console.error("Cinevood fetchPosts error:", err instanceof Error ? err.message : String(err));
-            return [];
-        }
+        });
     });
 }
