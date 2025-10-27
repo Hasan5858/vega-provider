@@ -34,6 +34,30 @@ const getLastPathSegment = (input: string): string => {
 };
 
 /**
+ * Check if a host has a working extractor
+ * Returns false for hosts that are Cloudflare/Captcha protected or have no extractor
+ */
+const hasExtractor = (hostLabel: string): boolean => {
+  const host = normalizeHost(hostLabel);
+  
+  // List of supported hosts (must match extractStreamForHost routing)
+  const supportedHosts = [
+    "streamtape", "streamta",
+    "dood",
+    "mixdrop",
+    "filelions",
+    "filemoon",
+    "streamwish", "awish", "yuguaab",
+    "savefiles",
+    "luluvdoo",
+    "voe"
+  ];
+  
+  // Check if host matches any supported host
+  return supportedHosts.some(supported => host.includes(supported));
+};
+
+/**
  * Extract stream from host using providerContext extractors
  * This approach scales to 30+ extractors without bloating this file
  */
@@ -424,6 +448,12 @@ const resolveGoEntries = async (
   for (const entry of entries) {
     const key = linkKeys[entry.index] || entry.fallbackKey;
     if (!key) {
+      continue;
+    }
+
+    // Skip hosts without extractors (Cloudflare protected, Captcha, or no implementation)
+    if (!hasExtractor(entry.host)) {
+      console.log(`Primewire: Skipping ${entry.host} (no extractor available)`);
       continue;
     }
 

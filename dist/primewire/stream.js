@@ -92,6 +92,27 @@ var getLastPathSegment = function (input) {
     return segments[segments.length - 1] || "";
 };
 /**
+ * Check if a host has a working extractor
+ * Returns false for hosts that are Cloudflare/Captcha protected or have no extractor
+ */
+var hasExtractor = function (hostLabel) {
+    var host = normalizeHost(hostLabel);
+    // List of supported hosts (must match extractStreamForHost routing)
+    var supportedHosts = [
+        "streamtape", "streamta",
+        "dood",
+        "mixdrop",
+        "filelions",
+        "filemoon",
+        "streamwish", "awish", "yuguaab",
+        "savefiles",
+        "luluvdoo",
+        "voe"
+    ];
+    // Check if host matches any supported host
+    return supportedHosts.some(function (supported) { return host.includes(supported); });
+};
+/**
  * Extract stream from host using providerContext extractors
  * This approach scales to 30+ extractors without bloating this file
  */
@@ -465,6 +486,11 @@ var resolveGoEntries = function (url, $, axios, providerContext) { return __awai
                 entry = entries_1_1.value;
                 key = linkKeys[entry.index] || entry.fallbackKey;
                 if (!key) {
+                    return [3 /*break*/, 9];
+                }
+                // Skip hosts without extractors (Cloudflare protected, Captcha, or no implementation)
+                if (!hasExtractor(entry.host)) {
+                    console.log("Primewire: Skipping ".concat(entry.host, " (no extractor available)"));
                     return [3 /*break*/, 9];
                 }
                 goUrl = "".concat(baseUrl, "/links/go/").concat(encodeURIComponent(key), "?embed=true");
