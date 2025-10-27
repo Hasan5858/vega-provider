@@ -121,6 +121,9 @@ var extractStreamForHost = function (hostLabel, directLink, axios, providerConte
                 if (host.includes("streamwish") || host.includes("awish") || host.includes("yuguaab") || directLink.includes("streamwish") || directLink.includes("awish") || directLink.includes("yuguaab")) {
                     return [2 /*return*/, providerContext.extractors.streamwishExtractor(directLink, axios)];
                 }
+                if (host.includes("savefiles") || directLink.includes("savefiles")) {
+                    return [2 /*return*/, providerContext.extractors.savefilesExtractor(directLink, axios)];
+                }
                 if (!host.includes("voe")) return [3 /*break*/, 2];
                 return [4 /*yield*/, providerContext.extractors.voeExtractor(directLink)];
             case 1:

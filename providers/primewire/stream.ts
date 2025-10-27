@@ -71,6 +71,10 @@ const extractStreamForHost = async (
   if (host.includes("streamwish") || host.includes("awish") || host.includes("yuguaab") || directLink.includes("streamwish") || directLink.includes("awish") || directLink.includes("yuguaab")) {
     return providerContext.extractors.streamwishExtractor(directLink, axios);
   }
+
+  if (host.includes("savefiles") || directLink.includes("savefiles")) {
+    return providerContext.extractors.savefilesExtractor(directLink, axios);
+  }
   
   if (host.includes("voe")) {
     const streams = await providerContext.extractors.voeExtractor(directLink);
