@@ -1,166 +1,159 @@
-# Video Host Extractors
+# Video Extractors
 
-This directory contains modular video extractors for various hosting services. 
+This directory contains shared video extractors that can be used across multiple providers.
 
-## ⚠️ Important Architecture Note
-
-**The separate extractor files (`streamtapeExtractor.ts`, `mixdropExtractor.ts`, `doodExtractor.ts`) are kept for reference and potential future use in other contexts, but they CANNOT be imported into provider modules due to the app's module system limitations.**
-
-The app's runtime environment does not support cross-module imports (like `import { extractMixdrop } from "../mixdropExtractor"`). Each provider module must be **self-contained**.
-
-## Current Implementation
-
-### For Provider Modules (e.g., `primewire/stream.ts`)
-Extractors must be **embedded inline** within the provider's stream.ts file:
-
-```typescript
-// ✅ CORRECT: Inline extractor functions
-const extractMixdrop: Extractor = async (url, axios) => {
-  // extraction logic here
-};
-
-const extractDood: Extractor = async (url, axios) => {
-  // extraction logic here
-};
-
-// Use them in HOST_EXTRACTORS array
-const HOST_EXTRACTORS = [
-  { match: (link, host) => host.includes("mixdrop"), extractor: extractMixdrop },
-  { match: (link, host) => host.includes("dood"), extractor: extractDood },
-];
-```
-
-```typescript
-// ❌ INCORRECT: Importing from external modules
-import { extractMixdrop } from "../mixdropExtractor";  // Won't work!
-```
-
-## Available Extractors (Reference)
+## Available Extractors
 
 ### StreamTape Extractor (`streamtapeExtractor.ts`)
-- **Hosts**: streamtape.com, streamta.pe
-- **Method**: Extracts video links from `robotlink` element or JavaScript
-- **Output**: Direct MP4 links
-- **Notes**: Automatically adds `stream=1` parameter
-
-### Mixdrop Extractor (`mixdropExtractor.ts`)
-- **Hosts**: mixdrop.co, mixdrop.to
-- **Method**: Unpacks obfuscated JavaScript to find video URL
-- **Output**: Direct MP4 links
-- **Notes**: Converts `/f/` URLs to `/e/` embed URLs automatically
+- **Hosts**: streamtape.com, streamta.site, streamta.pe
+- **Features**: Handles JavaScript obfuscation and robotlink manipulation
+- **Status**: ✅ Working (v3.1 - Fixed JavaScript parsing)
+- **Verified**: Returns 1.39GB MP4 videos
 
 ### DoodStream Extractor (`doodExtractor.ts`)
-- **Hosts**: dood.la, dood.ws, dood.cx, dsvplay.com
-- **Method**: Tries multiple known hosts, extracts pass_md5 and token
-- **Output**: Direct MP4 links with token and expiry parameters
-- **Notes**: Automatically tries fallback hosts if primary host fails
+- **Hosts**: dood.watch, dood.la, dood.ws, dood.cx, dsvplay.com
+- **Features**: Multi-host fallback, pass_md5 token extraction
+- **Status**: ✅ Working
+- **Verified**: Returns 1.21GB MP4 videos
 
-## Usage
+### Mixdrop Extractor (`mixdropExtractor.ts`)
+- **Hosts**: mixdrop.ag, mixdrop.co, mixdrop.to
+- **Features**: Unpacks eval() obfuscated JavaScript, extracts MDCore.wurl
+- **Status**: ✅ Working
 
-These extractor files serve as **reference implementations**. When you need an extractor:
+## Usage in Providers
 
-1. **Copy the extractor function** from the reference file
-2. **Paste it directly** into your provider's stream.ts file
-3. **Customize** as needed for your provider
+All extractors are registered in `providerContext.ts`:
 
 ```typescript
-// Example: Adding StreamTape support to a provider
-// 1. Copy from streamtapeExtractor.ts
-// 2. Paste into your provider/stream.ts
-
-const extractStreamTape: Extractor = async (url, axios) => {
-  // ... full implementation here ...
+const extractors = {
+  streamtapeExtractor,
+  doodExtractor,
+  mixdropExtractor,
+  // ... other extractors
 };
+```
 
-// 3. Add to your HOST_EXTRACTORS
-const HOST_EXTRACTORS = [
-  {
-    match: (link, host) => host.includes("streamtape"),
-    extractor: extractStreamTape
+### Access via Provider Context
+
+```typescript
+export const getStream = async ({link, providerContext}) => {
+  const result = await providerContext.extractors.streamtapeExtractor(url, axios);
+  if (result) {
+    return [{
+      server: "StreamTape",
+      link: result.link,
+      type: result.type || "mp4",
+      headers: result.headers
+    }];
   }
-];
-```
-
-## Extractor Interface
-
-All extractors follow the same interface:
-
-```typescript
-type ExtractedStream = {
-  link: string;                      // Direct video URL
-  headers?: Record<string, string>;  // Required headers for playback
-  type?: string;                     // Video type (usually "mp4")
 };
-
-type Extractor = (
-  url: string,
-  axios: ProviderContext["axios"]
-) => Promise<ExtractedStream | null>;
 ```
 
-## Maintenance Guide
+## Architecture
 
-### Updating an Extractor
+### Build Process
+1. TypeScript compiles all `.ts` files in `/providers/`
+2. Build system bundles imports into provider's `stream.js`
+3. Result: Single self-contained JavaScript file per provider
+4. App downloads and executes compiled `stream.js`
 
-If a host changes their structure:
+### Why Separate Files?
+- **Maintainability**: Each extractor is focused (~150 lines vs 700+ in one file)
+- **Reusability**: Multiple providers can use same extractors
+- **Testing**: Each extractor tested independently
+- **Updates**: Change one file when host updates format
+- **Scalability**: Add new extractors without touching existing code
 
-1. Edit the specific extractor file (e.g., `mixdropExtractor.ts`)
-2. Update the extraction logic
-3. Run `npm run build` to recompile
-4. Test the changes
-5. Push to GitHub - the app will use the updated module
+### Current Architecture (Primewire v3.2)
+```
+providers/
+├── streamtapeExtractor.ts       ← Standalone, registered in context
+├── doodExtractor.ts             ← Standalone, registered in context
+├── mixdropExtractor.ts          ← Standalone, registered in context
+├── providerContext.ts           ← Central registry
+└── primewire/
+    └── stream.ts                ← Uses inline extractors (for now)
+                                    Can migrate to context extractors in Phase 2
+```
 
-### Adding a New Extractor
+## Adding New Extractors
 
-1. Create a new file: `newHostExtractor.ts`
-2. Follow the extractor interface shown above
-3. Export your extraction function
-4. Import it in the provider that needs it (e.g., `primewire/stream.ts`)
-5. Add it to the `HOST_EXTRACTORS` array with appropriate host matching logic
-
-### Removing an Extractor
-
-If a host is no longer functional:
-
-1. Remove the import from the provider
-2. Remove it from the `HOST_EXTRACTORS` array
-3. Optionally delete the extractor file
-4. Rebuild and push
-
-## Benefits of Modular Design
-
-✅ **Easy Maintenance**: Update one extractor without affecting others
-✅ **Reusability**: Use the same extractor across multiple providers
-✅ **Quick Updates**: Push fixes to GitHub, app automatically uses new version
-✅ **Clean Code**: Smaller, focused files are easier to understand and debug
-✅ **Testing**: Test individual extractors in isolation
-
-## Example: Primewire Provider
-
-The Primewire provider (`primewire/stream.ts`) uses all three extractors:
-
+### Step 1: Create Extractor
 ```typescript
-import { extractMixdrop } from "../mixdropExtractor";
-import { extractDood } from "../doodExtractor";
-import { extractStreamTape } from "../streamtapeExtractor";
+// providers/voeExtractor.ts
+import axios from "axios";
 
-const HOST_EXTRACTORS = [
-  {
-    match: (link, host) => 
-      normalizeHost(host).includes("mixdrop") || link.includes("mixdrop"),
-    extractor: extractMixdrop,
-  },
-  {
-    match: (link, host) =>
-      normalizeHost(host).includes("dood") || link.includes("dood"),
-    extractor: extractDood,
-  },
-  {
-    match: (link, host) =>
-      normalizeHost(host).includes("streamtape") || link.includes("streamtape"),
-    extractor: extractStreamTape,
-  },
-];
+export async function voeExtractor(
+  url: string,
+  axiosInstance: any = axios,
+  signal?: AbortSignal
+): Promise<{
+  link: string;
+  headers?: Record<string, string>;
+  type?: string;
+} | null> {
+  try {
+    // Extraction logic
+    return {
+      link: videoUrl,
+      headers: { "User-Agent": "...", "Referer": url },
+      type: "mp4"
+    };
+  } catch (error) {
+    console.error("VOE extractor failed", error);
+    return null;
+  }
+}
 ```
 
-This makes it easy to add, remove, or modify extractors without touching the core provider logic.
+### Step 2: Register in Context
+```typescript
+// providers/providerContext.ts
+import { voeExtractor } from "./voeExtractor";
+
+const extractors = {
+  // existing...
+  voeExtractor,  // ← Add here
+};
+```
+
+### Step 3: Use in Provider
+```typescript
+const result = await providerContext.extractors.voeExtractor(url, axios);
+```
+
+## Testing
+
+Run extractor tests:
+```bash
+node test-extractors.js
+```
+
+Example test output:
+```
+✅ StreamTape: WORKING - Returns 1.39GB MP4
+✅ DoodStream: WORKING - Returns 1.21GB MP4
+```
+
+## Version History
+
+- **v3.2** (2025-10-27): Extractors available in providerContext
+- **v3.1** (2025-10-27): Fixed StreamTape JavaScript parsing  
+- **v3.0** (2025-10-27): Initial extractor separation
+
+## Future Extractors Needed
+
+- [ ] VOE (voe.sx)
+- [ ] FileMoon (filemoon.sx)
+- [ ] FileLions (filelions.to)
+- [ ] StreamWish (streamwish.to)
+- [ ] BigWarp (bigwarp.cc)
+- [ ] SaveFiles (savefiles.com)
+- [ ] LuluVdoo (luluvdoo.com)
+- [ ] StreamPlay (streamplay.to)
+- [ ] VidMoly (vidmoly.me)
+
+---
+
+**Pattern**: This follows the established architecture used by hubcloudExtractor, gofileExtracter, gdflixExtractor, etc.

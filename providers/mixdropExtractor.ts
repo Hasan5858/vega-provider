@@ -1,10 +1,4 @@
-import { ProviderContext } from "./types";
-
-type ExtractedStream = {
-  link: string;
-  headers?: Record<string, string>;
-  type?: string;
-};
+import axios from "axios";
 
 const PACKED_EVAL_REGEX =
   /eval\(function\(p,a,c,k,e,d\)\{[\s\S]*?\}\([\s\S]*?\)\)/;
@@ -12,56 +6,69 @@ const PACKED_EVAL_REGEX =
 /**
  * Mixdrop Video Extractor
  * Extracts direct video links from Mixdrop embed pages
- * Hosts: mixdrop.co, mixdrop.to, etc.
  * 
- * This extractor unpacks obfuscated JavaScript to find the video URL
+ * Mixdrop obfuscates video URLs using packed JavaScript (eval function).
+ * This extractor:
+ * 1. Fetches the embed page
+ * 2. Finds the packed eval() JavaScript
+ * 3. Executes it to unpack the code
+ * 4. Extracts MDCore.wurl (the video URL)
+ * 
+ * @param url - Mixdrop embed URL (e.g., https://mixdrop.ag/e/xxx or /f/xxx)
+ * @param axiosInstance - Axios instance to use for requests
+ * @param signal - AbortSignal for request cancellation
+ * @returns Object with video link and headers, or null if extraction fails
  */
-export const extractMixdrop = async (
-  mixdropUrl: string,
-  axios: ProviderContext["axios"]
-): Promise<ExtractedStream | null> => {
+export async function mixdropExtractor(
+  url: string,
+  axiosInstance: any = axios,
+  signal?: AbortSignal
+): Promise<{
+  link: string;
+  headers?: Record<string, string>;
+  type?: string;
+} | null> {
   try {
-    // Convert /f/ URLs to /e/ embed URLs
-    const embedUrl = mixdropUrl.replace("/f/", "/e/");
+    // Mixdrop uses /f/ for file links and /e/ for embed - normalize to /e/
+    const embedUrl = url.replace("/f/", "/e/");
     
-    const { data } = await axios.get(embedUrl, {
+    const { data } = await axiosInstance.get(embedUrl, {
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-        Referer: mixdropUrl,
+        Referer: url,
         Accept:
           "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9",
         "Cache-Control": "no-cache",
         Pragma: "no-cache",
       },
+      signal,
     });
 
-    // Find packed JavaScript eval function
+    // Find the packed eval() code
     const match = data.match(PACKED_EVAL_REGEX);
     if (!match) {
-      console.warn("Mixdrop extractor: Could not find packed JavaScript");
       return null;
     }
 
+    // Unpack the JavaScript by executing it
     let decoded: string;
     try {
-      // Unpack the JavaScript by executing it
       const transformed = match[0].replace(/^eval\(/, "(") + ";";
       decoded = Function(`"use strict"; return ${transformed}`)();
     } catch (error) {
-      console.error("Mixdrop extractor: Failed to unpack JavaScript", error);
+      console.error("Mixdrop extractor: unpack failed", error);
       return null;
     }
 
-    // Extract the video URL from unpacked code
-    const wurl = decoded.match(/MDCore\\.wurl="([^"\n]+)"/);
+    // Extract the video URL from MDCore.wurl
+    const wurl = decoded.match(/MDCore\.wurl="([^"\n]+)"/);
     if (!wurl || !wurl[1]) {
-      console.warn("Mixdrop extractor: Could not find wurl in unpacked code");
       return null;
     }
 
-    // Normalize the URL
+    // Normalize URL (add https: if protocol-relative)
     const link = wurl[1].startsWith("http") ? wurl[1] : `https:${wurl[1]}`;
     
     return {
@@ -77,4 +84,4 @@ export const extractMixdrop = async (
     console.error("Mixdrop extractor failed", error);
     return null;
   }
-};
+}

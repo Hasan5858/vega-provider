@@ -1,27 +1,34 @@
-import { ProviderContext } from "./types";
-
-type ExtractedStream = {
-  link: string;
-  headers?: Record<string, string>;
-  type?: string;
-};
+import axios from "axios";
 
 const getOrigin = (input: string): string => {
   const match = input.match(/^(https?:\/\/[^/]+)/i);
-  return match ? match[1] : "https://streamtape.com";
+  return match ? match[1] : "https://streamta.site";
 };
 
 /**
  * StreamTape Video Extractor
- * Extracts direct video links from StreamTape embed pages
- * Hosts: streamtape.com, streamta.pe, etc.
+ * Extracts direct video links from StreamTape embed pages by parsing obfuscated JavaScript
+ * 
+ * The extractor handles StreamTape's JavaScript obfuscation which manipulates the robotlink
+ * element's innerHTML using substring operations to hide the actual video URL.
+ * 
+ * @param url - StreamTape embed URL (e.g., https://streamta.site/e/xxx)
+ * @param axiosInstance - Axios instance to use for requests (defaults to imported axios)
+ * @param signal - AbortSignal for request cancellation
+ * @returns Object with video link and headers, or null if extraction fails
  */
-export const extractStreamTape = async (
+export async function streamtapeExtractor(
   url: string,
-  axios: ProviderContext["axios"]
-): Promise<ExtractedStream | null> => {
+  axiosInstance: any = axios,
+  signal?: AbortSignal
+): Promise<{
+  link: string;
+  headers?: Record<string, string>;
+  type?: string;
+} | null> {
   try {
-    const { data } = await axios.get(url, {
+    console.log(`StreamTape: Fetching embed page: ${url}`);
+    const { data } = await axiosInstance.get(url, {
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
@@ -32,41 +39,80 @@ export const extractStreamTape = async (
         "Cache-Control": "no-cache",
         Pragma: "no-cache",
       },
+      signal,
     });
 
     const html = data as string;
     
-    // Try to extract video link from robotlink element or JavaScript
-    const directMatch =
-      html.match(/id="robotlink"[^>]*>([^<]+)</) ??
-      html.match(/document\.getElementById\('robotlink'\)\.innerHTML\s*=\s*'([^']+)'/);
+    // Extract the JavaScript-manipulated robotlink value
+    // The page uses: document.getElementById('robotlink').innerHTML = '//streamta.site/get_video?id='+ ('xcdpkyXZVbyAJHrOKq...').substring(2).substring(1);
+    const robotlinkMatch = html.match(/getElementById\('robotlink'\)\.innerHTML\s*=\s*'([^']+)'\s*\+\s*\('([^']+)'\)\.substring\((\d+)\)(?:\.substring\((\d+)\))?/);
+    
+    let rawLink = "";
+    
+    if (robotlinkMatch) {
+      // Parse the JavaScript manipulation
+      const prefix = robotlinkMatch[1]; // e.g., "//streamta.site/get_video?id="
+      const mangledString = robotlinkMatch[2]; // e.g., "xcdpkyXZVbyAJHrOKq..."
+      const firstSubstring = parseInt(robotlinkMatch[3]);
+      const secondSubstring = robotlinkMatch[4] ? parseInt(robotlinkMatch[4]) : 0;
+      
+      // Apply substring operations
+      let processed = mangledString.substring(firstSubstring);
+      if (secondSubstring > 0) {
+        processed = processed.substring(secondSubstring);
+      }
+      
+      rawLink = prefix + processed;
+      console.log(`StreamTape: Parsed JavaScript manipulation: ${rawLink}`);
+    } else {
+      // Fallback to direct extraction
+      let directMatch = html.match(/id="robotlink"[^>]*>([^<]+)</);
+      if (!directMatch) {
+        directMatch = html.match(/document\.getElementById\('robotlink'\)\.innerHTML\s*=\s*'([^']+)'/);
+      }
+      if (!directMatch) {
+        directMatch = html.match(/'robotlink'\)\.innerHTML\s*=\s*'([^']+)'/);
+      }
 
-    if (!directMatch || !directMatch[1]) {
-      console.warn("StreamTape extractor: Could not find video link");
-      return null;
+      if (!directMatch || !directMatch[1]) {
+        console.warn("StreamTape: Could not find video link in page");
+        return null;
+      }
+
+      rawLink = directMatch[1];
+      console.log(`StreamTape: Extracted from HTML: ${rawLink}`);
     }
 
-    // Decode the extracted link
-    const rawLink = directMatch[1]
+    rawLink = rawLink
       .replace(/\\u0026/g, "&")
       .replace(/&amp;/g, "&")
       .trim();
 
-    // Normalize the URL
-    const normalized =
-      rawLink.startsWith("http") || rawLink.startsWith("https")
-        ? rawLink
-        : rawLink.startsWith("//")
-        ? `https:${rawLink}`
-        : rawLink.startsWith("/")
-        ? `${getOrigin(url)}${rawLink}`
-        : rawLink;
+    console.log(`StreamTape: Cleaned link: ${rawLink}`);
 
-    // Ensure stream parameter is included
+    // Handle different URL formats
+    let normalized: string;
+    if (rawLink.startsWith("http") || rawLink.startsWith("https")) {
+      // Already a complete URL
+      normalized = rawLink;
+    } else if (rawLink.startsWith("//")) {
+      // Protocol-relative URL
+      normalized = `https:${rawLink}`;
+    } else if (rawLink.startsWith("/")) {
+      // Normal path, prepend origin
+      normalized = `${getOrigin(url)}${rawLink}`;
+    } else {
+      // Relative path
+      normalized = `${getOrigin(url)}/${rawLink}`;
+    }
+
     const finalUrl =
       normalized.includes("&stream=") || normalized.includes("stream=")
         ? normalized
         : `${normalized}&stream=1`;
+
+    console.log(`StreamTape: Final URL: ${finalUrl}`);
 
     return {
       link: finalUrl,
@@ -81,4 +127,4 @@ export const extractStreamTape = async (
     console.error("StreamTape extractor failed", error);
     return null;
   }
-};
+}

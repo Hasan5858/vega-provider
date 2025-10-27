@@ -10,6 +10,9 @@ import { nexdriveExtractor } from "./nexdriveExtractor";
 import { fastdlExtractor } from "./fastdlExtractor";
 import { vcloudExtractor } from "./vcloudExtractor";
 import { filepresExtractor } from "./filepresExtractor";
+import { streamtapeExtractor } from "./streamtapeExtractor";
+import { doodExtractor } from "./doodExtractor";
+import { mixdropExtractor } from "./mixdropExtractor";
 import { ProviderContext } from "./types";
 import Aes from "react-native-aes-crypto";
 
@@ -27,6 +30,9 @@ const extractors = {
   fastdlExtractor,
   vcloudExtractor,
   filepresExtractor,
+  streamtapeExtractor,
+  doodExtractor,
+  mixdropExtractor,
 };
 
 export const providerContext: ProviderContext = {

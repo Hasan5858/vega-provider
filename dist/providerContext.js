@@ -49,6 +49,9 @@ var nexdriveExtractor_1 = require("./nexdriveExtractor");
 var fastdlExtractor_1 = require("./fastdlExtractor");
 var vcloudExtractor_1 = require("./vcloudExtractor");
 var filepresExtractor_1 = require("./filepresExtractor");
+var streamtapeExtractor_1 = require("./streamtapeExtractor");
+var doodExtractor_1 = require("./doodExtractor");
+var mixdropExtractor_1 = require("./mixdropExtractor");
 var react_native_aes_crypto_1 = __importDefault(require("react-native-aes-crypto"));
 /**
  * Context for provider functions.
@@ -63,6 +66,9 @@ var extractors = {
     fastdlExtractor: fastdlExtractor_1.fastdlExtractor,
     vcloudExtractor: vcloudExtractor_1.vcloudExtractor,
     filepresExtractor: filepresExtractor_1.filepresExtractor,
+    streamtapeExtractor: streamtapeExtractor_1.streamtapeExtractor,
+    doodExtractor: doodExtractor_1.doodExtractor,
+    mixdropExtractor: mixdropExtractor_1.mixdropExtractor,
 };
 exports.providerContext = {
     axios: axios_1.default,

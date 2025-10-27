@@ -35,70 +35,120 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.extractStreamTape = void 0;
+exports.streamtapeExtractor = streamtapeExtractor;
+var axios_1 = __importDefault(require("axios"));
 var getOrigin = function (input) {
     var match = input.match(/^(https?:\/\/[^/]+)/i);
-    return match ? match[1] : "https://streamtape.com";
+    return match ? match[1] : "https://streamta.site";
 };
 /**
  * StreamTape Video Extractor
- * Extracts direct video links from StreamTape embed pages
- * Hosts: streamtape.com, streamta.pe, etc.
+ * Extracts direct video links from StreamTape embed pages by parsing obfuscated JavaScript
+ *
+ * The extractor handles StreamTape's JavaScript obfuscation which manipulates the robotlink
+ * element's innerHTML using substring operations to hide the actual video URL.
+ *
+ * @param url - StreamTape embed URL (e.g., https://streamta.site/e/xxx)
+ * @param axiosInstance - Axios instance to use for requests (defaults to imported axios)
+ * @param signal - AbortSignal for request cancellation
+ * @returns Object with video link and headers, or null if extraction fails
  */
-var extractStreamTape = function (url, axios) { return __awaiter(void 0, void 0, void 0, function () {
-    var data, html, directMatch, rawLink, normalized, finalUrl, error_1;
-    var _a;
-    return __generator(this, function (_b) {
-        switch (_b.label) {
-            case 0:
-                _b.trys.push([0, 2, , 3]);
-                return [4 /*yield*/, axios.get(url, {
-                        headers: {
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                            Referer: url,
-                            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-                            "Accept-Language": "en-US,en;q=0.9",
-                            "Cache-Control": "no-cache",
-                            Pragma: "no-cache",
-                        },
-                    })];
-            case 1:
-                data = (_b.sent()).data;
-                html = data;
-                directMatch = (_a = html.match(/id="robotlink"[^>]*>([^<]+)</)) !== null && _a !== void 0 ? _a : html.match(/document\.getElementById\('robotlink'\)\.innerHTML\s*=\s*'([^']+)'/);
-                if (!directMatch || !directMatch[1]) {
-                    console.warn("StreamTape extractor: Could not find video link");
+function streamtapeExtractor(url_1) {
+    return __awaiter(this, arguments, void 0, function (url, axiosInstance, signal) {
+        var data, html, robotlinkMatch, rawLink, prefix, mangledString, firstSubstring, secondSubstring, processed, directMatch, normalized, finalUrl, error_1;
+        if (axiosInstance === void 0) { axiosInstance = axios_1.default; }
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    _a.trys.push([0, 2, , 3]);
+                    console.log("StreamTape: Fetching embed page: ".concat(url));
+                    return [4 /*yield*/, axiosInstance.get(url, {
+                            headers: {
+                                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+                                Referer: url,
+                                Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                                "Accept-Language": "en-US,en;q=0.9",
+                                "Cache-Control": "no-cache",
+                                Pragma: "no-cache",
+                            },
+                            signal: signal,
+                        })];
+                case 1:
+                    data = (_a.sent()).data;
+                    html = data;
+                    robotlinkMatch = html.match(/getElementById\('robotlink'\)\.innerHTML\s*=\s*'([^']+)'\s*\+\s*\('([^']+)'\)\.substring\((\d+)\)(?:\.substring\((\d+)\))?/);
+                    rawLink = "";
+                    if (robotlinkMatch) {
+                        prefix = robotlinkMatch[1];
+                        mangledString = robotlinkMatch[2];
+                        firstSubstring = parseInt(robotlinkMatch[3]);
+                        secondSubstring = robotlinkMatch[4] ? parseInt(robotlinkMatch[4]) : 0;
+                        processed = mangledString.substring(firstSubstring);
+                        if (secondSubstring > 0) {
+                            processed = processed.substring(secondSubstring);
+                        }
+                        rawLink = prefix + processed;
+                        console.log("StreamTape: Parsed JavaScript manipulation: ".concat(rawLink));
+                    }
+                    else {
+                        directMatch = html.match(/id="robotlink"[^>]*>([^<]+)</);
+                        if (!directMatch) {
+                            directMatch = html.match(/document\.getElementById\('robotlink'\)\.innerHTML\s*=\s*'([^']+)'/);
+                        }
+                        if (!directMatch) {
+                            directMatch = html.match(/'robotlink'\)\.innerHTML\s*=\s*'([^']+)'/);
+                        }
+                        if (!directMatch || !directMatch[1]) {
+                            console.warn("StreamTape: Could not find video link in page");
+                            return [2 /*return*/, null];
+                        }
+                        rawLink = directMatch[1];
+                        console.log("StreamTape: Extracted from HTML: ".concat(rawLink));
+                    }
+                    rawLink = rawLink
+                        .replace(/\\u0026/g, "&")
+                        .replace(/&amp;/g, "&")
+                        .trim();
+                    console.log("StreamTape: Cleaned link: ".concat(rawLink));
+                    normalized = void 0;
+                    if (rawLink.startsWith("http") || rawLink.startsWith("https")) {
+                        // Already a complete URL
+                        normalized = rawLink;
+                    }
+                    else if (rawLink.startsWith("//")) {
+                        // Protocol-relative URL
+                        normalized = "https:".concat(rawLink);
+                    }
+                    else if (rawLink.startsWith("/")) {
+                        // Normal path, prepend origin
+                        normalized = "".concat(getOrigin(url)).concat(rawLink);
+                    }
+                    else {
+                        // Relative path
+                        normalized = "".concat(getOrigin(url), "/").concat(rawLink);
+                    }
+                    finalUrl = normalized.includes("&stream=") || normalized.includes("stream=")
+                        ? normalized
+                        : "".concat(normalized, "&stream=1");
+                    console.log("StreamTape: Final URL: ".concat(finalUrl));
+                    return [2 /*return*/, {
+                            link: finalUrl,
+                            headers: {
+                                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+                                Referer: url,
+                            },
+                            type: "mp4",
+                        }];
+                case 2:
+                    error_1 = _a.sent();
+                    console.error("StreamTape extractor failed", error_1);
                     return [2 /*return*/, null];
-                }
-                rawLink = directMatch[1]
-                    .replace(/\\u0026/g, "&")
-                    .replace(/&amp;/g, "&")
-                    .trim();
-                normalized = rawLink.startsWith("http") || rawLink.startsWith("https")
-                    ? rawLink
-                    : rawLink.startsWith("//")
-                        ? "https:".concat(rawLink)
-                        : rawLink.startsWith("/")
-                            ? "".concat(getOrigin(url)).concat(rawLink)
-                            : rawLink;
-                finalUrl = normalized.includes("&stream=") || normalized.includes("stream=")
-                    ? normalized
-                    : "".concat(normalized, "&stream=1");
-                return [2 /*return*/, {
-                        link: finalUrl,
-                        headers: {
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                            Referer: url,
-                        },
-                        type: "mp4",
-                    }];
-            case 2:
-                error_1 = _b.sent();
-                console.error("StreamTape extractor failed", error_1);
-                return [2 /*return*/, null];
-            case 3: return [2 /*return*/];
-        }
+                case 3: return [2 /*return*/];
+            }
+        });
     });
-}); };
-exports.extractStreamTape = extractStreamTape;
+}

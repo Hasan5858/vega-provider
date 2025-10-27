@@ -148,5 +148,21 @@ export type ProviderContext = {
     fastdlExtractor: (link: string, signal: AbortSignal) => Promise<Stream[]>;
     vcloudExtractor: (link: string, signal: AbortSignal) => Promise<Stream[]>;
     filepresExtractor: (link: string, signal: AbortSignal) => Promise<Stream[]>;
+    // Primewire extractors (v3.2)
+    streamtapeExtractor: (url: string, axios: AxiosStatic, signal?: AbortSignal) => Promise<{
+      link: string;
+      headers?: Record<string, string>;
+      type?: string;
+    } | null>;
+    doodExtractor: (url: string, axios: AxiosStatic, signal?: AbortSignal) => Promise<{
+      link: string;
+      headers?: Record<string, string>;
+      type?: string;
+    } | null>;
+    mixdropExtractor: (url: string, axios: AxiosStatic, signal?: AbortSignal) => Promise<{
+      link: string;
+      headers?: Record<string, string>;
+      type?: string;
+    } | null>;
   };
 };

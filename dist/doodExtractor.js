@@ -46,16 +46,20 @@ var __values = (this && this.__values) || function(o) {
     };
     throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.extractDood = void 0;
+exports.doodExtractor = doodExtractor;
+var axios_1 = __importDefault(require("axios"));
+var getOrigin = function (input) {
+    var match = input.match(/^(https?:\/\/[^/]+)/i);
+    return match ? match[1] : "https://dood.watch";
+};
 var getLastPathSegment = function (input) {
     var cleaned = input.split("?")[0];
     var segments = cleaned.split("/").filter(Boolean);
     return segments[segments.length - 1] || "";
-};
-var getOrigin = function (input) {
-    var match = input.match(/^(https?:\/\/[^/]+)/i);
-    return match ? match[1] : "https://dood.la";
 };
 var randomAlphaNumeric = function (length) {
     var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -68,121 +72,129 @@ var randomAlphaNumeric = function (length) {
 /**
  * DoodStream Video Extractor
  * Extracts direct video links from DoodStream embed pages
- * Hosts: dood.la, dood.ws, dood.cx, dsvplay.com, etc.
  *
- * This extractor tries multiple known DoodStream hosts to find working streams
+ * DoodStream uses multiple mirror hosts and requires:
+ * 1. Finding the correct working host
+ * 2. Extracting pass_md5 and token from HTML
+ * 3. Fetching the base stream URL
+ * 4. Constructing final URL with random string, token, and expiry
+ *
+ * @param url - DoodStream embed URL (e.g., https://dood.watch/e/xxx)
+ * @param axiosInstance - Axios instance to use for requests
+ * @param signal - AbortSignal for request cancellation
+ * @returns Object with video link and headers, or null if extraction fails
  */
-var extractDood = function (url, axios) { return __awaiter(void 0, void 0, void 0, function () {
-    var id, candidateHosts, embedHtml, activeHost, candidateHosts_1, candidateHosts_1_1, host, embedUrl_1, data, _a, e_1_1, passMatch, tokenMatch, embedUrl, passUrl, response, baseStream, token, finalUrl, error_1;
-    var e_1, _b;
-    return __generator(this, function (_c) {
-        switch (_c.label) {
-            case 0:
-                _c.trys.push([0, 12, , 13]);
-                id = getLastPathSegment(url);
-                if (!id) {
-                    console.warn("Dood extractor: Could not extract video ID from URL");
+function doodExtractor(url_1) {
+    return __awaiter(this, arguments, void 0, function (url, axiosInstance, signal) {
+        var id, candidateHosts, embedHtml, activeHost, candidateHosts_1, candidateHosts_1_1, host, embedUrl_1, data, _a, e_1_1, passMatch, tokenMatch, embedUrl, passUrl, response, baseStream, token, finalUrl, error_1;
+        var e_1, _b;
+        if (axiosInstance === void 0) { axiosInstance = axios_1.default; }
+        return __generator(this, function (_c) {
+            switch (_c.label) {
+                case 0:
+                    _c.trys.push([0, 12, , 13]);
+                    id = getLastPathSegment(url);
+                    if (!id) {
+                        return [2 /*return*/, null];
+                    }
+                    candidateHosts = Array.from(new Set([
+                        getOrigin(url),
+                        "https://dsvplay.com",
+                        "https://dood.la",
+                        "https://dood.ws",
+                        "https://dood.cx",
+                    ]));
+                    embedHtml = null;
+                    activeHost = null;
+                    _c.label = 1;
+                case 1:
+                    _c.trys.push([1, 8, 9, 10]);
+                    candidateHosts_1 = __values(candidateHosts), candidateHosts_1_1 = candidateHosts_1.next();
+                    _c.label = 2;
+                case 2:
+                    if (!!candidateHosts_1_1.done) return [3 /*break*/, 7];
+                    host = candidateHosts_1_1.value;
+                    embedUrl_1 = "".concat(host, "/e/").concat(id);
+                    _c.label = 3;
+                case 3:
+                    _c.trys.push([3, 5, , 6]);
+                    return [4 /*yield*/, axiosInstance.get(embedUrl_1, {
+                            headers: {
+                                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+                                Referer: "".concat(host, "/d/").concat(id),
+                                Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                                "Accept-Language": "en-US,en;q=0.9",
+                                "Cache-Control": "no-cache",
+                                Pragma: "no-cache",
+                            },
+                            signal: signal,
+                        })];
+                case 4:
+                    data = (_c.sent()).data;
+                    embedHtml = data;
+                    activeHost = host;
+                    return [3 /*break*/, 7];
+                case 5:
+                    _a = _c.sent();
+                    return [3 /*break*/, 6];
+                case 6:
+                    candidateHosts_1_1 = candidateHosts_1.next();
+                    return [3 /*break*/, 2];
+                case 7: return [3 /*break*/, 10];
+                case 8:
+                    e_1_1 = _c.sent();
+                    e_1 = { error: e_1_1 };
+                    return [3 /*break*/, 10];
+                case 9:
+                    try {
+                        if (candidateHosts_1_1 && !candidateHosts_1_1.done && (_b = candidateHosts_1.return)) _b.call(candidateHosts_1);
+                    }
+                    finally { if (e_1) throw e_1.error; }
+                    return [7 /*endfinally*/];
+                case 10:
+                    if (!embedHtml || !activeHost) {
+                        return [2 /*return*/, null];
+                    }
+                    passMatch = embedHtml.match(/\/pass_md5\/([^'"\n]+)/);
+                    tokenMatch = embedHtml.match(/token=([a-z0-9]+)/i);
+                    if (!passMatch || !tokenMatch) {
+                        return [2 /*return*/, null];
+                    }
+                    embedUrl = "".concat(activeHost, "/e/").concat(id);
+                    passUrl = "".concat(activeHost, "/pass_md5/").concat(passMatch[1]);
+                    return [4 /*yield*/, axiosInstance.get(passUrl, {
+                            headers: {
+                                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+                                Referer: embedUrl,
+                                Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                                "Accept-Language": "en-US,en;q=0.9",
+                                "Cache-Control": "no-cache",
+                                Pragma: "no-cache",
+                            },
+                            signal: signal,
+                        })];
+                case 11:
+                    response = _c.sent();
+                    baseStream = typeof response.data === "string" ? response.data : null;
+                    if (!baseStream) {
+                        return [2 /*return*/, null];
+                    }
+                    token = tokenMatch[1];
+                    finalUrl = "".concat(baseStream).concat(randomAlphaNumeric(10), "?token=").concat(token, "&expiry=").concat(Date.now());
+                    return [2 /*return*/, {
+                            link: finalUrl,
+                            headers: {
+                                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+                                Referer: embedUrl,
+                            },
+                            type: "mp4",
+                        }];
+                case 12:
+                    error_1 = _c.sent();
+                    console.error("Dood extractor failed", error_1);
                     return [2 /*return*/, null];
-                }
-                candidateHosts = Array.from(new Set([
-                    getOrigin(url),
-                    "https://dsvplay.com",
-                    "https://dood.la",
-                    "https://dood.ws",
-                    "https://dood.cx",
-                ]));
-                embedHtml = null;
-                activeHost = null;
-                _c.label = 1;
-            case 1:
-                _c.trys.push([1, 8, 9, 10]);
-                candidateHosts_1 = __values(candidateHosts), candidateHosts_1_1 = candidateHosts_1.next();
-                _c.label = 2;
-            case 2:
-                if (!!candidateHosts_1_1.done) return [3 /*break*/, 7];
-                host = candidateHosts_1_1.value;
-                embedUrl_1 = "".concat(host, "/e/").concat(id);
-                _c.label = 3;
-            case 3:
-                _c.trys.push([3, 5, , 6]);
-                return [4 /*yield*/, axios.get(embedUrl_1, {
-                        headers: {
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                            Referer: "".concat(host, "/d/").concat(id),
-                            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-                            "Accept-Language": "en-US,en;q=0.9",
-                            "Cache-Control": "no-cache",
-                            Pragma: "no-cache",
-                        },
-                    })];
-            case 4:
-                data = (_c.sent()).data;
-                embedHtml = data;
-                activeHost = host;
-                return [3 /*break*/, 7];
-            case 5:
-                _a = _c.sent();
-                return [3 /*break*/, 6];
-            case 6:
-                candidateHosts_1_1 = candidateHosts_1.next();
-                return [3 /*break*/, 2];
-            case 7: return [3 /*break*/, 10];
-            case 8:
-                e_1_1 = _c.sent();
-                e_1 = { error: e_1_1 };
-                return [3 /*break*/, 10];
-            case 9:
-                try {
-                    if (candidateHosts_1_1 && !candidateHosts_1_1.done && (_b = candidateHosts_1.return)) _b.call(candidateHosts_1);
-                }
-                finally { if (e_1) throw e_1.error; }
-                return [7 /*endfinally*/];
-            case 10:
-                if (!embedHtml || !activeHost) {
-                    console.warn("Dood extractor: Could not fetch embed page from any host");
-                    return [2 /*return*/, null];
-                }
-                passMatch = embedHtml.match(/\/pass_md5\/([^'"\n]+)/);
-                tokenMatch = embedHtml.match(/token=([a-z0-9]+)/i);
-                if (!passMatch || !tokenMatch) {
-                    console.warn("Dood extractor: Could not find pass_md5 or token in embed page");
-                    return [2 /*return*/, null];
-                }
-                embedUrl = "".concat(activeHost, "/e/").concat(id);
-                passUrl = "".concat(activeHost, "/pass_md5/").concat(passMatch[1]);
-                return [4 /*yield*/, axios.get(passUrl, {
-                        headers: {
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                            Referer: embedUrl,
-                            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-                            "Accept-Language": "en-US,en;q=0.9",
-                            "Cache-Control": "no-cache",
-                            Pragma: "no-cache",
-                        },
-                    })];
-            case 11:
-                response = _c.sent();
-                baseStream = typeof response.data === "string" ? response.data : null;
-                if (!baseStream) {
-                    console.warn("Dood extractor: Invalid response from pass_md5 endpoint");
-                    return [2 /*return*/, null];
-                }
-                token = tokenMatch[1];
-                finalUrl = "".concat(baseStream).concat(randomAlphaNumeric(10), "?token=").concat(token, "&expiry=").concat(Date.now());
-                return [2 /*return*/, {
-                        link: finalUrl,
-                        headers: {
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                            Referer: embedUrl,
-                        },
-                        type: "mp4",
-                    }];
-            case 12:
-                error_1 = _c.sent();
-                console.error("Dood extractor failed", error_1);
-                return [2 /*return*/, null];
-            case 13: return [2 /*return*/];
-        }
+                case 13: return [2 /*return*/];
+            }
+        });
     });
-}); };
-exports.extractDood = extractDood;
+}

@@ -33,301 +33,39 @@ const getLastPathSegment = (input: string): string => {
   return segments[segments.length - 1] || "";
 };
 
-const PACKED_EVAL_REGEX =
-  /eval\(function\(p,a,c,k,e,d\)\{[\s\S]*?\}\([\s\S]*?\)\)/;
-
 /**
- * Mixdrop Video Extractor
- * Extracts direct video links from Mixdrop embed pages
+ * Extract stream from host using providerContext extractors
+ * This approach scales to 30+ extractors without bloating this file
  */
-const extractMixdrop: Extractor = async (mixdropUrl, axios) => {
-  try {
-    const embedUrl = mixdropUrl.replace("/f/", "/e/");
-    const { data } = await axios.get(embedUrl, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-        Referer: mixdropUrl,
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Cache-Control": "no-cache",
-        Pragma: "no-cache",
-      },
-    });
-
-    const match = data.match(PACKED_EVAL_REGEX);
-    if (!match) {
-      return null;
-    }
-
-    let decoded: string;
-    try {
-      const transformed = match[0].replace(/^eval\(/, "(") + ";";
-      decoded = Function(`"use strict"; return ${transformed}`)();
-    } catch (error) {
-      console.error("Mixdrop extractor: unpack failed", error);
-      return null;
-    }
-
-    const wurl = decoded.match(/MDCore\\.wurl="([^"\n]+)"/);
-    if (!wurl || !wurl[1]) {
-      return null;
-    }
-
-    const link = wurl[1].startsWith("http") ? wurl[1] : `https:${wurl[1]}`;
-    return {
-      link,
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-        Referer: embedUrl,
-      },
-      type: "mp4",
-    };
-  } catch (error) {
-    console.error("Mixdrop extractor failed", error);
-    return null;
-  }
-};
-
-/**
- * DoodStream Video Extractor
- * Extracts direct video links from DoodStream embed pages
- */
-const extractDood: Extractor = async (url, axios) => {
-  try {
-    const id = getLastPathSegment(url);
-    if (!id) {
-      return null;
-    }
-
-    const candidateHosts = Array.from(
-      new Set([
-        getOrigin(url),
-        "https://dsvplay.com",
-        "https://dood.la",
-        "https://dood.ws",
-        "https://dood.cx",
-      ])
-    );
-
-    let embedHtml: string | null = null;
-    let activeHost: string | null = null;
-
-    for (const host of candidateHosts) {
-      const embedUrl = `${host}/e/${id}`;
-      try {
-        const { data } = await axios.get(embedUrl, {
-          headers: {
-            "User-Agent":
-              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-            Referer: `${host}/d/${id}`,
-            Accept:
-              "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Cache-Control": "no-cache",
-            Pragma: "no-cache",
-          },
-        });
-        embedHtml = data;
-        activeHost = host;
-        break;
-      } catch {
-        // try next host
-      }
-    }
-
-    if (!embedHtml || !activeHost) {
-      return null;
-    }
-
-    const passMatch = embedHtml.match(/\/pass_md5\/([^'"\n]+)/);
-    const tokenMatch = embedHtml.match(/token=([a-z0-9]+)/i);
-
-    if (!passMatch || !tokenMatch) {
-      return null;
-    }
-
-    const embedUrl = `${activeHost}/e/${id}`;
-    const passUrl = `${activeHost}/pass_md5/${passMatch[1]}`;
-    const response = await axios.get(passUrl, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-        Referer: embedUrl,
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Cache-Control": "no-cache",
-        Pragma: "no-cache",
-      },
-    });
-
-    const baseStream = typeof response.data === "string" ? response.data : null;
-    if (!baseStream) {
-      return null;
-    }
-
-    const token = tokenMatch[1];
-    const finalUrl = `${baseStream}${randomAlphaNumeric(10)}?token=${token}&expiry=${Date.now()}`;
-
-    return {
-      link: finalUrl,
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-        Referer: embedUrl,
-      },
-      type: "mp4",
-    };
-  } catch (error) {
-    console.error("Dood extractor failed", error);
-    return null;
-  }
-};
-
-/**
- * StreamTape Video Extractor
- * Extracts direct video links from StreamTape embed pages
- */
-const extractStreamTape: Extractor = async (url, axios) => {
-  try {
-    console.log(`StreamTape: Fetching embed page: ${url}`);
-    const { data } = await axios.get(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-        Referer: url,
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Cache-Control": "no-cache",
-        Pragma: "no-cache",
-      },
-    });
-
-    const html = data as string;
-    
-    // Extract the JavaScript-manipulated robotlink value
-    // The page uses: document.getElementById('robotlink').innerHTML = '//streamta.site/get_video?id='+ ('xcdpkyXZVbyAJHrOKq...').substring(2).substring(1);
-    const robotlinkMatch = html.match(/getElementById\('robotlink'\)\.innerHTML\s*=\s*'([^']+)'\s*\+\s*\('([^']+)'\)\.substring\((\d+)\)(?:\.substring\((\d+)\))?/);
-    
-    let rawLink = "";
-    
-    if (robotlinkMatch) {
-      // Parse the JavaScript manipulation
-      const prefix = robotlinkMatch[1]; // e.g., "//streamta.site/get_video?id="
-      const mangledString = robotlinkMatch[2]; // e.g., "xcdpkyXZVbyAJHrOKq..."
-      const firstSubstring = parseInt(robotlinkMatch[3]);
-      const secondSubstring = robotlinkMatch[4] ? parseInt(robotlinkMatch[4]) : 0;
-      
-      // Apply substring operations
-      let processed = mangledString.substring(firstSubstring);
-      if (secondSubstring > 0) {
-        processed = processed.substring(secondSubstring);
-      }
-      
-      rawLink = prefix + processed;
-      console.log(`StreamTape: Parsed JavaScript manipulation: ${rawLink}`);
-    } else {
-      // Fallback to direct extraction
-      let directMatch = html.match(/id="robotlink"[^>]*>([^<]+)</);
-      if (!directMatch) {
-        directMatch = html.match(/document\.getElementById\('robotlink'\)\.innerHTML\s*=\s*'([^']+)'/);
-      }
-      if (!directMatch) {
-        directMatch = html.match(/'robotlink'\)\.innerHTML\s*=\s*'([^']+)'/);
-      }
-
-      if (!directMatch || !directMatch[1]) {
-        console.warn("StreamTape: Could not find video link in page");
-        return null;
-      }
-
-      rawLink = directMatch[1];
-      console.log(`StreamTape: Extracted from HTML: ${rawLink}`);
-    }
-
-    rawLink = rawLink
-      .replace(/\\u0026/g, "&")
-      .replace(/&amp;/g, "&")
-      .trim();
-
-    console.log(`StreamTape: Cleaned link: ${rawLink}`);
-
-    // Handle different URL formats
-    let normalized: string;
-    if (rawLink.startsWith("http") || rawLink.startsWith("https")) {
-      // Already a complete URL
-      normalized = rawLink;
-    } else if (rawLink.startsWith("//")) {
-      // Protocol-relative URL
-      normalized = `https:${rawLink}`;
-    } else if (rawLink.startsWith("/")) {
-      // Normal path, prepend origin
-      normalized = `${getOrigin(url)}${rawLink}`;
-    } else {
-      // Relative path
-      normalized = `${getOrigin(url)}/${rawLink}`;
-    }
-
-    const finalUrl =
-      normalized.includes("&stream=") || normalized.includes("stream=")
-        ? normalized
-        : `${normalized}&stream=1`;
-
-    console.log(`StreamTape: Final URL: ${finalUrl}`);
-
-    return {
-      link: finalUrl,
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-        Referer: url,
-      },
-      type: "mp4",
-    };
-  } catch (error) {
-    console.error("StreamTape extractor failed", error);
-    return null;
-  }
-};
-
-const HOST_EXTRACTORS: Array<{
-  match: (link: string, host: string) => boolean;
-  extractor: Extractor;
-}> = [
-  {
-    match: (link, host) =>
-      normalizeHost(host).includes("mixdrop") || link.includes("mixdrop"),
-    extractor: extractMixdrop,
-  },
-  {
-    match: (link, host) =>
-      normalizeHost(host).includes("dood") || link.includes("dood"),
-    extractor: extractDood,
-  },
-  {
-    match: (link, host) =>
-      normalizeHost(host).includes("streamtape") ||
-      link.includes("streamtape") ||
-      link.includes("streamta"),
-    extractor: extractStreamTape,
-  },
-];
-
 const extractStreamForHost = async (
   hostLabel: string,
   directLink: string,
-  axios: ProviderContext["axios"]
+  axios: ProviderContext["axios"],
+  providerContext: ProviderContext
 ): Promise<ExtractedStream | null> => {
   const host = normalizeHost(hostLabel);
-  for (const { match, extractor } of HOST_EXTRACTORS) {
-    if (match(directLink, host)) {
-      return extractor(directLink, axios);
-    }
+  
+  // Route to extractors from providerContext
+  // Easy to add 20-30 more hosts - just add more if statements or use a map
+  
+  if (host.includes("streamtape") || directLink.includes("streamtape") || directLink.includes("streamta")) {
+    return providerContext.extractors.streamtapeExtractor(directLink, axios);
   }
+  
+  if (host.includes("dood") || directLink.includes("dood")) {
+    return providerContext.extractors.doodExtractor(directLink, axios);
+  }
+  
+  if (host.includes("mixdrop") || directLink.includes("mixdrop")) {
+    return providerContext.extractors.mixdropExtractor(directLink, axios);
+  }
+  
+  // TODO: Add more extractors as they're implemented in providerContext
+  // if (host.includes("voe")) return providerContext.extractors.voeExtractor(directLink, axios);
+  // if (host.includes("filemoon")) return providerContext.extractors.fileMoonExtractor(directLink, axios);
+  // if (host.includes("filelions")) return providerContext.extractors.fileLionsExtractor(directLink, axios);
+  // ... etc
+  
   return null;
 };
 
@@ -601,7 +339,8 @@ async function handlePrimeSrcEmbed(
 const resolveGoEntries = async (
   url: string,
   $: CheerioInstance,
-  axios: ProviderContext["axios"]
+  axios: ProviderContext["axios"],
+  providerContext: ProviderContext
 ): Promise<Stream[]> => {
   // Parse origin manually instead of using URL.origin (not available in React Native)
   const urlMatch = url.match(/^(https?:\/\/[^\/]+)/);
@@ -674,7 +413,7 @@ const resolveGoEntries = async (
     const hostLabel = (goData?.host || entry.host || "Primewire").trim();
 
     console.log(`Primewire: Trying to extract from ${hostLabel}: ${directLink}`);
-    const extracted = await extractStreamForHost(hostLabel, directLink, axios);
+    const extracted = await extractStreamForHost(hostLabel, directLink, axios, providerContext);
 
     if (extracted) {
       console.log(`Primewire: Successfully extracted from ${hostLabel}`);
@@ -721,7 +460,7 @@ export const getStream = async function ({
 
     const $ = cheerio.load(pageResponse.data);
 
-    const decodedStreams = await resolveGoEntries(url, $, axios);
+    const decodedStreams = await resolveGoEntries(url, $, axios, providerContext);
     if (decodedStreams.length) {
       return decodedStreams;
     }
@@ -742,7 +481,7 @@ export const getStream = async function ({
     if (mixdropCandidates.length) {
       const streams: Stream[] = [];
       for (const candidate of mixdropCandidates) {
-        const extracted = await extractStreamForHost(candidate.server, candidate.link, axios);
+        const extracted = await extractStreamForHost(candidate.server, candidate.link, axios, providerContext);
         if (extracted) {
           streams.push({
             server: candidate.server,

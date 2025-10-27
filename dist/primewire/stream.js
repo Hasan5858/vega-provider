@@ -35,17 +35,6 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __values = (this && this.__values) || function(o) {
-    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-    if (m) return m.call(o);
-    if (o && typeof o.length === "number") return {
-        next: function () {
-            if (o && i >= o.length) o = void 0;
-            return { value: o && o[i++], done: !o };
-        }
-    };
-    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
-};
 var __read = (this && this.__read) || function (o, n) {
     var m = typeof Symbol === "function" && o[Symbol.iterator];
     if (!m) return o;
@@ -71,6 +60,17 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     }
     return to.concat(ar || Array.prototype.slice.call(from));
 };
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getStream = void 0;
 var normalizeHost = function (value) { return value.toLowerCase(); };
@@ -91,314 +91,30 @@ var getLastPathSegment = function (input) {
     var segments = cleaned.split("/").filter(Boolean);
     return segments[segments.length - 1] || "";
 };
-var PACKED_EVAL_REGEX = /eval\(function\(p,a,c,k,e,d\)\{[\s\S]*?\}\([\s\S]*?\)\)/;
 /**
- * Mixdrop Video Extractor
- * Extracts direct video links from Mixdrop embed pages
+ * Extract stream from host using providerContext extractors
+ * This approach scales to 30+ extractors without bloating this file
  */
-var extractMixdrop = function (mixdropUrl, axios) { return __awaiter(void 0, void 0, void 0, function () {
-    var embedUrl, data, match, decoded, transformed, wurl, link, error_1;
+var extractStreamForHost = function (hostLabel, directLink, axios, providerContext) { return __awaiter(void 0, void 0, void 0, function () {
+    var host;
     return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0:
-                _a.trys.push([0, 2, , 3]);
-                embedUrl = mixdropUrl.replace("/f/", "/e/");
-                return [4 /*yield*/, axios.get(embedUrl, {
-                        headers: {
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                            Referer: mixdropUrl,
-                            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-                            "Accept-Language": "en-US,en;q=0.9",
-                            "Cache-Control": "no-cache",
-                            Pragma: "no-cache",
-                        },
-                    })];
-            case 1:
-                data = (_a.sent()).data;
-                match = data.match(PACKED_EVAL_REGEX);
-                if (!match) {
-                    return [2 /*return*/, null];
-                }
-                decoded = void 0;
-                try {
-                    transformed = match[0].replace(/^eval\(/, "(") + ";";
-                    decoded = Function("\"use strict\"; return ".concat(transformed))();
-                }
-                catch (error) {
-                    console.error("Mixdrop extractor: unpack failed", error);
-                    return [2 /*return*/, null];
-                }
-                wurl = decoded.match(/MDCore\\.wurl="([^"\n]+)"/);
-                if (!wurl || !wurl[1]) {
-                    return [2 /*return*/, null];
-                }
-                link = wurl[1].startsWith("http") ? wurl[1] : "https:".concat(wurl[1]);
-                return [2 /*return*/, {
-                        link: link,
-                        headers: {
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                            Referer: embedUrl,
-                        },
-                        type: "mp4",
-                    }];
-            case 2:
-                error_1 = _a.sent();
-                console.error("Mixdrop extractor failed", error_1);
-                return [2 /*return*/, null];
-            case 3: return [2 /*return*/];
-        }
-    });
-}); };
-/**
- * DoodStream Video Extractor
- * Extracts direct video links from DoodStream embed pages
- */
-var extractDood = function (url, axios) { return __awaiter(void 0, void 0, void 0, function () {
-    var id, candidateHosts, embedHtml, activeHost, candidateHosts_1, candidateHosts_1_1, host, embedUrl_1, data, _a, e_1_1, passMatch, tokenMatch, embedUrl, passUrl, response, baseStream, token, finalUrl, error_2;
-    var e_1, _b;
-    return __generator(this, function (_c) {
-        switch (_c.label) {
-            case 0:
-                _c.trys.push([0, 12, , 13]);
-                id = getLastPathSegment(url);
-                if (!id) {
-                    return [2 /*return*/, null];
-                }
-                candidateHosts = Array.from(new Set([
-                    getOrigin(url),
-                    "https://dsvplay.com",
-                    "https://dood.la",
-                    "https://dood.ws",
-                    "https://dood.cx",
-                ]));
-                embedHtml = null;
-                activeHost = null;
-                _c.label = 1;
-            case 1:
-                _c.trys.push([1, 8, 9, 10]);
-                candidateHosts_1 = __values(candidateHosts), candidateHosts_1_1 = candidateHosts_1.next();
-                _c.label = 2;
-            case 2:
-                if (!!candidateHosts_1_1.done) return [3 /*break*/, 7];
-                host = candidateHosts_1_1.value;
-                embedUrl_1 = "".concat(host, "/e/").concat(id);
-                _c.label = 3;
-            case 3:
-                _c.trys.push([3, 5, , 6]);
-                return [4 /*yield*/, axios.get(embedUrl_1, {
-                        headers: {
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                            Referer: "".concat(host, "/d/").concat(id),
-                            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-                            "Accept-Language": "en-US,en;q=0.9",
-                            "Cache-Control": "no-cache",
-                            Pragma: "no-cache",
-                        },
-                    })];
-            case 4:
-                data = (_c.sent()).data;
-                embedHtml = data;
-                activeHost = host;
-                return [3 /*break*/, 7];
-            case 5:
-                _a = _c.sent();
-                return [3 /*break*/, 6];
-            case 6:
-                candidateHosts_1_1 = candidateHosts_1.next();
-                return [3 /*break*/, 2];
-            case 7: return [3 /*break*/, 10];
-            case 8:
-                e_1_1 = _c.sent();
-                e_1 = { error: e_1_1 };
-                return [3 /*break*/, 10];
-            case 9:
-                try {
-                    if (candidateHosts_1_1 && !candidateHosts_1_1.done && (_b = candidateHosts_1.return)) _b.call(candidateHosts_1);
-                }
-                finally { if (e_1) throw e_1.error; }
-                return [7 /*endfinally*/];
-            case 10:
-                if (!embedHtml || !activeHost) {
-                    return [2 /*return*/, null];
-                }
-                passMatch = embedHtml.match(/\/pass_md5\/([^'"\n]+)/);
-                tokenMatch = embedHtml.match(/token=([a-z0-9]+)/i);
-                if (!passMatch || !tokenMatch) {
-                    return [2 /*return*/, null];
-                }
-                embedUrl = "".concat(activeHost, "/e/").concat(id);
-                passUrl = "".concat(activeHost, "/pass_md5/").concat(passMatch[1]);
-                return [4 /*yield*/, axios.get(passUrl, {
-                        headers: {
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                            Referer: embedUrl,
-                            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-                            "Accept-Language": "en-US,en;q=0.9",
-                            "Cache-Control": "no-cache",
-                            Pragma: "no-cache",
-                        },
-                    })];
-            case 11:
-                response = _c.sent();
-                baseStream = typeof response.data === "string" ? response.data : null;
-                if (!baseStream) {
-                    return [2 /*return*/, null];
-                }
-                token = tokenMatch[1];
-                finalUrl = "".concat(baseStream).concat(randomAlphaNumeric(10), "?token=").concat(token, "&expiry=").concat(Date.now());
-                return [2 /*return*/, {
-                        link: finalUrl,
-                        headers: {
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                            Referer: embedUrl,
-                        },
-                        type: "mp4",
-                    }];
-            case 12:
-                error_2 = _c.sent();
-                console.error("Dood extractor failed", error_2);
-                return [2 /*return*/, null];
-            case 13: return [2 /*return*/];
-        }
-    });
-}); };
-/**
- * StreamTape Video Extractor
- * Extracts direct video links from StreamTape embed pages
- */
-var extractStreamTape = function (url, axios) { return __awaiter(void 0, void 0, void 0, function () {
-    var data, html, robotlinkMatch, rawLink, prefix, mangledString, firstSubstring, secondSubstring, processed, directMatch, normalized, finalUrl, error_3;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0:
-                _a.trys.push([0, 2, , 3]);
-                console.log("StreamTape: Fetching embed page: ".concat(url));
-                return [4 /*yield*/, axios.get(url, {
-                        headers: {
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                            Referer: url,
-                            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-                            "Accept-Language": "en-US,en;q=0.9",
-                            "Cache-Control": "no-cache",
-                            Pragma: "no-cache",
-                        },
-                    })];
-            case 1:
-                data = (_a.sent()).data;
-                html = data;
-                robotlinkMatch = html.match(/getElementById\('robotlink'\)\.innerHTML\s*=\s*'([^']+)'\s*\+\s*\('([^']+)'\)\.substring\((\d+)\)(?:\.substring\((\d+)\))?/);
-                rawLink = "";
-                if (robotlinkMatch) {
-                    prefix = robotlinkMatch[1];
-                    mangledString = robotlinkMatch[2];
-                    firstSubstring = parseInt(robotlinkMatch[3]);
-                    secondSubstring = robotlinkMatch[4] ? parseInt(robotlinkMatch[4]) : 0;
-                    processed = mangledString.substring(firstSubstring);
-                    if (secondSubstring > 0) {
-                        processed = processed.substring(secondSubstring);
-                    }
-                    rawLink = prefix + processed;
-                    console.log("StreamTape: Parsed JavaScript manipulation: ".concat(rawLink));
-                }
-                else {
-                    directMatch = html.match(/id="robotlink"[^>]*>([^<]+)</);
-                    if (!directMatch) {
-                        directMatch = html.match(/document\.getElementById\('robotlink'\)\.innerHTML\s*=\s*'([^']+)'/);
-                    }
-                    if (!directMatch) {
-                        directMatch = html.match(/'robotlink'\)\.innerHTML\s*=\s*'([^']+)'/);
-                    }
-                    if (!directMatch || !directMatch[1]) {
-                        console.warn("StreamTape: Could not find video link in page");
-                        return [2 /*return*/, null];
-                    }
-                    rawLink = directMatch[1];
-                    console.log("StreamTape: Extracted from HTML: ".concat(rawLink));
-                }
-                rawLink = rawLink
-                    .replace(/\\u0026/g, "&")
-                    .replace(/&amp;/g, "&")
-                    .trim();
-                console.log("StreamTape: Cleaned link: ".concat(rawLink));
-                normalized = void 0;
-                if (rawLink.startsWith("http") || rawLink.startsWith("https")) {
-                    // Already a complete URL
-                    normalized = rawLink;
-                }
-                else if (rawLink.startsWith("//")) {
-                    // Protocol-relative URL
-                    normalized = "https:".concat(rawLink);
-                }
-                else if (rawLink.startsWith("/")) {
-                    // Normal path, prepend origin
-                    normalized = "".concat(getOrigin(url)).concat(rawLink);
-                }
-                else {
-                    // Relative path
-                    normalized = "".concat(getOrigin(url), "/").concat(rawLink);
-                }
-                finalUrl = normalized.includes("&stream=") || normalized.includes("stream=")
-                    ? normalized
-                    : "".concat(normalized, "&stream=1");
-                console.log("StreamTape: Final URL: ".concat(finalUrl));
-                return [2 /*return*/, {
-                        link: finalUrl,
-                        headers: {
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                            Referer: url,
-                        },
-                        type: "mp4",
-                    }];
-            case 2:
-                error_3 = _a.sent();
-                console.error("StreamTape extractor failed", error_3);
-                return [2 /*return*/, null];
-            case 3: return [2 /*return*/];
-        }
-    });
-}); };
-var HOST_EXTRACTORS = [
-    {
-        match: function (link, host) {
-            return normalizeHost(host).includes("mixdrop") || link.includes("mixdrop");
-        },
-        extractor: extractMixdrop,
-    },
-    {
-        match: function (link, host) {
-            return normalizeHost(host).includes("dood") || link.includes("dood");
-        },
-        extractor: extractDood,
-    },
-    {
-        match: function (link, host) {
-            return normalizeHost(host).includes("streamtape") ||
-                link.includes("streamtape") ||
-                link.includes("streamta");
-        },
-        extractor: extractStreamTape,
-    },
-];
-var extractStreamForHost = function (hostLabel, directLink, axios) { return __awaiter(void 0, void 0, void 0, function () {
-    var host, HOST_EXTRACTORS_1, HOST_EXTRACTORS_1_1, _a, match, extractor;
-    var e_2, _b;
-    return __generator(this, function (_c) {
         host = normalizeHost(hostLabel);
-        try {
-            for (HOST_EXTRACTORS_1 = __values(HOST_EXTRACTORS), HOST_EXTRACTORS_1_1 = HOST_EXTRACTORS_1.next(); !HOST_EXTRACTORS_1_1.done; HOST_EXTRACTORS_1_1 = HOST_EXTRACTORS_1.next()) {
-                _a = HOST_EXTRACTORS_1_1.value, match = _a.match, extractor = _a.extractor;
-                if (match(directLink, host)) {
-                    return [2 /*return*/, extractor(directLink, axios)];
-                }
-            }
+        // Route to extractors from providerContext
+        // Easy to add 20-30 more hosts - just add more if statements or use a map
+        if (host.includes("streamtape") || directLink.includes("streamtape") || directLink.includes("streamta")) {
+            return [2 /*return*/, providerContext.extractors.streamtapeExtractor(directLink, axios)];
         }
-        catch (e_2_1) { e_2 = { error: e_2_1 }; }
-        finally {
-            try {
-                if (HOST_EXTRACTORS_1_1 && !HOST_EXTRACTORS_1_1.done && (_b = HOST_EXTRACTORS_1.return)) _b.call(HOST_EXTRACTORS_1);
-            }
-            finally { if (e_2) throw e_2.error; }
+        if (host.includes("dood") || directLink.includes("dood")) {
+            return [2 /*return*/, providerContext.extractors.doodExtractor(directLink, axios)];
         }
+        if (host.includes("mixdrop") || directLink.includes("mixdrop")) {
+            return [2 /*return*/, providerContext.extractors.mixdropExtractor(directLink, axios)];
+        }
+        // TODO: Add more extractors as they're implemented in providerContext
+        // if (host.includes("voe")) return providerContext.extractors.voeExtractor(directLink, axios);
+        // if (host.includes("filemoon")) return providerContext.extractors.fileMoonExtractor(directLink, axios);
+        // if (host.includes("filelions")) return providerContext.extractors.fileLionsExtractor(directLink, axios);
+        // ... etc
         return [2 /*return*/, null];
     });
 }); };
@@ -592,7 +308,7 @@ var QUALITY_MAP = {
     quality_hd: "1080",
 };
 var mapQuality = function (className) {
-    var e_3, _a;
+    var e_1, _a;
     if (!className) {
         return undefined;
     }
@@ -604,18 +320,18 @@ var mapQuality = function (className) {
             }
         }
     }
-    catch (e_3_1) { e_3 = { error: e_3_1 }; }
+    catch (e_1_1) { e_1 = { error: e_1_1 }; }
     finally {
         try {
             if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
         }
-        finally { if (e_3) throw e_3.error; }
+        finally { if (e_1) throw e_1.error; }
     }
     return undefined;
 };
 function handlePrimeSrcEmbed(url, axios, cheerioModule) {
     return __awaiter(this, void 0, void 0, function () {
-        var embedRes, $_1, streams_1, error_4;
+        var embedRes, $_1, streams_1, error_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -662,17 +378,17 @@ function handlePrimeSrcEmbed(url, axios, cheerioModule) {
                     }
                     return [2 /*return*/, streams_1];
                 case 2:
-                    error_4 = _a.sent();
-                    console.error("Failed to handle primesrc embed", error_4);
+                    error_1 = _a.sent();
+                    console.error("Failed to handle primesrc embed", error_1);
                     return [2 /*return*/, []];
                 case 3: return [2 /*return*/];
             }
         });
     });
 }
-var resolveGoEntries = function (url, $, axios) { return __awaiter(void 0, void 0, void 0, function () {
-    var urlMatch, baseUrl, linkKeys, entries, results, entries_1, entries_1_1, entry, key, goUrl, goData, response, error_5, directLink, hostLabel, extracted, e_4_1;
-    var e_4, _a;
+var resolveGoEntries = function (url, $, axios, providerContext) { return __awaiter(void 0, void 0, void 0, function () {
+    var urlMatch, baseUrl, linkKeys, entries, results, entries_1, entries_1_1, entry, key, goUrl, goData, response, error_2, directLink, hostLabel, extracted, e_2_1;
+    var e_2, _a;
     return __generator(this, function (_b) {
         switch (_b.label) {
             case 0:
@@ -730,8 +446,8 @@ var resolveGoEntries = function (url, $, axios) { return __awaiter(void 0, void 
                 goData = response.data;
                 return [3 /*break*/, 6];
             case 5:
-                error_5 = _b.sent();
-                console.error("Failed to fetch go endpoint", goUrl, error_5);
+                error_2 = _b.sent();
+                console.error("Failed to fetch go endpoint", goUrl, error_2);
                 return [3 /*break*/, 8];
             case 6:
                 directLink = typeof goData === "string" ? goData : (goData === null || goData === void 0 ? void 0 : goData.link) || (goData === null || goData === void 0 ? void 0 : goData.url) || null;
@@ -740,7 +456,7 @@ var resolveGoEntries = function (url, $, axios) { return __awaiter(void 0, void 
                 }
                 hostLabel = ((goData === null || goData === void 0 ? void 0 : goData.host) || entry.host || "Primewire").trim();
                 console.log("Primewire: Trying to extract from ".concat(hostLabel, ": ").concat(directLink));
-                return [4 /*yield*/, extractStreamForHost(hostLabel, directLink, axios)];
+                return [4 /*yield*/, extractStreamForHost(hostLabel, directLink, axios, providerContext)];
             case 7:
                 extracted = _b.sent();
                 if (extracted) {
@@ -761,14 +477,14 @@ var resolveGoEntries = function (url, $, axios) { return __awaiter(void 0, void 
                 return [3 /*break*/, 2];
             case 9: return [3 /*break*/, 12];
             case 10:
-                e_4_1 = _b.sent();
-                e_4 = { error: e_4_1 };
+                e_2_1 = _b.sent();
+                e_2 = { error: e_2_1 };
                 return [3 /*break*/, 12];
             case 11:
                 try {
                     if (entries_1_1 && !entries_1_1.done && (_a = entries_1.return)) _a.call(entries_1);
                 }
-                finally { if (e_4) throw e_4.error; }
+                finally { if (e_2) throw e_2.error; }
                 return [7 /*endfinally*/];
             case 12: return [2 /*return*/, results];
         }
@@ -776,8 +492,8 @@ var resolveGoEntries = function (url, $, axios) { return __awaiter(void 0, void 
 }); };
 var getStream = function (_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var axios, cheerio, pageResponse, $_2, decodedStreams, mixdropCandidates_2, streams, mixdropCandidates_1, mixdropCandidates_1_1, candidate, extracted, e_5_1, error_6;
-        var e_5, _c;
+        var axios, cheerio, pageResponse, $_2, decodedStreams, mixdropCandidates_2, streams, mixdropCandidates_1, mixdropCandidates_1_1, candidate, extracted, e_3_1, error_3;
+        var e_3, _c;
         var url = _b.link, type = _b.type, providerContext = _b.providerContext;
         return __generator(this, function (_d) {
             switch (_d.label) {
@@ -799,7 +515,7 @@ var getStream = function (_a) {
                 case 4:
                     pageResponse = _d.sent();
                     $_2 = cheerio.load(pageResponse.data);
-                    return [4 /*yield*/, resolveGoEntries(url, $_2, axios)];
+                    return [4 /*yield*/, resolveGoEntries(url, $_2, axios, providerContext)];
                 case 5:
                     decodedStreams = _d.sent();
                     if (decodedStreams.length) {
@@ -826,7 +542,7 @@ var getStream = function (_a) {
                 case 7:
                     if (!!mixdropCandidates_1_1.done) return [3 /*break*/, 10];
                     candidate = mixdropCandidates_1_1.value;
-                    return [4 /*yield*/, extractStreamForHost(candidate.server, candidate.link, axios)];
+                    return [4 /*yield*/, extractStreamForHost(candidate.server, candidate.link, axios, providerContext)];
                 case 8:
                     extracted = _d.sent();
                     if (extracted) {
@@ -843,14 +559,14 @@ var getStream = function (_a) {
                     return [3 /*break*/, 7];
                 case 10: return [3 /*break*/, 13];
                 case 11:
-                    e_5_1 = _d.sent();
-                    e_5 = { error: e_5_1 };
+                    e_3_1 = _d.sent();
+                    e_3 = { error: e_3_1 };
                     return [3 /*break*/, 13];
                 case 12:
                     try {
                         if (mixdropCandidates_1_1 && !mixdropCandidates_1_1.done && (_c = mixdropCandidates_1.return)) _c.call(mixdropCandidates_1);
                     }
-                    finally { if (e_5) throw e_5.error; }
+                    finally { if (e_3) throw e_3.error; }
                     return [7 /*endfinally*/];
                 case 13:
                     if (streams.length) {
@@ -859,8 +575,8 @@ var getStream = function (_a) {
                     _d.label = 14;
                 case 14: return [2 /*return*/, []];
                 case 15:
-                    error_6 = _d.sent();
-                    console.error("Primewire getStream failed", error_6);
+                    error_3 = _d.sent();
+                    console.error("Primewire getStream failed", error_3);
                     return [2 /*return*/, []];
                 case 16: return [2 /*return*/];
             }
