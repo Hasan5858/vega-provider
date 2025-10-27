@@ -595,12 +595,13 @@ var extractStreamTape = function (streamTapeUrl, axios) { return __awaiter(void 
     });
 }); };
 var resolveGoEntries = function (url, $, axios) { return __awaiter(void 0, void 0, void 0, function () {
-    var baseUrl, linkKeys, entries, results, entries_1, entries_1_1, entry, key, goUrl, goData, response, error_5, directLink, hostLabel, host, extracted, fallbackType, e_3_1;
+    var urlMatch, baseUrl, linkKeys, entries, results, entries_1, entries_1_1, entry, key, goUrl, goData, response, error_5, directLink, hostLabel, host, extracted, fallbackType, e_3_1;
     var e_3, _a;
     return __generator(this, function (_b) {
         switch (_b.label) {
             case 0:
-                baseUrl = new URL(url).origin;
+                urlMatch = url.match(/^(https?:\/\/[^\/]+)/);
+                baseUrl = urlMatch ? urlMatch[1] : url;
                 linkKeys = decodeLinkKeys($("#user-data").attr("v") || "");
                 entries = [];
                 $("a.go-link").each(function (_, element) {

@@ -530,7 +530,9 @@ const resolveGoEntries = async (
   $: CheerioInstance,
   axios: ProviderContext["axios"]
 ): Promise<Stream[]> => {
-  const baseUrl = new URL(url).origin;
+  // Parse origin manually instead of using URL.origin (not available in React Native)
+  const urlMatch = url.match(/^(https?:\/\/[^\/]+)/);
+  const baseUrl = urlMatch ? urlMatch[1] : url;
   const linkKeys = decodeLinkKeys($("#user-data").attr("v") || "");
 
   const entries: Array<{
