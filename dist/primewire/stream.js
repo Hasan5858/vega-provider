@@ -267,7 +267,7 @@ var extractDood = function (url, axios) { return __awaiter(void 0, void 0, void 
  * Extracts direct video links from StreamTape embed pages
  */
 var extractStreamTape = function (url, axios) { return __awaiter(void 0, void 0, void 0, function () {
-    var data, html, directMatch, rawLink, normalized, pathMatch, finalUrl, error_3;
+    var data, html, robotlinkMatch, rawLink, prefix, mangledString, firstSubstring, secondSubstring, processed, directMatch, normalized, finalUrl, error_3;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -286,22 +286,40 @@ var extractStreamTape = function (url, axios) { return __awaiter(void 0, void 0,
             case 1:
                 data = (_a.sent()).data;
                 html = data;
-                directMatch = html.match(/id="robotlink"[^>]*>([^<]+)</);
-                if (!directMatch) {
-                    directMatch = html.match(/document\.getElementById\('robotlink'\)\.innerHTML\s*=\s*'([^']+)'/);
+                robotlinkMatch = html.match(/getElementById\('robotlink'\)\.innerHTML\s*=\s*'([^']+)'\s*\+\s*\('([^']+)'\)\.substring\((\d+)\)(?:\.substring\((\d+)\))?/);
+                rawLink = "";
+                if (robotlinkMatch) {
+                    prefix = robotlinkMatch[1];
+                    mangledString = robotlinkMatch[2];
+                    firstSubstring = parseInt(robotlinkMatch[3]);
+                    secondSubstring = robotlinkMatch[4] ? parseInt(robotlinkMatch[4]) : 0;
+                    processed = mangledString.substring(firstSubstring);
+                    if (secondSubstring > 0) {
+                        processed = processed.substring(secondSubstring);
+                    }
+                    rawLink = prefix + processed;
+                    console.log("StreamTape: Parsed JavaScript manipulation: ".concat(rawLink));
                 }
-                if (!directMatch) {
-                    directMatch = html.match(/'robotlink'\)\.innerHTML\s*=\s*'([^']+)'/);
+                else {
+                    directMatch = html.match(/id="robotlink"[^>]*>([^<]+)</);
+                    if (!directMatch) {
+                        directMatch = html.match(/document\.getElementById\('robotlink'\)\.innerHTML\s*=\s*'([^']+)'/);
+                    }
+                    if (!directMatch) {
+                        directMatch = html.match(/'robotlink'\)\.innerHTML\s*=\s*'([^']+)'/);
+                    }
+                    if (!directMatch || !directMatch[1]) {
+                        console.warn("StreamTape: Could not find video link in page");
+                        return [2 /*return*/, null];
+                    }
+                    rawLink = directMatch[1];
+                    console.log("StreamTape: Extracted from HTML: ".concat(rawLink));
                 }
-                if (!directMatch || !directMatch[1]) {
-                    console.warn("StreamTape: Could not find video link in page");
-                    return [2 /*return*/, null];
-                }
-                rawLink = directMatch[1]
+                rawLink = rawLink
                     .replace(/\\u0026/g, "&")
                     .replace(/&amp;/g, "&")
                     .trim();
-                console.log("StreamTape: Extracted raw link: ".concat(rawLink));
+                console.log("StreamTape: Cleaned link: ".concat(rawLink));
                 normalized = void 0;
                 if (rawLink.startsWith("http") || rawLink.startsWith("https")) {
                     // Already a complete URL
@@ -312,15 +330,8 @@ var extractStreamTape = function (url, axios) { return __awaiter(void 0, void 0,
                     normalized = "https:".concat(rawLink);
                 }
                 else if (rawLink.startsWith("/")) {
-                    pathMatch = rawLink.match(/^\/([^\/]+)\//);
-                    if (pathMatch && (pathMatch[1].includes("streamta") || pathMatch[1].includes("streamtape"))) {
-                        // Path includes domain, just add protocol
-                        normalized = "https:/".concat(rawLink);
-                    }
-                    else {
-                        // Normal path, prepend origin
-                        normalized = "".concat(getOrigin(url)).concat(rawLink);
-                    }
+                    // Normal path, prepend origin
+                    normalized = "".concat(getOrigin(url)).concat(rawLink);
                 }
                 else {
                     // Relative path
