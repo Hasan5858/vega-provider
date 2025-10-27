@@ -36,6 +36,10 @@ export const getMeta = async function ({
     
     const type = $(".show_season").html() ? "series" : "movie";
     const linkList: Link[] = [];
+    
+    // Extract embed iframe URL for movies
+    const iframeSrc = $('iframe').first().attr('src');
+    
     $(".show_season").each((i, element) => {
       const seasonTitle = "Season " + $(element).attr("data-id");
       const episodes: Link["directLinks"] = [];
@@ -64,11 +68,14 @@ export const getMeta = async function ({
       });
     });
     if (type === "movie") {
+      // If we found an embed URL, use that instead of the movie page
+      const streamLink = iframeSrc ? iframeSrc : link;
+      
       linkList.push({
         title: "Movie",
         directLinks: [
           {
-            link: link,
+            link: streamLink,
             title: "Movie",
             type: "movie",
           },
