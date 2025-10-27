@@ -1,37 +1,8 @@
-/**
- * SaveFiles Extractor
- * Extracts video streams from savefiles.com using the download mechanism
- * 
- * Strategy:
- * 1. Convert embed URL (/e/{id}) to download URL (/d/{id}_n)
- * 2. Fetch the download page to extract form parameters (op, id, mode, hash)
- * 3. POST to the download URL with parameters to get the direct download link
- * 
- * The download page contains a hidden form with:
- * - op: "download_orig"
- * - id: {video_id}
- * - mode: "n" (normal quality)
- * - hash: {generated_hash}
- * 
- * POSTing this form returns the direct file URL
- */
-
-import { AxiosStatic } from "axios";
+const axios = require('axios');
 
 const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36";
 
-/**
- * Extract stream from SaveFiles URL
- * @param url - SaveFiles embed or download URL (e.g., https://savefiles.com/e/k8zyey44415m)
- * @param axios - Axios instance
- * @param signal - AbortSignal for cancellation
- * @returns Stream info with link and headers
- */
-export async function savefilesExtractor(
-  url: string,
-  axios: AxiosStatic,
-  signal?: AbortSignal
-): Promise<{ link: string; headers?: Record<string, string>; type?: string } | null> {
+async function savefilesExtractor(url) {
   try {
     console.log("SaveFiles: Starting extraction for:", url.substring(0, 80));
 
@@ -58,7 +29,6 @@ export async function savefilesExtractor(
           "Referer": url,
           "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         },
-        signal,
         timeout: 15000,
       });
 
@@ -66,7 +36,6 @@ export async function savefilesExtractor(
       console.log("SaveFiles: Page fetched (" + html.length + " chars)");
 
       // Extract form parameters from hidden inputs
-      // Pattern: <input type="hidden" name="hash" value="HASH_VALUE">
       const hashMatch = html.match(/name="hash"\s+value="([^"]+)"/i);
       if (!hashMatch) {
         console.error("SaveFiles: Could not extract hash from download page");
@@ -82,16 +51,15 @@ export async function savefilesExtractor(
       const formData = new URLSearchParams();
       formData.append('op', 'download_orig');
       formData.append('id', videoId);
-      formData.append('mode', 'n'); // normal quality
+      formData.append('mode', 'n');
       formData.append('hash', hash);
 
-      const downloadResponse = await axios.post(downloadUrl, formData, {
+      const downloadResponse = await axios.post(downloadUrl, formData.toString(), {
         headers: {
           "User-Agent": USER_AGENT,
           "Referer": downloadUrl,
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        signal,
         timeout: 15000,
         maxRedirects: 10,
       });
@@ -118,9 +86,8 @@ export async function savefilesExtractor(
         const responseHtml = typeof downloadResponse.data === 'string' ? downloadResponse.data : '';
         
         // Look for SaveFiles CDN link
-        // Pattern: https://s{number}.savefiles.com/v/{path}?t=...
-        // Note: Files may have extensions like .mkv.mp4 or .avi.mp4
-        const cdnLinkMatch = responseHtml.match(/https?:\/\/s\d+\.savefiles\.com\/v\/[^\s"'<>]+/i);
+        // Pattern: https://s{number}.savefiles.com/v/{path}/filename.mp4?t=...
+        const cdnLinkMatch = responseHtml.match(/https?:\/\/s\d+\.savefiles\.com\/v\/[^\s"'<>]+\.(?:mp4|mkv|avi|webm|mov)[^\s"'<>]*/i);
         
         if (cdnLinkMatch) {
           const directLink = cdnLinkMatch[0];
@@ -135,12 +102,12 @@ export async function savefilesExtractor(
           };
         }
         
-        // Fallback: Look for any savefiles.com link with /v/ path
-        const fallbackMatch = responseHtml.match(/https?:\/\/[^\/\s"'<>]+\.savefiles\.com\/v\/[^\s"'<>]+/i);
+        // Fallback: Look for any download-related link
+        const directLinkMatch = responseHtml.match(/https?:\/\/[^\s"'<>]+(?:download|get_file|dl|storage|cdn)[^\s"'<>]+\.(?:mp4|mkv|avi|webm|mov)[^\s"'<>]*/i);
         
-        if (fallbackMatch) {
-          const directLink = fallbackMatch[0];
-          console.log("SaveFiles: Found fallback link");
+        if (directLinkMatch) {
+          const directLink = directLinkMatch[0];
+          console.log("SaveFiles: Found direct link in response");
           return {
             link: directLink,
             headers: {
@@ -167,18 +134,19 @@ export async function savefilesExtractor(
         type: 'mp4',
       };
 
-    } catch (error: any) {
-      if (error.name === "AbortError" || error.code === "ERR_CANCELED") {
-        console.log("SaveFiles: Request aborted");
-        return null;
-      }
-      
+    } catch (error) {
       console.error("SaveFiles: Error during extraction:", error.message);
       return null;
     }
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("SaveFiles: Extraction error:", error.message);
     return null;
   }
 }
+
+// Test with the URL from logs
+savefilesExtractor("https://savefiles.com/e/oopfumrwlo3n").then(result => {
+  console.log("\n✅ FINAL RESULT:");
+  console.log(JSON.stringify(result, null, 2));
+});

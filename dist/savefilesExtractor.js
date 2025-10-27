@@ -64,7 +64,7 @@ var USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (
  */
 function savefilesExtractor(url, axios, signal) {
     return __awaiter(this, void 0, void 0, function () {
-        var idMatch, videoId, downloadUrl, pageResponse, html, hashMatch, hash, formData, downloadResponse, contentType, finalUrl_1, responseHtml, directLinkMatch, directLink, finalUrl, error_1, error_2;
+        var idMatch, videoId, downloadUrl, pageResponse, html, hashMatch, hash, formData, downloadResponse, contentType, finalUrl_1, responseHtml, cdnLinkMatch, directLink, fallbackMatch, directLink, finalUrl, error_1, error_2;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -141,10 +141,10 @@ function savefilesExtractor(url, axios, signal) {
                     // If response is HTML, check if it contains a download link
                     if (contentType.includes('text/html')) {
                         responseHtml = typeof downloadResponse.data === 'string' ? downloadResponse.data : '';
-                        directLinkMatch = responseHtml.match(/https?:\/\/[^\s"'<>]+(?:download|get_file|dl|storage)[^\s"'<>]*/i);
-                        if (directLinkMatch) {
-                            directLink = directLinkMatch[0];
-                            console.log("SaveFiles: Found direct link in response");
+                        cdnLinkMatch = responseHtml.match(/https?:\/\/s\d+\.savefiles\.com\/v\/[^\s"'<>]+/i);
+                        if (cdnLinkMatch) {
+                            directLink = cdnLinkMatch[0];
+                            console.log("SaveFiles: Found CDN link:", directLink.substring(0, 100) + "...");
                             return [2 /*return*/, {
                                     link: directLink,
                                     headers: {
@@ -154,6 +154,21 @@ function savefilesExtractor(url, axios, signal) {
                                     type: 'mp4',
                                 }];
                         }
+                        fallbackMatch = responseHtml.match(/https?:\/\/[^\/\s"'<>]+\.savefiles\.com\/v\/[^\s"'<>]+/i);
+                        if (fallbackMatch) {
+                            directLink = fallbackMatch[0];
+                            console.log("SaveFiles: Found fallback link");
+                            return [2 /*return*/, {
+                                    link: directLink,
+                                    headers: {
+                                        "User-Agent": USER_AGENT,
+                                        "Referer": downloadUrl,
+                                    },
+                                    type: 'mp4',
+                                }];
+                        }
+                        console.error("SaveFiles: No video link found in HTML response");
+                        return [2 /*return*/, null];
                     }
                     // If form submission redirected to a file, use that URL
                     console.log("SaveFiles: Using submission response URL");
