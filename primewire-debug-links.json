@@ -1,6 +1,6 @@
 {
   "movieUrl": "https://www.primewire.mov/movie/1521964-a-house-of-dynamite",
-  "generatedAt": "2025-10-27T04:05:09.983Z",
+  "generatedAt": "2025-10-27T04:19:42.256Z",
   "entries": [
     {
       "index": 0,
@@ -49,9 +49,7 @@
       "key": "9LxqD",
       "goUrl": "https://www.primewire.mov/links/go/9LxqD?embed=true",
       "goResponse": {
-        "link": "https://voe.sx/e/kramdqpwsj0m",
-        "host_id": 48,
-        "host": "voe.sx"
+        "error": "Request failed with status code 404"
       }
     },
     {
@@ -62,7 +60,9 @@
       "key": "5YSpe",
       "goUrl": "https://www.primewire.mov/links/go/5YSpe?embed=true",
       "goResponse": {
-        "error": "Request failed with status code 404"
+        "link": "https://voe.sx/e/vtyacxsw3cxu",
+        "host_id": 48,
+        "host": "voe.sx"
       }
     },
     {
@@ -86,9 +86,7 @@
       "key": "nv7JD",
       "goUrl": "https://www.primewire.mov/links/go/nv7JD?embed=true",
       "goResponse": {
-        "link": "https://voe.sx/e/qc0eqpvqjsrg",
-        "host_id": 48,
-        "host": "voe.sx"
+        "error": "Request failed with status code 404"
       }
     },
     {
@@ -99,7 +97,9 @@
       "key": "rTK72",
       "goUrl": "https://www.primewire.mov/links/go/rTK72?embed=true",
       "goResponse": {
-        "error": "Request failed with status code 404"
+        "link": "https://filemoon.sx/e/jc17u9ap3d0s",
+        "host_id": 66,
+        "host": "filemoon.sx"
       }
     },
     {
@@ -110,9 +110,7 @@
       "key": "SkS_q",
       "goUrl": "https://www.primewire.mov/links/go/SkS_q?embed=true",
       "goResponse": {
-        "link": "https://filemoon.sx/e/9bimgbhsb8cg",
-        "host_id": 66,
-        "host": "filemoon.sx"
+        "error": "Request failed with status code 404"
       }
     },
     {
@@ -136,9 +134,7 @@
       "key": "88Ewy",
       "goUrl": "https://www.primewire.mov/links/go/88Ewy?embed=true",
       "goResponse": {
-        "link": "https://filemoon.sx/e/grhfx3vyteyu",
-        "host_id": 66,
-        "host": "filemoon.sx"
+        "error": "Request failed with status code 404"
       }
     },
     {
@@ -149,7 +145,9 @@
       "key": "xab-2",
       "goUrl": "https://www.primewire.mov/links/go/xab-2?embed=true",
       "goResponse": {
-        "error": "Request failed with status code 404"
+        "link": "https://filelions.to/v/ktbcy5797rqb",
+        "host_id": 64,
+        "host": "filelions.to"
       }
     },
     {
@@ -173,9 +171,7 @@
       "key": "ohFuo",
       "goUrl": "https://www.primewire.mov/links/go/ohFuo?embed=true",
       "goResponse": {
-        "link": "https://filelions.to/v/d3xg3eidmt9t",
-        "host_id": 64,
-        "host": "filelions.to"
+        "error": "Request failed with status code 404"
       }
     },
     {
@@ -186,7 +182,9 @@
       "key": "lCgtJ",
       "goUrl": "https://www.primewire.mov/links/go/lCgtJ?embed=true",
       "goResponse": {
-        "error": "Request failed with status code 404"
+        "link": "https://filelions.to/v/fp5ehbbju0ol",
+        "host_id": 64,
+        "host": "filelions.to"
       }
     },
     {
@@ -231,6 +229,19 @@
       "host": "vidmoly.me",
       "quality": "720",
       "keySource": "decoded",
+      "key": "T-mVx",
+      "goUrl": "https://www.primewire.mov/links/go/T-mVx?embed=true",
+      "goResponse": {
+        "link": "https://vidmoly.me/embed-8uwk6ygl9e3m.html",
+        "host_id": 61,
+        "host": "vidmoly.me"
+      }
+    },
+    {
+      "index": 19,
+      "host": "vidmoly.me",
+      "quality": "720",
+      "keySource": "decoded",
       "key": "3MV9l",
       "goUrl": "https://www.primewire.mov/links/go/3MV9l?embed=true",
       "goResponse": {
@@ -240,7 +251,7 @@
       }
     },
     {
-      "index": 19,
+      "index": 20,
       "host": "vidmoly.me",
       "quality": "720",
       "keySource": "decoded",
@@ -251,46 +262,7 @@
       }
     },
     {
-      "index": 20,
-      "host": "savefiles.com",
-      "quality": "720",
-      "keySource": "decoded",
-      "key": "N34hw",
-      "goUrl": "https://www.primewire.mov/links/go/N34hw?embed=true",
-      "goResponse": {
-        "link": "https://savefiles.com/e/oopfumrwlo3n",
-        "host_id": 69,
-        "host": "savefiles.com"
-      }
-    },
-    {
       "index": 21,
-      "host": "savefiles.com",
-      "quality": "720",
-      "keySource": "decoded",
-      "key": "osvd_",
-      "goUrl": "https://www.primewire.mov/links/go/osvd_?embed=true",
-      "goResponse": {
-        "link": "https://savefiles.com/e/irv2t1acswpk",
-        "host_id": 69,
-        "host": "savefiles.com"
-      }
-    },
-    {
-      "index": 22,
-      "host": "savefiles.com",
-      "quality": "720",
-      "keySource": "decoded",
-      "key": "chzrk",
-      "goUrl": "https://www.primewire.mov/links/go/chzrk?embed=true",
-      "goResponse": {
-        "link": "https://savefiles.com/e/8f2y2e8ep9as",
-        "host_id": 69,
-        "host": "savefiles.com"
-      }
-    },
-    {
-      "index": 23,
       "host": "savefiles.com",
       "quality": "720",
       "keySource": "decoded",
@@ -303,16 +275,38 @@
       }
     },
     {
-      "index": 24,
-      "host": "streamwish.to",
+      "index": 22,
+      "host": "savefiles.com",
       "quality": "720",
       "keySource": "decoded",
-      "key": "Nh8gn",
-      "goUrl": "https://www.primewire.mov/links/go/Nh8gn?embed=true",
+      "key": "N34hw",
+      "goUrl": "https://www.primewire.mov/links/go/N34hw?embed=true",
       "goResponse": {
-        "link": "https://streamwish.to/e/b1glfcp3wtz5",
-        "host_id": 65,
-        "host": "streamwish.to"
+        "error": "Request failed with status code 404"
+      }
+    },
+    {
+      "index": 23,
+      "host": "savefiles.com",
+      "quality": "720",
+      "keySource": "decoded",
+      "key": "chzrk",
+      "goUrl": "https://www.primewire.mov/links/go/chzrk?embed=true",
+      "goResponse": {
+        "link": "https://savefiles.com/e/8f2y2e8ep9as",
+        "host_id": 69,
+        "host": "savefiles.com"
+      }
+    },
+    {
+      "index": 24,
+      "host": "savefiles.com",
+      "quality": "720",
+      "keySource": "decoded",
+      "key": "osvd_",
+      "goUrl": "https://www.primewire.mov/links/go/osvd_?embed=true",
+      "goResponse": {
+        "error": "Request failed with status code 404"
       }
     },
     {
@@ -323,11 +317,35 @@
       "key": "0Ru4R",
       "goUrl": "https://www.primewire.mov/links/go/0Ru4R?embed=true",
       "goResponse": {
-        "error": "Request failed with status code 404"
+        "link": "https://streamwish.to/e/b0z6i87x4iki",
+        "host_id": 65,
+        "host": "streamwish.to"
       }
     },
     {
       "index": 26,
+      "host": "streamwish.to",
+      "quality": "720",
+      "keySource": "decoded",
+      "key": "BvQmg",
+      "goUrl": "https://www.primewire.mov/links/go/BvQmg?embed=true",
+      "goResponse": {
+        "error": "Request failed with status code 404"
+      }
+    },
+    {
+      "index": 27,
+      "host": "streamwish.to",
+      "quality": "720",
+      "keySource": "decoded",
+      "key": "Nh8gn",
+      "goUrl": "https://www.primewire.mov/links/go/Nh8gn?embed=true",
+      "goResponse": {
+        "error": "Request failed with status code 404"
+      }
+    },
+    {
+      "index": 28,
       "host": "streamwish.to",
       "quality": "720",
       "keySource": "decoded",
@@ -340,40 +358,14 @@
       }
     },
     {
-      "index": 27,
-      "host": "streamwish.to",
-      "quality": "720",
-      "keySource": "decoded",
-      "key": "BvQmg",
-      "goUrl": "https://www.primewire.mov/links/go/BvQmg?embed=true",
-      "goResponse": {
-        "error": "Request failed with status code 404"
-      }
-    },
-    {
-      "index": 28,
-      "host": "dood.watch",
-      "quality": "720",
-      "keySource": "decoded",
-      "key": "sYTl7",
-      "goUrl": "https://www.primewire.mov/links/go/sYTl7?embed=true",
-      "goResponse": {
-        "link": "https://dood.watch/e/eu55ig0od6ym",
-        "host_id": 42,
-        "host": "dood.watch"
-      }
-    },
-    {
       "index": 29,
       "host": "dood.watch",
       "quality": "720",
       "keySource": "decoded",
-      "key": "9wGb2",
-      "goUrl": "https://www.primewire.mov/links/go/9wGb2?embed=true",
+      "key": "82GxR",
+      "goUrl": "https://www.primewire.mov/links/go/82GxR?embed=true",
       "goResponse": {
-        "link": "https://dood.watch/e/akpl7die9s4p",
-        "host_id": 42,
-        "host": "dood.watch"
+        "error": "Request failed with status code 404"
       }
     },
     {
@@ -394,16 +386,40 @@
       "host": "dood.watch",
       "quality": "720",
       "keySource": "decoded",
-      "key": "82GxR",
-      "goUrl": "https://www.primewire.mov/links/go/82GxR?embed=true",
+      "key": "9wGb2",
+      "goUrl": "https://www.primewire.mov/links/go/9wGb2?embed=true",
       "goResponse": {
-        "link": "https://dood.watch/e/pil9umlz5js5",
+        "error": "Request failed with status code 404"
+      }
+    },
+    {
+      "index": 32,
+      "host": "dood.watch",
+      "quality": "720",
+      "keySource": "decoded",
+      "key": "sYTl7",
+      "goUrl": "https://www.primewire.mov/links/go/sYTl7?embed=true",
+      "goResponse": {
+        "link": "https://dood.watch/e/eu55ig0od6ym",
         "host_id": 42,
         "host": "dood.watch"
       }
     },
     {
-      "index": 32,
+      "index": 33,
+      "host": "bigwarp.cc",
+      "quality": "720",
+      "keySource": "decoded",
+      "key": "dordO",
+      "goUrl": "https://www.primewire.mov/links/go/dordO?embed=true",
+      "goResponse": {
+        "link": "https://bigwarp.cc/e/iw2hmw2sz246",
+        "host_id": 67,
+        "host": "bigwarp.cc"
+      }
+    },
+    {
+      "index": 34,
       "host": "bigwarp.cc",
       "quality": "720",
       "keySource": "decoded",
@@ -416,42 +432,31 @@
       }
     },
     {
-      "index": 33,
-      "host": "bigwarp.cc",
-      "quality": "720",
-      "keySource": "decoded",
-      "key": "dordO",
-      "goUrl": "https://www.primewire.mov/links/go/dordO?embed=true",
-      "goResponse": {
-        "error": "Request failed with status code 404"
-      }
-    },
-    {
-      "index": 34,
+      "index": 35,
       "host": "bigwarp.cc",
       "quality": "720",
       "keySource": "decoded",
       "key": "YaMNT",
       "goUrl": "https://www.primewire.mov/links/go/YaMNT?embed=true",
       "goResponse": {
-        "link": "https://bigwarp.cc/e/n5inz2fiwfwu",
-        "host_id": 67,
-        "host": "bigwarp.cc"
+        "error": "Request failed with status code 404"
       }
     },
     {
-      "index": 35,
+      "index": 36,
       "host": "streamplay.to",
       "quality": "720",
       "keySource": "decoded",
       "key": "lCefC",
       "goUrl": "https://www.primewire.mov/links/go/lCefC?embed=true",
       "goResponse": {
-        "error": "Request failed with status code 404"
+        "link": "https://streamplay.to/embed-fq9a616257xz.html",
+        "host_id": 8,
+        "host": "streamplay.to"
       }
     },
     {
-      "index": 36,
+      "index": 37,
       "host": "streamplay.to",
       "quality": "720",
       "keySource": "decoded",
@@ -464,18 +469,31 @@
       }
     },
     {
-      "index": 37,
+      "index": 38,
       "host": "luluvdoo.com",
       "quality": "720",
       "keySource": "decoded",
-      "key": "0mKt3",
-      "goUrl": "https://www.primewire.mov/links/go/0mKt3?embed=true",
+      "key": "636Xj",
+      "goUrl": "https://www.primewire.mov/links/go/636Xj?embed=true",
       "goResponse": {
         "error": "Request failed with status code 404"
       }
     },
     {
-      "index": 38,
+      "index": 39,
+      "host": "luluvdoo.com",
+      "quality": "720",
+      "keySource": "decoded",
+      "key": "l5Eqa",
+      "goUrl": "https://www.primewire.mov/links/go/l5Eqa?embed=true",
+      "goResponse": {
+        "link": "https://luluvdoo.com/e/lxha81u0t6jr",
+        "host_id": 68,
+        "host": "luluvdoo.com"
+      }
+    },
+    {
+      "index": 40,
       "host": "luluvdoo.com",
       "quality": "720",
       "keySource": "decoded",
@@ -488,27 +506,14 @@
       }
     },
     {
-      "index": 39,
+      "index": 41,
       "host": "luluvdoo.com",
       "quality": "720",
       "keySource": "decoded",
-      "key": "636Xj",
-      "goUrl": "https://www.primewire.mov/links/go/636Xj?embed=true",
+      "key": "0mKt3",
+      "goUrl": "https://www.primewire.mov/links/go/0mKt3?embed=true",
       "goResponse": {
-        "link": "https://luluvdoo.com/e/y32qr13jchxo",
-        "host_id": 68,
-        "host": "luluvdoo.com"
-      }
-    },
-    {
-      "index": 40,
-      "host": "luluvdoo.com",
-      "quality": "720",
-      "keySource": "decoded",
-      "key": "l5Eqa",
-      "goUrl": "https://www.primewire.mov/links/go/l5Eqa?embed=true",
-      "goResponse": {
-        "link": "https://luluvdoo.com/e/lxha81u0t6jr",
+        "link": "https://luluvdoo.com/e/dxs6bxh3lzoz",
         "host_id": 68,
         "host": "luluvdoo.com"
       }
@@ -517,7 +522,7 @@
   "streams": [
     {
       "server": "streamtape.com",
-      "link": "https://streamta.site/streamta.site/get_video?id=a0bp47g6zYFxyZg&expires=1761607934&ip=FHqsD0WSKxSHDN&token=FbNejB4RTcde&stream=1",
+      "link": "https://streamta.site/streamta.site/get_video?id=a0bp47g6zYFxyZg&expires=1761608804&ip=FHqsD0WSKxSHDN&token=FoswsroTCcde&stream=1",
       "type": "mp4",
       "quality": "720",
       "headers": {
@@ -527,7 +532,7 @@
     },
     {
       "server": "streamtape.com",
-      "link": "https://streamta.site/streamta.site/get_video?id=rJMOo88A7lTbw8j&expires=1761607936&ip=FHqsD0WSKxSHDN&token=4m9bHJh4Pcde&stream=1",
+      "link": "https://streamta.site/streamta.site/get_video?id=rJMOo88A7lTbw8j&expires=1761608805&ip=FHqsD0WSKxSHDN&token=6hD-jvD0Ocde&stream=1",
       "type": "mp4",
       "quality": "720",
       "headers": {
@@ -536,38 +541,18 @@
       }
     },
     {
-      "server": "mixdrop.ag",
-      "link": "https://s-delivery26.mxcontent.net/v2/dkre6r7pa7m4ojj.mp4?s=lnbvlrc3xV6JFWuJxDW0nQ&e=1761559544&_t=1761546330",
+      "server": "dood.watch",
+      "link": "https://dc583xx.cloudatacdn.com/u5kj7umzw7b3sdgge465ojq7iqpftqdox56j3sjzo3kdu67eb5q7lyx37saa/8swvggkyc5~CyxOUQKYSJ?token=u0ryxh3iu5ey0zkigcfmasew&expiry=1761538820862",
       "type": "mp4",
       "quality": "720",
       "headers": {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-        "Referer": "https://mixdrop.ag/e/dkre6r7pa7m4ojj"
-      }
-    },
-    {
-      "server": "mixdrop.ag",
-      "link": "https://s-delivery48.mxcontent.net/v2/q1d63901c64lvw.mp4?s=wbU2a37TTdYsyj5C83ptMw&e=1761559546&_t=1761546326",
-      "type": "mp4",
-      "quality": "720",
-      "headers": {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-        "Referer": "https://mixdrop.ag/e/q1d63901c64lvw"
-      }
-    },
-    {
-      "server": "mixdrop.ag",
-      "link": "https://s-delivery25.mxcontent.net/v2/z1jdwppki7d3v8.mp4?s=p8P24Jzjwi7wBuYTpzgd4g&e=1761559547&_t=1761539696",
-      "type": "mp4",
-      "quality": "720",
-      "headers": {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-        "Referer": "https://mixdrop.ag/e/z1jdwppki7d3v8"
+        "Referer": "https://dsvplay.com/e/pil9umlz5js5"
       }
     },
     {
       "server": "dood.watch",
-      "link": "https://sc582x.cloudatacdn.com/u5kj76d5zhb3sdgge5bnolyrj2spzsyhvtwvkxlwp6mmu7qf6wmlkleb72ia/m3od1xedkc~Yy0iYUbbUn?token=zw8s6v71xw4zahz2x91n7s2i&expiry=1761537956065",
+      "link": "https://sc582x.cloudatacdn.com/u5kj76d5zhb3sdgge5bnolyrj2spzsyhvtwvkxlwp6mmu7qf6wmbal4b72ia/uqu6zyu6rs~okR41OVffP?token=zw8s6v71xw4zahz2x91n7s2i&expiry=1761538822389",
       "type": "mp4",
       "quality": "720",
       "headers": {
@@ -577,7 +562,7 @@
     },
     {
       "server": "dood.watch",
-      "link": "https://sc582x.cloudatacdn.com/u5kj7frezxb3sdgge5bnolyrj2vgt3ttrrah72ez6g5vx2lgrm43zh3mlqqq/hnpglb2ups~POlH7OC5nR?token=5k9enhjs606kka2ujxikc4sj&expiry=1761537957727",
+      "link": "https://sc582x.cloudatacdn.com/u5kj7frezxb3sdgge5bnolyrj2vgt3ttrrah72ez6g5vx2lgrm4r5hdmlqqq/1wtumxa0jf~Vpmt36ElhJ?token=5k9enhjs606kka2ujxikc4sj&expiry=1761538824027",
       "type": "mp4",
       "quality": "720",
       "headers": {
@@ -587,7 +572,7 @@
     },
     {
       "server": "dood.watch",
-      "link": "https://cc510lo.cloudatacdn.com/u5kj67bqzdb3sdgge455omydduopu5h3j2jxzu6cxce64dwr42e7iq452ebq/jr37bo2u9l~2YIilBD9xK?token=vnvlueoxrqn1nmv4dcpc3840&expiry=1761537959288",
+      "link": "https://cc510lo.cloudatacdn.com/u5kj67bqzdb3sdgge455omydduopu5h3j2jxzu6cxce64dwr42evuqe52ebq/fpkkqgwx6p~jZonrPmPOA?token=vnvlueoxrqn1nmv4dcpc3840&expiry=1761538825664",
       "type": "mp4",
       "quality": "720",
       "headers": {

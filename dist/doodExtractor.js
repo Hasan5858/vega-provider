@@ -47,8 +47,16 @@ var __values = (this && this.__values) || function(o) {
     throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.extractStreamForHost = void 0;
-var normalizeHost = function (value) { return value.toLowerCase(); };
+exports.extractDood = void 0;
+var getLastPathSegment = function (input) {
+    var cleaned = input.split("?")[0];
+    var segments = cleaned.split("/").filter(Boolean);
+    return segments[segments.length - 1] || "";
+};
+var getOrigin = function (input) {
+    var match = input.match(/^(https?:\/\/[^/]+)/i);
+    return match ? match[1] : "https://dood.la";
+};
 var randomAlphaNumeric = function (length) {
     var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     var result = "";
@@ -57,71 +65,15 @@ var randomAlphaNumeric = function (length) {
     }
     return result;
 };
-var getOrigin = function (input) {
-    var match = input.match(/^(https?:\/\/[^/]+)/i);
-    return match ? match[1] : "https://www.primewire.mov";
-};
-var getLastPathSegment = function (input) {
-    var cleaned = input.split("?")[0];
-    var segments = cleaned.split("/").filter(Boolean);
-    return segments[segments.length - 1] || "";
-};
-var PACKED_EVAL_REGEX = /eval\(function\(p,a,c,k,e,d\)\{[\s\S]*?\}\([\s\S]*?\)\)/;
-var extractMixdrop = function (mixdropUrl, axios) { return __awaiter(void 0, void 0, void 0, function () {
-    var embedUrl, data, match, decoded, transformed, wurl, link, error_1;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0:
-                _a.trys.push([0, 2, , 3]);
-                embedUrl = mixdropUrl.replace("/f/", "/e/");
-                return [4 /*yield*/, axios.get(embedUrl, {
-                        headers: {
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                            Referer: mixdropUrl,
-                            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-                            "Accept-Language": "en-US,en;q=0.9",
-                            "Cache-Control": "no-cache",
-                            Pragma: "no-cache",
-                        },
-                    })];
-            case 1:
-                data = (_a.sent()).data;
-                match = data.match(PACKED_EVAL_REGEX);
-                if (!match) {
-                    return [2 /*return*/, null];
-                }
-                decoded = void 0;
-                try {
-                    transformed = match[0].replace(/^eval\(/, "(") + ";";
-                    decoded = Function("\"use strict\"; return ".concat(transformed))();
-                }
-                catch (error) {
-                    console.error("Primewire extractor (Mixdrop) unpack failed", error);
-                    return [2 /*return*/, null];
-                }
-                wurl = decoded.match(/MDCore\.wurl="([^\"]+)"/);
-                if (!wurl || !wurl[1]) {
-                    return [2 /*return*/, null];
-                }
-                link = wurl[1].startsWith("http") ? wurl[1] : "https:".concat(wurl[1]);
-                return [2 /*return*/, {
-                        link: link,
-                        headers: {
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                            Referer: embedUrl,
-                        },
-                        type: "mp4",
-                    }];
-            case 2:
-                error_1 = _a.sent();
-                console.error("Primewire extractor (Mixdrop) failed", error_1);
-                return [2 /*return*/, null];
-            case 3: return [2 /*return*/];
-        }
-    });
-}); };
+/**
+ * DoodStream Video Extractor
+ * Extracts direct video links from DoodStream embed pages
+ * Hosts: dood.la, dood.ws, dood.cx, dsvplay.com, etc.
+ *
+ * This extractor tries multiple known DoodStream hosts to find working streams
+ */
 var extractDood = function (url, axios) { return __awaiter(void 0, void 0, void 0, function () {
-    var id, candidateHosts, embedHtml, activeHost, candidateHosts_1, candidateHosts_1_1, host, embedUrl_1, data, _a, e_1_1, passMatch, tokenMatch, embedUrl, passUrl, response, baseStream, token, finalUrl, error_2;
+    var id, candidateHosts, embedHtml, activeHost, candidateHosts_1, candidateHosts_1_1, host, embedUrl_1, data, _a, e_1_1, passMatch, tokenMatch, embedUrl, passUrl, response, baseStream, token, finalUrl, error_1;
     var e_1, _b;
     return __generator(this, function (_c) {
         switch (_c.label) {
@@ -129,6 +81,7 @@ var extractDood = function (url, axios) { return __awaiter(void 0, void 0, void 
                 _c.trys.push([0, 12, , 13]);
                 id = getLastPathSegment(url);
                 if (!id) {
+                    console.warn("Dood extractor: Could not extract video ID from URL");
                     return [2 /*return*/, null];
                 }
                 candidateHosts = Array.from(new Set([
@@ -186,11 +139,13 @@ var extractDood = function (url, axios) { return __awaiter(void 0, void 0, void 
                 return [7 /*endfinally*/];
             case 10:
                 if (!embedHtml || !activeHost) {
+                    console.warn("Dood extractor: Could not fetch embed page from any host");
                     return [2 /*return*/, null];
                 }
-                passMatch = embedHtml.match(/\/pass_md5\/([^'\"]+)/);
+                passMatch = embedHtml.match(/\/pass_md5\/([^'"\n]+)/);
                 tokenMatch = embedHtml.match(/token=([a-z0-9]+)/i);
                 if (!passMatch || !tokenMatch) {
+                    console.warn("Dood extractor: Could not find pass_md5 or token in embed page");
                     return [2 /*return*/, null];
                 }
                 embedUrl = "".concat(activeHost, "/e/").concat(id);
@@ -209,6 +164,7 @@ var extractDood = function (url, axios) { return __awaiter(void 0, void 0, void 
                 response = _c.sent();
                 baseStream = typeof response.data === "string" ? response.data : null;
                 if (!baseStream) {
+                    console.warn("Dood extractor: Invalid response from pass_md5 endpoint");
                     return [2 /*return*/, null];
                 }
                 token = tokenMatch[1];
@@ -222,110 +178,11 @@ var extractDood = function (url, axios) { return __awaiter(void 0, void 0, void 
                         type: "mp4",
                     }];
             case 12:
-                error_2 = _c.sent();
-                console.error("Primewire extractor (Dood) failed", error_2);
+                error_1 = _c.sent();
+                console.error("Dood extractor failed", error_1);
                 return [2 /*return*/, null];
             case 13: return [2 /*return*/];
         }
     });
 }); };
-var extractStreamTape = function (url, axios) { return __awaiter(void 0, void 0, void 0, function () {
-    var data, html, directMatch, rawLink, normalized, finalUrl, error_3;
-    var _a;
-    return __generator(this, function (_b) {
-        switch (_b.label) {
-            case 0:
-                _b.trys.push([0, 2, , 3]);
-                return [4 /*yield*/, axios.get(url, {
-                        headers: {
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                            Referer: url,
-                            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-                            "Accept-Language": "en-US,en;q=0.9",
-                            "Cache-Control": "no-cache",
-                            Pragma: "no-cache",
-                        },
-                    })];
-            case 1:
-                data = (_b.sent()).data;
-                html = data;
-                directMatch = (_a = html.match(/id="robotlink"[^>]*>([^<]+)</)) !== null && _a !== void 0 ? _a : html.match(/document\.getElementById\('robotlink'\)\.innerHTML\s*=\s*'([^']+)'/);
-                if (!directMatch || !directMatch[1]) {
-                    return [2 /*return*/, null];
-                }
-                rawLink = directMatch[1]
-                    .replace(/\\u0026/g, "&")
-                    .replace(/&amp;/g, "&")
-                    .trim();
-                normalized = rawLink.startsWith("http") || rawLink.startsWith("https")
-                    ? rawLink
-                    : rawLink.startsWith("//")
-                        ? "https:".concat(rawLink)
-                        : rawLink.startsWith("/")
-                            ? "".concat(getOrigin(url)).concat(rawLink)
-                            : rawLink;
-                finalUrl = normalized.includes("&stream=") || normalized.includes("stream=")
-                    ? normalized
-                    : "".concat(normalized, "&stream=1");
-                return [2 /*return*/, {
-                        link: finalUrl,
-                        headers: {
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                            Referer: url,
-                        },
-                        type: "mp4",
-                    }];
-            case 2:
-                error_3 = _b.sent();
-                console.error("Primewire extractor (StreamTape) failed", error_3);
-                return [2 /*return*/, null];
-            case 3: return [2 /*return*/];
-        }
-    });
-}); };
-var HOST_EXTRACTORS = [
-    {
-        match: function (link, host) {
-            return normalizeHost(host).includes("mixdrop") || link.includes("mixdrop");
-        },
-        extractor: extractMixdrop,
-    },
-    {
-        match: function (link, host) {
-            return normalizeHost(host).includes("dood") || link.includes("dood");
-        },
-        extractor: extractDood,
-    },
-    {
-        match: function (link, host) {
-            return normalizeHost(host).includes("streamtape") ||
-                link.includes("streamtape") ||
-                link.includes("streamta");
-        },
-        extractor: extractStreamTape,
-    },
-];
-var extractStreamForHost = function (hostLabel, directLink, axios) { return __awaiter(void 0, void 0, void 0, function () {
-    var host, HOST_EXTRACTORS_1, HOST_EXTRACTORS_1_1, _a, match, extractor;
-    var e_2, _b;
-    return __generator(this, function (_c) {
-        host = normalizeHost(hostLabel);
-        try {
-            for (HOST_EXTRACTORS_1 = __values(HOST_EXTRACTORS), HOST_EXTRACTORS_1_1 = HOST_EXTRACTORS_1.next(); !HOST_EXTRACTORS_1_1.done; HOST_EXTRACTORS_1_1 = HOST_EXTRACTORS_1.next()) {
-                _a = HOST_EXTRACTORS_1_1.value, match = _a.match, extractor = _a.extractor;
-                if (match(directLink, host)) {
-                    return [2 /*return*/, extractor(directLink, axios)];
-                }
-            }
-        }
-        catch (e_2_1) { e_2 = { error: e_2_1 }; }
-        finally {
-            try {
-                if (HOST_EXTRACTORS_1_1 && !HOST_EXTRACTORS_1_1.done && (_b = HOST_EXTRACTORS_1.return)) _b.call(HOST_EXTRACTORS_1);
-            }
-            finally { if (e_2) throw e_2.error; }
-        }
-        return [2 /*return*/, null];
-    });
-}); };
-exports.extractStreamForHost = extractStreamForHost;
+exports.extractDood = extractDood;

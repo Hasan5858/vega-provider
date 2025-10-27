@@ -1,5 +1,62 @@
 import { Stream, ProviderContext } from "../types";
-import { extractStreamForHost } from "./extractors";
+import { extractMixdrop } from "../mixdropExtractor";
+import { extractDood } from "../doodExtractor";
+import { extractStreamTape } from "../streamtapeExtractor";
+
+type ExtractedStream = {
+  link: string;
+  headers?: Record<string, string>;
+  type?: string;
+};
+
+type Extractor = (
+  url: string,
+  axios: ProviderContext["axios"]
+) => Promise<ExtractedStream | null>;
+
+const normalizeHost = (value: string) => value.toLowerCase();
+
+const getOrigin = (input: string): string => {
+  const match = input.match(/^(https?:\/\/[^/]+)/i);
+  return match ? match[1] : "https://www.primewire.mov";
+};
+
+const HOST_EXTRACTORS: Array<{
+  match: (link: string, host: string) => boolean;
+  extractor: Extractor;
+}> = [
+  {
+    match: (link, host) =>
+      normalizeHost(host).includes("mixdrop") || link.includes("mixdrop"),
+    extractor: extractMixdrop,
+  },
+  {
+    match: (link, host) =>
+      normalizeHost(host).includes("dood") || link.includes("dood"),
+    extractor: extractDood,
+  },
+  {
+    match: (link, host) =>
+      normalizeHost(host).includes("streamtape") ||
+      link.includes("streamtape") ||
+      link.includes("streamta"),
+    extractor: extractStreamTape,
+  },
+];
+
+const extractStreamForHost = async (
+  hostLabel: string,
+  directLink: string,
+  axios: ProviderContext["axios"]
+): Promise<ExtractedStream | null> => {
+  const host = normalizeHost(hostLabel);
+  for (const { match, extractor } of HOST_EXTRACTORS) {
+    if (match(directLink, host)) {
+      return extractor(directLink, axios);
+    }
+  }
+  return null;
+};
 
 // Blowfish constants inlined (P array and S-boxes)
 const P_ARRAY_BF = [608135816,2242054355,320440878,57701188,2752067618,698298832,137296536,3964562569,1160258022,953160567,3193202383,887688300,3232508343,3380367581,1065670069,3041331479,2450970073,2306472731];

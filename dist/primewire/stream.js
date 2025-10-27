@@ -35,6 +35,17 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
 var __read = (this && this.__read) || function (o, n) {
     var m = typeof Symbol === "function" && o[Symbol.iterator];
     if (!m) return o;
@@ -60,20 +71,61 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     }
     return to.concat(ar || Array.prototype.slice.call(from));
 };
-var __values = (this && this.__values) || function(o) {
-    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
-    if (m) return m.call(o);
-    if (o && typeof o.length === "number") return {
-        next: function () {
-            if (o && i >= o.length) o = void 0;
-            return { value: o && o[i++], done: !o };
-        }
-    };
-    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getStream = void 0;
-var extractors_1 = require("./extractors");
+var mixdropExtractor_1 = require("../mixdropExtractor");
+var doodExtractor_1 = require("../doodExtractor");
+var streamtapeExtractor_1 = require("../streamtapeExtractor");
+var normalizeHost = function (value) { return value.toLowerCase(); };
+var getOrigin = function (input) {
+    var match = input.match(/^(https?:\/\/[^/]+)/i);
+    return match ? match[1] : "https://www.primewire.mov";
+};
+var HOST_EXTRACTORS = [
+    {
+        match: function (link, host) {
+            return normalizeHost(host).includes("mixdrop") || link.includes("mixdrop");
+        },
+        extractor: mixdropExtractor_1.extractMixdrop,
+    },
+    {
+        match: function (link, host) {
+            return normalizeHost(host).includes("dood") || link.includes("dood");
+        },
+        extractor: doodExtractor_1.extractDood,
+    },
+    {
+        match: function (link, host) {
+            return normalizeHost(host).includes("streamtape") ||
+                link.includes("streamtape") ||
+                link.includes("streamta");
+        },
+        extractor: streamtapeExtractor_1.extractStreamTape,
+    },
+];
+var extractStreamForHost = function (hostLabel, directLink, axios) { return __awaiter(void 0, void 0, void 0, function () {
+    var host, HOST_EXTRACTORS_1, HOST_EXTRACTORS_1_1, _a, match, extractor;
+    var e_1, _b;
+    return __generator(this, function (_c) {
+        host = normalizeHost(hostLabel);
+        try {
+            for (HOST_EXTRACTORS_1 = __values(HOST_EXTRACTORS), HOST_EXTRACTORS_1_1 = HOST_EXTRACTORS_1.next(); !HOST_EXTRACTORS_1_1.done; HOST_EXTRACTORS_1_1 = HOST_EXTRACTORS_1.next()) {
+                _a = HOST_EXTRACTORS_1_1.value, match = _a.match, extractor = _a.extractor;
+                if (match(directLink, host)) {
+                    return [2 /*return*/, extractor(directLink, axios)];
+                }
+            }
+        }
+        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+        finally {
+            try {
+                if (HOST_EXTRACTORS_1_1 && !HOST_EXTRACTORS_1_1.done && (_b = HOST_EXTRACTORS_1.return)) _b.call(HOST_EXTRACTORS_1);
+            }
+            finally { if (e_1) throw e_1.error; }
+        }
+        return [2 /*return*/, null];
+    });
+}); };
 // Blowfish constants inlined (P array and S-boxes)
 var P_ARRAY_BF = [608135816, 2242054355, 320440878, 57701188, 2752067618, 698298832, 137296536, 3964562569, 1160258022, 953160567, 3193202383, 887688300, 3232508343, 3380367581, 1065670069, 3041331479, 2450970073, 2306472731];
 // S-box arrays truncated for brevity - will include full arrays...
@@ -264,7 +316,7 @@ var QUALITY_MAP = {
     quality_hd: "1080",
 };
 var mapQuality = function (className) {
-    var e_1, _a;
+    var e_2, _a;
     if (!className) {
         return undefined;
     }
@@ -276,12 +328,12 @@ var mapQuality = function (className) {
             }
         }
     }
-    catch (e_1_1) { e_1 = { error: e_1_1 }; }
+    catch (e_2_1) { e_2 = { error: e_2_1 }; }
     finally {
         try {
             if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
         }
-        finally { if (e_1) throw e_1.error; }
+        finally { if (e_2) throw e_2.error; }
     }
     return undefined;
 };
@@ -343,8 +395,8 @@ function handlePrimeSrcEmbed(url, axios, cheerioModule) {
     });
 }
 var resolveGoEntries = function (url, $, axios) { return __awaiter(void 0, void 0, void 0, function () {
-    var urlMatch, baseUrl, linkKeys, entries, results, entries_1, entries_1_1, entry, key, goUrl, goData, response, error_2, directLink, hostLabel, extracted, e_2_1;
-    var e_2, _a;
+    var urlMatch, baseUrl, linkKeys, entries, results, entries_1, entries_1_1, entry, key, goUrl, goData, response, error_2, directLink, hostLabel, extracted, e_3_1;
+    var e_3, _a;
     return __generator(this, function (_b) {
         switch (_b.label) {
             case 0:
@@ -411,7 +463,7 @@ var resolveGoEntries = function (url, $, axios) { return __awaiter(void 0, void 
                     return [3 /*break*/, 8];
                 }
                 hostLabel = ((goData === null || goData === void 0 ? void 0 : goData.host) || entry.host || "Primewire").trim();
-                return [4 /*yield*/, (0, extractors_1.extractStreamForHost)(hostLabel, directLink, axios)];
+                return [4 /*yield*/, extractStreamForHost(hostLabel, directLink, axios)];
             case 7:
                 extracted = _b.sent();
                 if (extracted) {
@@ -431,14 +483,14 @@ var resolveGoEntries = function (url, $, axios) { return __awaiter(void 0, void 
                 return [3 /*break*/, 2];
             case 9: return [3 /*break*/, 12];
             case 10:
-                e_2_1 = _b.sent();
-                e_2 = { error: e_2_1 };
+                e_3_1 = _b.sent();
+                e_3 = { error: e_3_1 };
                 return [3 /*break*/, 12];
             case 11:
                 try {
                     if (entries_1_1 && !entries_1_1.done && (_a = entries_1.return)) _a.call(entries_1);
                 }
-                finally { if (e_2) throw e_2.error; }
+                finally { if (e_3) throw e_3.error; }
                 return [7 /*endfinally*/];
             case 12: return [2 /*return*/, results];
         }
@@ -446,8 +498,8 @@ var resolveGoEntries = function (url, $, axios) { return __awaiter(void 0, void 
 }); };
 var getStream = function (_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var axios, cheerio, pageResponse, $_2, decodedStreams, mixdropCandidates_2, streams, mixdropCandidates_1, mixdropCandidates_1_1, candidate, extracted, e_3_1, error_3;
-        var e_3, _c;
+        var axios, cheerio, pageResponse, $_2, decodedStreams, mixdropCandidates_2, streams, mixdropCandidates_1, mixdropCandidates_1_1, candidate, extracted, e_4_1, error_3;
+        var e_4, _c;
         var url = _b.link, type = _b.type, providerContext = _b.providerContext;
         return __generator(this, function (_d) {
             switch (_d.label) {
@@ -496,7 +548,7 @@ var getStream = function (_a) {
                 case 7:
                     if (!!mixdropCandidates_1_1.done) return [3 /*break*/, 10];
                     candidate = mixdropCandidates_1_1.value;
-                    return [4 /*yield*/, (0, extractors_1.extractStreamForHost)(candidate.server, candidate.link, axios)];
+                    return [4 /*yield*/, extractStreamForHost(candidate.server, candidate.link, axios)];
                 case 8:
                     extracted = _d.sent();
                     if (extracted) {
@@ -513,14 +565,14 @@ var getStream = function (_a) {
                     return [3 /*break*/, 7];
                 case 10: return [3 /*break*/, 13];
                 case 11:
-                    e_3_1 = _d.sent();
-                    e_3 = { error: e_3_1 };
+                    e_4_1 = _d.sent();
+                    e_4 = { error: e_4_1 };
                     return [3 /*break*/, 13];
                 case 12:
                     try {
                         if (mixdropCandidates_1_1 && !mixdropCandidates_1_1.done && (_c = mixdropCandidates_1.return)) _c.call(mixdropCandidates_1);
                     }
-                    finally { if (e_3) throw e_3.error; }
+                    finally { if (e_4) throw e_4.error; }
                     return [7 /*endfinally*/];
                 case 13:
                     if (streams.length) {
