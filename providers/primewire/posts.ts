@@ -99,10 +99,25 @@ async function posts({
     // If no results, try playlist table row selector
     if (catalog.length === 0) {
       $("table tbody tr").each((i, element) => {
-        const titleLink = $(element).find("a");
+        // Skip info header rows (first row in playlists)
+        if ($(element).find(".playlist_item_info").length > 0) return;
+        
+        // Find link in first td (may be inside a or standalone)
+        const firstTd = $(element).find("td").first();
+        const titleLink = firstTd.find("a").first();
+        
+        if (titleLink.length === 0) return;
+        
         const title = titleLink.text().trim();
         const link = titleLink.attr("href");
-        const image = $(element).find("img").attr("src") || "";
+        
+        // Image is inside the playlist_thumb div, specifically in the img tag
+        let image = firstTd.find(".playlist_thumb img").attr("src") || "";
+        
+        // Convert relative image URLs to absolute URLs
+        if (image && image.startsWith("/")) {
+          image = baseUrl + image;
+        }
         
         if (!title || !link) return;
         
@@ -125,7 +140,8 @@ async function posts({
       });
     }
 
-    return catalog;
+    // Limit results to 30 posts for faster homepage loading
+    return catalog.slice(0, 30);
   } catch (err) {
     console.error("primewire error ", err);
     return [];

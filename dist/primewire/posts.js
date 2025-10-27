@@ -131,10 +131,22 @@ function posts(_a) {
                     // If no results, try playlist table row selector
                     if (catalog_1.length === 0) {
                         $_1("table tbody tr").each(function (i, element) {
-                            var titleLink = $_1(element).find("a");
+                            // Skip info header rows (first row in playlists)
+                            if ($_1(element).find(".playlist_item_info").length > 0)
+                                return;
+                            // Find link in first td (may be inside a or standalone)
+                            var firstTd = $_1(element).find("td").first();
+                            var titleLink = firstTd.find("a").first();
+                            if (titleLink.length === 0)
+                                return;
                             var title = titleLink.text().trim();
                             var link = titleLink.attr("href");
-                            var image = $_1(element).find("img").attr("src") || "";
+                            // Image is inside the playlist_thumb div, specifically in the img tag
+                            var image = firstTd.find(".playlist_thumb img").attr("src") || "";
+                            // Convert relative image URLs to absolute URLs
+                            if (image && image.startsWith("/")) {
+                                image = baseUrl + image;
+                            }
                             if (!title || !link)
                                 return;
                             var fullLink = baseUrl + link;
@@ -153,7 +165,8 @@ function posts(_a) {
                             });
                         });
                     }
-                    return [2 /*return*/, catalog_1];
+                    // Limit results to 30 posts for faster homepage loading
+                    return [2 /*return*/, catalog_1.slice(0, 30)];
                 case 2:
                     err_1 = _c.sent();
                     console.error("primewire error ", err_1);
