@@ -184,6 +184,16 @@ export type ProviderContext = {
       headers?: Record<string, string>;
       type?: string;
     } | null>;
+    luluvdooExtractor: (url: string, axios: AxiosStatic, signal?: AbortSignal) => Promise<{
+      link: string;
+      headers?: Record<string, string>;
+      type?: string;
+    } | null>;
+    bigwarpExtractor: (url: string, axios: AxiosStatic, signal?: AbortSignal) => Promise<{
+      link: string;
+      headers?: Record<string, string>;
+      type?: string;
+    } | null>;
     voeExtractor: (url: string) => Promise<Stream[]>;
   };
 };

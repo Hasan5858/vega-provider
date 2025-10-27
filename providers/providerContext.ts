@@ -18,6 +18,8 @@ import { filelionsExtractor } from "./filelionsExtractor";
 import { filemoonExtractor } from "./filemoonExtractor";
 import { streamwishExtractor } from "./streamwishExtractor";
 import { savefilesExtractor } from "./savefilesExtractor";
+import { luluvdooExtractor } from "./luluvdooExtractor";
+import { bigwarpExtractor } from "./bigwarpExtractor";
 import { ProviderContext } from "./types";
 import Aes from "react-native-aes-crypto";
 
@@ -43,6 +45,8 @@ const extractors = {
   voeExtractor,
   streamwishExtractor,
   savefilesExtractor,
+  luluvdooExtractor,
+  bigwarpExtractor,
 };
 
 export const providerContext: ProviderContext = {

@@ -75,6 +75,10 @@ const extractStreamForHost = async (
   if (host.includes("savefiles") || directLink.includes("savefiles")) {
     return providerContext.extractors.savefilesExtractor(directLink, axios);
   }
+
+  if (host.includes("luluvdoo") || directLink.includes("luluvdoo")) {
+    return providerContext.extractors.luluvdooExtractor(directLink, axios);
+  }
   
   if (host.includes("voe")) {
     const streams = await providerContext.extractors.voeExtractor(directLink);
@@ -89,10 +93,11 @@ const extractStreamForHost = async (
     return null;
   }
   
-  // TODO: Add more extractors as they're implemented in providerContext
-  // if (host.includes("filemoon")) return providerContext.extractors.fileMoonExtractor(directLink, axios);
-  // if (host.includes("filelions")) return providerContext.extractors.fileLionsExtractor(directLink, axios);
-  // ... etc
+  // Unsupported hosts (Cloudflare protected, Captcha protected, or no extractor):
+  // - bigwarp.cc (Cloudflare protected - cannot extract)
+  // - streamplay.to (Google Captcha protected - cannot extract)
+  // - vidmoly.me (no extractor yet)
+  // Only return streams for hosts we have working extractors for
   
   return null;
 };
