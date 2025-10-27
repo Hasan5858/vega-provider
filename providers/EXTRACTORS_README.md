@@ -1,8 +1,41 @@
 # Video Host Extractors
 
-This directory contains modular video extractors for various hosting services. Each extractor is a standalone module that can be easily maintained, updated, or removed independently.
+This directory contains modular video extractors for various hosting services. 
 
-## Available Extractors
+## ⚠️ Important Architecture Note
+
+**The separate extractor files (`streamtapeExtractor.ts`, `mixdropExtractor.ts`, `doodExtractor.ts`) are kept for reference and potential future use in other contexts, but they CANNOT be imported into provider modules due to the app's module system limitations.**
+
+The app's runtime environment does not support cross-module imports (like `import { extractMixdrop } from "../mixdropExtractor"`). Each provider module must be **self-contained**.
+
+## Current Implementation
+
+### For Provider Modules (e.g., `primewire/stream.ts`)
+Extractors must be **embedded inline** within the provider's stream.ts file:
+
+```typescript
+// ✅ CORRECT: Inline extractor functions
+const extractMixdrop: Extractor = async (url, axios) => {
+  // extraction logic here
+};
+
+const extractDood: Extractor = async (url, axios) => {
+  // extraction logic here
+};
+
+// Use them in HOST_EXTRACTORS array
+const HOST_EXTRACTORS = [
+  { match: (link, host) => host.includes("mixdrop"), extractor: extractMixdrop },
+  { match: (link, host) => host.includes("dood"), extractor: extractDood },
+];
+```
+
+```typescript
+// ❌ INCORRECT: Importing from external modules
+import { extractMixdrop } from "../mixdropExtractor";  // Won't work!
+```
+
+## Available Extractors (Reference)
 
 ### StreamTape Extractor (`streamtapeExtractor.ts`)
 - **Hosts**: streamtape.com, streamta.pe
@@ -24,20 +57,28 @@ This directory contains modular video extractors for various hosting services. E
 
 ## Usage
 
-Each extractor exports a single async function that takes a URL and axios instance:
+These extractor files serve as **reference implementations**. When you need an extractor:
+
+1. **Copy the extractor function** from the reference file
+2. **Paste it directly** into your provider's stream.ts file
+3. **Customize** as needed for your provider
 
 ```typescript
-import { extractStreamTape } from "./streamtapeExtractor";
-import { extractMixdrop } from "./mixdropExtractor";
-import { extractDood } from "./doodExtractor";
+// Example: Adding StreamTape support to a provider
+// 1. Copy from streamtapeExtractor.ts
+// 2. Paste into your provider/stream.ts
 
-// Example usage
-const result = await extractStreamTape(url, axios);
-if (result) {
-  console.log("Video URL:", result.link);
-  console.log("Headers:", result.headers);
-  console.log("Type:", result.type);
-}
+const extractStreamTape: Extractor = async (url, axios) => {
+  // ... full implementation here ...
+};
+
+// 3. Add to your HOST_EXTRACTORS
+const HOST_EXTRACTORS = [
+  {
+    match: (link, host) => host.includes("streamtape"),
+    extractor: extractStreamTape
+  }
+];
 ```
 
 ## Extractor Interface
