@@ -533,51 +533,95 @@ const resolveGoEntries = async (
 
 /**
  * Fallback: Use PrimeSrc API when age verification or no links found
- * Fetches from OMDB → TMDB → PrimeSrc API chain
+ * Fetches from Primewire page IMDB ID → PrimeSrc API chain
  */
 async function fetchPrimeSrcFallback(
   url: string,
   type: string,
+  $: CheerioInstance,
   axios: ProviderContext["axios"],
   providerContext: ProviderContext
 ): Promise<Stream[]> {
   try {
     console.log("Primewire: Primary scrape failed, trying PrimeSrc API fallback...");
     
-    // Extract IMDB ID from URL or fetch from OMDB
-    // URL format: https://www.primewire.mov/movie/1153991-love or /tv/...
-    const urlMatch = url.match(/\/(movie|tv)\/(\d+)-([^/?]+)/);
-    if (!urlMatch) {
-      console.log("Primewire: Cannot parse URL for fallback");
-      return [];
-    }
-    
-    const [, contentType, id, slug] = urlMatch;
-    const title = slug.replace(/-/g, " ");
-    
-    console.log(`Primewire: Searching OMDB for "${title}" (${contentType})`);
-    
-    // Search OMDB API to get IMDB ID
-    const omdbSearchUrl = `https://www.omdbapi.com/?apikey=84448d47&t=${encodeURIComponent(title)}&type=${contentType}`;
+    // Try to extract IMDB ID from the page
     let imdbId: string | null = null;
     
-    try {
-      const omdbRes = await axios.get(omdbSearchUrl, { timeout: 10000 });
-      imdbId = omdbRes.data?.imdbID;
-      
-      if (!imdbId) {
-        console.log("Primewire: No IMDB ID found in OMDB");
-        return [];
+    // Method 1: Look for IMDB link in page
+    $('a[href*="imdb.com/title/"]').each((i: number, el: any) => {
+      const href = $(el).attr("href") || "";
+      const match = href.match(/imdb\.com\/title\/(tt\d+)/);
+      if (match) {
+        imdbId = match[1];
+        return false; // break
       }
-      
-      console.log(`Primewire: Found IMDB ID: ${imdbId}`);
-    } catch (omdbError) {
-      console.error("Primewire: OMDB API failed", omdbError);
+    });
+    
+    // Method 2: Look for meta tags
+    if (!imdbId) {
+      const imdbMeta = $('meta[property="og:url"]').attr("content") || 
+                       $('meta[name="imdb:id"]').attr("content");
+      if (imdbMeta) {
+        const match = imdbMeta.match(/tt\d+/);
+        if (match) imdbId = match[0];
+      }
+    }
+    
+    // Method 3: Search in page text
+    if (!imdbId) {
+      const bodyText = $("body").text();
+      const match = bodyText.match(/tt\d{7,}/);
+      if (match) imdbId = match[0];
+    }
+    
+    // Method 4: Extract from URL and search OMDB (fallback)
+    if (!imdbId) {
+      console.log("Primewire: No IMDB ID found on page, trying OMDB search...");
+      const urlMatch = url.match(/\/(movie|tv)\/(\d+)-([^/?]+)/);
+      if (urlMatch) {
+        const [, contentType, id, slug] = urlMatch;
+        const title = slug.replace(/-/g, " ");
+        
+        // Try with public OMDB alternative or without API key requirement
+        try {
+          // Use the movie-database API as alternative
+          const searchUrl = `https://api.themoviedb.org/3/search/${contentType === 'tv' ? 'tv' : 'movie'}?query=${encodeURIComponent(title)}`;
+          const tmdbRes = await axios.get(searchUrl, {
+            timeout: 10000,
+            headers: {
+              'Accept': 'application/json',
+            }
+          });
+          
+          if (tmdbRes.data?.results?.[0]?.id) {
+            // Get external IDs from TMDB
+            const tmdbId = tmdbRes.data.results[0].id;
+            const externalUrl = `https://api.themoviedb.org/3/${contentType === 'tv' ? 'tv' : 'movie'}/${tmdbId}/external_ids`;
+            const externalRes = await axios.get(externalUrl, {
+              timeout: 10000,
+              headers: {
+                'Accept': 'application/json',
+              }
+            });
+            
+            imdbId = externalRes.data?.imdb_id;
+          }
+        } catch (searchError) {
+          console.log("Primewire: External API search failed, will try without IMDB ID");
+        }
+      }
+    }
+    
+    if (!imdbId) {
+      console.log("Primewire: Could not find IMDB ID, cannot use PrimeSrc API fallback");
       return [];
     }
     
+    console.log(`Primewire: Found IMDB ID: ${imdbId}`);
+    
     // Fetch available servers from PrimeSrc API
-    const primeSrcApiUrl = `https://primesrc.me/api/v1/s?imdb=${imdbId}&type=${contentType}`;
+    const primeSrcApiUrl = `https://primesrc.me/api/v1/s?imdb=${imdbId}&type=${type}`;
     console.log(`Primewire: Fetching servers from PrimeSrc API...`);
     
     let serversData: any;
@@ -844,7 +888,7 @@ export const getStream = async function ({
     
     if (needsAgeVerification) {
       console.log("Primewire: Age verification required, using PrimeSrc API fallback");
-      return await fetchPrimeSrcFallback(url, type, axios, providerContext);
+      return await fetchPrimeSrcFallback(url, type, $, axios, providerContext);
     }
 
     const decodedStreams = await resolveGoEntries(url, $, axios, providerContext);
@@ -854,7 +898,7 @@ export const getStream = async function ({
 
     // If no links found, try PrimeSrc API fallback
     console.log("Primewire: No links found via primary scrape, trying PrimeSrc API fallback");
-    const fallbackStreams = await fetchPrimeSrcFallback(url, type, axios, providerContext);
+    const fallbackStreams = await fetchPrimeSrcFallback(url, type, $, axios, providerContext);
     if (fallbackStreams.length) {
       return fallbackStreams;
     }

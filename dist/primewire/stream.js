@@ -585,52 +585,93 @@ var resolveGoEntries = function (url, $, axios, providerContext) { return __awai
 }); };
 /**
  * Fallback: Use PrimeSrc API when age verification or no links found
- * Fetches from OMDB → TMDB → PrimeSrc API chain
+ * Fetches from Primewire page IMDB ID → PrimeSrc API chain
  */
-function fetchPrimeSrcFallback(url, type, axios, providerContext) {
+function fetchPrimeSrcFallback(url, type, $, axios, providerContext) {
     return __awaiter(this, void 0, void 0, function () {
-        var urlMatch, _a, contentType, id, slug, title, omdbSearchUrl, imdbId, omdbRes, omdbError_1, primeSrcApiUrl, serversData, apiRes, apiError_1, results, firstExtracted, _b, _c, server, serverName, serverKey, linkApiUrl, linkRes, directLink, extracted, linkError_1, e_3_1, error_3;
+        var imdbId_1, imdbMeta, match, bodyText, match, urlMatch, _a, contentType, id, slug, title, searchUrl, tmdbRes, tmdbId, externalUrl, externalRes, searchError_1, primeSrcApiUrl, serversData, apiRes, apiError_1, results, firstExtracted, _b, _c, server, serverName, serverKey, linkApiUrl, linkRes, directLink, extracted, linkError_1, e_3_1, error_3;
         var e_3, _d;
-        var _e, _f;
-        return __generator(this, function (_g) {
-            switch (_g.label) {
+        var _e, _f, _g, _h, _j;
+        return __generator(this, function (_k) {
+            switch (_k.label) {
                 case 0:
-                    _g.trys.push([0, 22, , 23]);
+                    _k.trys.push([0, 24, , 25]);
                     console.log("Primewire: Primary scrape failed, trying PrimeSrc API fallback...");
-                    urlMatch = url.match(/\/(movie|tv)\/(\d+)-([^/?]+)/);
-                    if (!urlMatch) {
-                        console.log("Primewire: Cannot parse URL for fallback");
-                        return [2 /*return*/, []];
+                    imdbId_1 = null;
+                    // Method 1: Look for IMDB link in page
+                    $('a[href*="imdb.com/title/"]').each(function (i, el) {
+                        var href = $(el).attr("href") || "";
+                        var match = href.match(/imdb\.com\/title\/(tt\d+)/);
+                        if (match) {
+                            imdbId_1 = match[1];
+                            return false; // break
+                        }
+                    });
+                    // Method 2: Look for meta tags
+                    if (!imdbId_1) {
+                        imdbMeta = $('meta[property="og:url"]').attr("content") ||
+                            $('meta[name="imdb:id"]').attr("content");
+                        if (imdbMeta) {
+                            match = imdbMeta.match(/tt\d+/);
+                            if (match)
+                                imdbId_1 = match[0];
+                        }
                     }
+                    // Method 3: Search in page text
+                    if (!imdbId_1) {
+                        bodyText = $("body").text();
+                        match = bodyText.match(/tt\d{7,}/);
+                        if (match)
+                            imdbId_1 = match[0];
+                    }
+                    if (!!imdbId_1) return [3 /*break*/, 6];
+                    console.log("Primewire: No IMDB ID found on page, trying OMDB search...");
+                    urlMatch = url.match(/\/(movie|tv)\/(\d+)-([^/?]+)/);
+                    if (!urlMatch) return [3 /*break*/, 6];
                     _a = __read(urlMatch, 4), contentType = _a[1], id = _a[2], slug = _a[3];
                     title = slug.replace(/-/g, " ");
-                    console.log("Primewire: Searching OMDB for \"".concat(title, "\" (").concat(contentType, ")"));
-                    omdbSearchUrl = "https://www.omdbapi.com/?apikey=84448d47&t=".concat(encodeURIComponent(title), "&type=").concat(contentType);
-                    imdbId = null;
-                    _g.label = 1;
+                    _k.label = 1;
                 case 1:
-                    _g.trys.push([1, 3, , 4]);
-                    return [4 /*yield*/, axios.get(omdbSearchUrl, { timeout: 10000 })];
+                    _k.trys.push([1, 5, , 6]);
+                    searchUrl = "https://api.themoviedb.org/3/search/".concat(contentType === 'tv' ? 'tv' : 'movie', "?query=").concat(encodeURIComponent(title));
+                    return [4 /*yield*/, axios.get(searchUrl, {
+                            timeout: 10000,
+                            headers: {
+                                'Accept': 'application/json',
+                            }
+                        })];
                 case 2:
-                    omdbRes = _g.sent();
-                    imdbId = (_e = omdbRes.data) === null || _e === void 0 ? void 0 : _e.imdbID;
-                    if (!imdbId) {
-                        console.log("Primewire: No IMDB ID found in OMDB");
+                    tmdbRes = _k.sent();
+                    if (!((_g = (_f = (_e = tmdbRes.data) === null || _e === void 0 ? void 0 : _e.results) === null || _f === void 0 ? void 0 : _f[0]) === null || _g === void 0 ? void 0 : _g.id)) return [3 /*break*/, 4];
+                    tmdbId = tmdbRes.data.results[0].id;
+                    externalUrl = "https://api.themoviedb.org/3/".concat(contentType === 'tv' ? 'tv' : 'movie', "/").concat(tmdbId, "/external_ids");
+                    return [4 /*yield*/, axios.get(externalUrl, {
+                            timeout: 10000,
+                            headers: {
+                                'Accept': 'application/json',
+                            }
+                        })];
+                case 3:
+                    externalRes = _k.sent();
+                    imdbId_1 = (_h = externalRes.data) === null || _h === void 0 ? void 0 : _h.imdb_id;
+                    _k.label = 4;
+                case 4: return [3 /*break*/, 6];
+                case 5:
+                    searchError_1 = _k.sent();
+                    console.log("Primewire: External API search failed, will try without IMDB ID");
+                    return [3 /*break*/, 6];
+                case 6:
+                    if (!imdbId_1) {
+                        console.log("Primewire: Could not find IMDB ID, cannot use PrimeSrc API fallback");
                         return [2 /*return*/, []];
                     }
-                    console.log("Primewire: Found IMDB ID: ".concat(imdbId));
-                    return [3 /*break*/, 4];
-                case 3:
-                    omdbError_1 = _g.sent();
-                    console.error("Primewire: OMDB API failed", omdbError_1);
-                    return [2 /*return*/, []];
-                case 4:
-                    primeSrcApiUrl = "https://primesrc.me/api/v1/s?imdb=".concat(imdbId, "&type=").concat(contentType);
+                    console.log("Primewire: Found IMDB ID: ".concat(imdbId_1));
+                    primeSrcApiUrl = "https://primesrc.me/api/v1/s?imdb=".concat(imdbId_1, "&type=").concat(type);
                     console.log("Primewire: Fetching servers from PrimeSrc API...");
                     serversData = void 0;
-                    _g.label = 5;
-                case 5:
-                    _g.trys.push([5, 7, , 8]);
+                    _k.label = 7;
+                case 7:
+                    _k.trys.push([7, 9, , 10]);
                     return [4 /*yield*/, axios.get(primeSrcApiUrl, {
                             timeout: 15000,
                             headers: {
@@ -638,15 +679,15 @@ function fetchPrimeSrcFallback(url, type, axios, providerContext) {
                                 'Accept': 'application/json',
                             }
                         })];
-                case 6:
-                    apiRes = _g.sent();
+                case 8:
+                    apiRes = _k.sent();
                     serversData = apiRes.data;
-                    return [3 /*break*/, 8];
-                case 7:
-                    apiError_1 = _g.sent();
+                    return [3 /*break*/, 10];
+                case 9:
+                    apiError_1 = _k.sent();
                     console.error("Primewire: PrimeSrc API failed", apiError_1);
                     return [2 /*return*/, []];
-                case 8:
+                case 10:
                     if (!(serversData === null || serversData === void 0 ? void 0 : serversData.servers) || !Array.isArray(serversData.servers)) {
                         console.log("Primewire: No servers in PrimeSrc API response");
                         return [2 /*return*/, []];
@@ -654,30 +695,30 @@ function fetchPrimeSrcFallback(url, type, axios, providerContext) {
                     console.log("Primewire: Found ".concat(serversData.servers.length, " servers in PrimeSrc API"));
                     results = [];
                     firstExtracted = false;
-                    _g.label = 9;
-                case 9:
-                    _g.trys.push([9, 19, 20, 21]);
+                    _k.label = 11;
+                case 11:
+                    _k.trys.push([11, 21, 22, 23]);
                     _b = __values(serversData.servers), _c = _b.next();
-                    _g.label = 10;
-                case 10:
-                    if (!!_c.done) return [3 /*break*/, 18];
+                    _k.label = 12;
+                case 12:
+                    if (!!_c.done) return [3 /*break*/, 20];
                     server = _c.value;
                     serverName = server.name || "Unknown";
                     serverKey = server.key;
                     if (!serverKey) {
                         console.log("Primewire: Server ".concat(serverName, " has no key, skipping"));
-                        return [3 /*break*/, 17];
+                        return [3 /*break*/, 19];
                     }
                     // Check if we have an extractor for this host
                     if (!hasExtractor(serverName)) {
                         console.log("Primewire: No extractor for ".concat(serverName, ", skipping"));
-                        return [3 /*break*/, 17];
+                        return [3 /*break*/, 19];
                     }
-                    if (!!firstExtracted) return [3 /*break*/, 16];
+                    if (!!firstExtracted) return [3 /*break*/, 18];
                     console.log("Primewire: Fetching link for ".concat(serverName, "..."));
-                    _g.label = 11;
-                case 11:
-                    _g.trys.push([11, 14, , 15]);
+                    _k.label = 13;
+                case 13:
+                    _k.trys.push([13, 16, , 17]);
                     linkApiUrl = "https://primesrc.me/api/v1/l?key=".concat(serverKey);
                     return [4 /*yield*/, axios.get(linkApiUrl, {
                             timeout: 10000,
@@ -686,17 +727,17 @@ function fetchPrimeSrcFallback(url, type, axios, providerContext) {
                                 'Accept': 'application/json',
                             }
                         })];
-                case 12:
-                    linkRes = _g.sent();
-                    directLink = (_f = linkRes.data) === null || _f === void 0 ? void 0 : _f.link;
+                case 14:
+                    linkRes = _k.sent();
+                    directLink = (_j = linkRes.data) === null || _j === void 0 ? void 0 : _j.link;
                     if (!directLink) {
                         console.log("Primewire: No link returned for ".concat(serverName));
-                        return [3 /*break*/, 17];
+                        return [3 /*break*/, 19];
                     }
                     console.log("Primewire: Got direct link for ".concat(serverName, ", extracting..."));
                     return [4 /*yield*/, extractStreamForHost(serverName, directLink, axios, providerContext)];
-                case 13:
-                    extracted = _g.sent();
+                case 15:
+                    extracted = _k.sent();
                     if (extracted) {
                         console.log("Primewire: Successfully extracted ".concat(serverName, " via PrimeSrc API"));
                         results.push({
@@ -709,15 +750,15 @@ function fetchPrimeSrcFallback(url, type, axios, providerContext) {
                     }
                     else {
                         console.log("Primewire: Extraction failed for ".concat(serverName, ", trying next..."));
-                        return [3 /*break*/, 17];
+                        return [3 /*break*/, 19];
                     }
-                    return [3 /*break*/, 15];
-                case 14:
-                    linkError_1 = _g.sent();
-                    console.error("Primewire: Failed to fetch/extract ".concat(serverName), linkError_1);
                     return [3 /*break*/, 17];
-                case 15: return [3 /*break*/, 17];
                 case 16:
+                    linkError_1 = _k.sent();
+                    console.error("Primewire: Failed to fetch/extract ".concat(serverName), linkError_1);
+                    return [3 /*break*/, 19];
+                case 17: return [3 /*break*/, 19];
+                case 18:
                     // Add remaining servers as lazy-load
                     results.push({
                         server: "".concat(serverName, " (PrimeSrc)"),
@@ -728,33 +769,33 @@ function fetchPrimeSrcFallback(url, type, axios, providerContext) {
                         }),
                         type: "lazy",
                     });
-                    _g.label = 17;
-                case 17:
-                    _c = _b.next();
-                    return [3 /*break*/, 10];
-                case 18: return [3 /*break*/, 21];
+                    _k.label = 19;
                 case 19:
-                    e_3_1 = _g.sent();
+                    _c = _b.next();
+                    return [3 /*break*/, 12];
+                case 20: return [3 /*break*/, 23];
+                case 21:
+                    e_3_1 = _k.sent();
                     e_3 = { error: e_3_1 };
-                    return [3 /*break*/, 21];
-                case 20:
+                    return [3 /*break*/, 23];
+                case 22:
                     try {
                         if (_c && !_c.done && (_d = _b.return)) _d.call(_b);
                     }
                     finally { if (e_3) throw e_3.error; }
                     return [7 /*endfinally*/];
-                case 21:
+                case 23:
                     if (results.length > 0) {
                         console.log("Primewire: PrimeSrc API fallback returned ".concat(results.length, " servers"));
                         return [2 /*return*/, results];
                     }
                     console.log("Primewire: PrimeSrc API fallback found no working servers");
                     return [2 /*return*/, []];
-                case 22:
-                    error_3 = _g.sent();
+                case 24:
+                    error_3 = _k.sent();
                     console.error("Primewire: PrimeSrc API fallback error", error_3);
                     return [2 /*return*/, []];
-                case 23: return [2 /*return*/];
+                case 25: return [2 /*return*/];
             }
         });
     });
@@ -910,7 +951,7 @@ var getStream = function (_a) {
                         $_2(".signin-message").length > 0;
                     if (!needsAgeVerification) return [3 /*break*/, 8];
                     console.log("Primewire: Age verification required, using PrimeSrc API fallback");
-                    return [4 /*yield*/, fetchPrimeSrcFallback(url, type, axios, providerContext)];
+                    return [4 /*yield*/, fetchPrimeSrcFallback(url, type, $_2, axios, providerContext)];
                 case 7: return [2 /*return*/, _d.sent()];
                 case 8: return [4 /*yield*/, resolveGoEntries(url, $_2, axios, providerContext)];
                 case 9:
@@ -920,7 +961,7 @@ var getStream = function (_a) {
                     }
                     // If no links found, try PrimeSrc API fallback
                     console.log("Primewire: No links found via primary scrape, trying PrimeSrc API fallback");
-                    return [4 /*yield*/, fetchPrimeSrcFallback(url, type, axios, providerContext)];
+                    return [4 /*yield*/, fetchPrimeSrcFallback(url, type, $_2, axios, providerContext)];
                 case 10:
                     fallbackStreams = _d.sent();
                     if (fallbackStreams.length) {
