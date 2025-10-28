@@ -49,62 +49,106 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getStream = void 0;
 var getStream = function (_a) { return __awaiter(void 0, [_a], void 0, function (_b) {
-    var cheerio, headers, axios, streamData, streamLinks, url, res, iframe, iframeUrl, iframeRes, $, script, srcUrl, e_1;
+    var cheerio, headers_1, axios, getBaseUrl, baseUrl_1, slug, streamLinks_1, apiUrl, res, data, content, videoUrl, videoRes, videoData, videoError_1, pageRes, $_1, pageError_1, e_1;
     var _c, _d;
-    var data = _b.link, providerContext = _b.providerContext;
+    var link = _b.link, providerContext = _b.providerContext;
     return __generator(this, function (_e) {
         switch (_e.label) {
             case 0:
-                _e.trys.push([0, 3, , 4]);
-                cheerio = providerContext.cheerio, headers = providerContext.commonHeaders, axios = providerContext.axios;
-                streamData = JSON.parse(data);
-                streamLinks = [];
-                url = (streamData === null || streamData === void 0 ? void 0 : streamData.baseUrl) + "/api/" + (streamData === null || streamData === void 0 ? void 0 : streamData.slug);
-                console.log("rido url", url);
-                return [4 /*yield*/, axios.get(url, { headers: headers })];
+                _e.trys.push([0, 11, , 12]);
+                cheerio = providerContext.cheerio, headers_1 = providerContext.commonHeaders, axios = providerContext.axios, getBaseUrl = providerContext.getBaseUrl;
+                return [4 /*yield*/, getBaseUrl("ridomovies")];
             case 1:
-                res = _e.sent();
-                iframe = (_d = (_c = res.data.data) === null || _c === void 0 ? void 0 : _c[0]) === null || _d === void 0 ? void 0 : _d.url;
-                console.log("rido data", iframe);
-                iframeUrl = iframe.split('src="')[1].split('"')[0];
-                console.log("rido iframeUrl", iframeUrl);
-                return [4 /*yield*/, axios.get(iframeUrl, {
-                        headers: __assign(__assign({}, headers), { Referer: streamData === null || streamData === void 0 ? void 0 : streamData.baseUrl }),
+                baseUrl_1 = _e.sent();
+                console.log("ridomovies stream link:", link);
+                slug = link.replace(baseUrl_1 + "/", "");
+                console.log("ridomovies stream slug:", slug);
+                streamLinks_1 = [];
+                apiUrl = "".concat(baseUrl_1, "/core/api/content/").concat(slug);
+                console.log("ridomovies stream API URL:", apiUrl);
+                return [4 /*yield*/, axios.get(apiUrl, {
+                        headers: __assign(__assign({}, headers_1), { 'Referer': baseUrl_1 })
                     })];
             case 2:
-                iframeRes = _e.sent();
-                $ = cheerio.load(iframeRes.data);
-                script = $('script:contains("eval")').html();
-                if (!script) {
-                    throw new Error("Unable to find script");
+                res = _e.sent();
+                data = res.data;
+                console.log("ridomovies stream API response:", data);
+                if (!((_c = data === null || data === void 0 ? void 0 : data.data) === null || _c === void 0 ? void 0 : _c.contentable)) {
+                    throw new Error("No contentable data found for streaming");
                 }
-                srcUrl = unpackJavaScript(script.trim());
-                console.log("rido srcUrl", srcUrl);
-                streamLinks.push({
-                    link: srcUrl,
-                    server: "rido",
-                    type: "m3u8",
-                    headers: {
-                        Referer: iframeUrl,
-                    },
-                });
-                return [2 /*return*/, streamLinks];
+                content = data.data.contentable;
+                videoUrl = "".concat(baseUrl_1, "/core/api/content/").concat(slug, "/videos");
+                console.log("ridomovies video URL:", videoUrl);
+                _e.label = 3;
             case 3:
+                _e.trys.push([3, 5, , 6]);
+                return [4 /*yield*/, axios.get(videoUrl, {
+                        headers: __assign(__assign({}, headers_1), { 'Referer': baseUrl_1 })
+                    })];
+            case 4:
+                videoRes = _e.sent();
+                videoData = videoRes.data;
+                console.log("ridomovies video response:", videoData);
+                if ((_d = videoData === null || videoData === void 0 ? void 0 : videoData.data) === null || _d === void 0 ? void 0 : _d.videos) {
+                    videoData.data.videos.forEach(function (video) {
+                        if (video === null || video === void 0 ? void 0 : video.url) {
+                            streamLinks_1.push({
+                                link: video.url,
+                                server: "rido ".concat(video.quality || 'unknown'),
+                                type: video.type || "mp4",
+                                headers: {
+                                    Referer: baseUrl_1,
+                                    'User-Agent': headers_1['User-Agent'],
+                                },
+                            });
+                        }
+                    });
+                }
+                return [3 /*break*/, 6];
+            case 5:
+                videoError_1 = _e.sent();
+                console.log("ridomovies video API error:", videoError_1);
+                return [3 /*break*/, 6];
+            case 6:
+                if (!(streamLinks_1.length === 0)) return [3 /*break*/, 10];
+                _e.label = 7;
+            case 7:
+                _e.trys.push([7, 9, , 10]);
+                return [4 /*yield*/, axios.get(link, {
+                        headers: __assign(__assign({}, headers_1), { 'Referer': baseUrl_1 })
+                    })];
+            case 8:
+                pageRes = _e.sent();
+                $_1 = cheerio.load(pageRes.data);
+                // Look for video sources in the page
+                $_1('video source, iframe').each(function (i, element) {
+                    var src = $_1(element).attr('src');
+                    if (src && (src.includes('.mp4') || src.includes('.m3u8') || src.includes('player'))) {
+                        streamLinks_1.push({
+                            link: src.startsWith('http') ? src : "".concat(baseUrl_1).concat(src),
+                            server: "rido embedded",
+                            type: src.includes('.m3u8') ? "m3u8" : "mp4",
+                            headers: {
+                                Referer: baseUrl_1,
+                                'User-Agent': headers_1['User-Agent'],
+                            },
+                        });
+                    }
+                });
+                return [3 /*break*/, 10];
+            case 9:
+                pageError_1 = _e.sent();
+                console.log("ridomovies page scraping error:", pageError_1);
+                return [3 /*break*/, 10];
+            case 10:
+                console.log("ridomovies stream links found:", streamLinks_1.length);
+                return [2 /*return*/, streamLinks_1];
+            case 11:
                 e_1 = _e.sent();
-                console.log("rido get stream err", e_1);
+                console.log("ridomovies get stream error:", e_1);
                 return [2 /*return*/, []];
-            case 4: return [2 /*return*/];
+            case 12: return [2 /*return*/];
         }
     });
 }); };
 exports.getStream = getStream;
-function unpackJavaScript(packedCode) {
-    var encodedString = packedCode.split("|aHR")[1].split("|")[0];
-    var base64Url = "aHR" + encodedString;
-    function addPadding(base64) {
-        return base64 + "=".repeat((4 - (base64.length % 4)) % 4);
-    }
-    console.log("rido base64Url", base64Url);
-    var unpackedCode = atob(addPadding(base64Url));
-    return unpackedCode;
-}

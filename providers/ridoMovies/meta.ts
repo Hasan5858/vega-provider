@@ -8,73 +8,115 @@ export const getMeta = async function ({
   providerContext: ProviderContext;
 }): Promise<Info> {
   try {
-    const { getBaseUrl, axios } = providerContext;
-    const res = await axios.get(link);
-    const data = res.data;
-    const meta = {
-      title: "",
-      synopsis: "",
-      image: "",
-      imdbId: data?.meta?.imdb_id || "",
-      type: data?.meta?.type || "movie",
-    };
+    const { axios, getBaseUrl, cheerio, commonHeaders: headers } = providerContext;
     const baseUrl = await getBaseUrl("ridomovies");
-    let slug = "";
-    try {
-      const res2 = await axios.get(
-        baseUrl + "/core/api/search?q=" + meta.imdbId
-      );
-      const data2 = res2.data;
-      slug = data2?.data?.items[0]?.fullSlug;
-      if (!slug || meta?.type === "series") {
+    
+    console.log("ridomovies meta link:", link);
+    
+    // Extract slug from link
+    const slug = link.replace(baseUrl + "/", "");
+    console.log("ridomovies slug:", slug);
+    
+    // Get movie/series data from API
+    const apiUrl = `${baseUrl}/core/api/content/${slug}`;
+    console.log("ridomovies API URL:", apiUrl);
+    
+    const res = await axios.get(apiUrl, {
+      headers,
+    });
+    
+    const data = res.data;
+    console.log("ridomovies API response:", data);
+    
+    if (!data?.data?.contentable) {
+      throw new Error("No contentable data found");
+    }
+    
+    const content = data.data.contentable;
+    const meta = {
+      title: content.originalTitle || data.data.title,
+      synopsis: content.overview || "",
+      image: content.apiPosterPath || `${baseUrl}${content.posterPath}`,
+      imdbId: content.imdbId || "",
+      type: data.data.type || "movie",
+    };
+    
+    console.log("ridomovies meta extracted:", meta);
+    
+    // For movies, create a single link
+    if (meta.type === "movie") {
+      const links: Link[] = [{
+        title: "Movie",
+        directLinks: [{
+          title: "Movie",
+          link: link,
+        }],
+      }];
+      
+      return {
+        ...meta,
+        linkList: links,
+      };
+    }
+    
+    // For series, get episodes
+    if (meta.type === "series") {
+      const episodesUrl = `${baseUrl}/core/api/series/${slug}/episodes`;
+      console.log("ridomovies episodes URL:", episodesUrl);
+      
+      try {
+        const episodesRes = await axios.get(episodesUrl, {
+          headers,
+        });
+        
+        const episodesData = episodesRes.data;
+        console.log("ridomovies episodes response:", episodesData);
+        
+        const links: Link[] = [];
+        const seasonMap = new Map();
+        
+        if (episodesData?.data?.episodes) {
+          episodesData.data.episodes.forEach((episode: any) => {
+            const seasonNum = episode.season || 1;
+            if (!seasonMap.has(seasonNum)) {
+              seasonMap.set(seasonNum, []);
+            }
+            
+            seasonMap.get(seasonNum).push({
+              title: `Episode ${episode.episode}`,
+              link: `${baseUrl}/${episode.slug}`,
+            });
+          });
+          
+          // Convert map to links array
+          for (const [seasonNum, episodes] of seasonMap.entries()) {
+            links.push({
+              title: `Season ${seasonNum}`,
+              directLinks: episodes,
+            });
+          }
+        }
+        
         return {
-          title: "",
-          synopsis: "",
-          image: "",
-          imdbId: data?.meta?.imdb_id || "",
-          type: meta?.type || "movie",
+          ...meta,
+          linkList: links,
+        };
+      } catch (episodesError) {
+        console.log("ridomovies episodes error:", episodesError);
+        // Return empty episodes for series
+        return {
+          ...meta,
           linkList: [],
         };
       }
-    } catch (err) {
-      return {
-        title: "",
-        synopsis: "",
-        image: "",
-        imdbId: meta?.imdbId || "",
-        type: meta?.type || "movie",
-        linkList: [],
-      };
     }
-    const links: Link[] = [];
-    let directLinks: EpisodeLink[] = [];
-    let season = new Map();
-    if (meta.type === "series") {
-      data?.meta?.videos?.map((video: any) => {
-        if (video?.season <= 0) return;
-        if (!season.has(video?.season)) {
-          season.set(video?.season, []);
-        }
-        season.get(video?.season).push({
-          title: "Episode " + video?.episode,
-          link: "",
-        });
-      });
-      for (const [seasonNum, episodes] of season.entries()) {
-        links.push({
-          title: "Season " + seasonNum,
-          directLinks: episodes,
-        });
-      }
-    } else {
-      directLinks.push({ title: "Movie", link: link });
-      links.push({ title: "Movie", directLinks: directLinks });
-    }
+    
     return {
       ...meta,
-      linkList: links,
+      linkList: [],
     };
   } catch (err) {
+    console.error("ridomovies meta error:", err);
     return {
       title: "",
       synopsis: "",

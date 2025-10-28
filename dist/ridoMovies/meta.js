@@ -77,80 +77,85 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getMeta = void 0;
 var getMeta = function (_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var getBaseUrl, axios, res, data, meta, baseUrl, slug, res2, data2, err_1, links, directLinks, season_1, _c, _d, _e, seasonNum, episodes, err_2;
+        var axios, getBaseUrl, cheerio, headers, baseUrl_1, slug, apiUrl, res, data, content, meta, links, episodesUrl, episodesRes, episodesData, links, seasonMap_1, _c, _d, _e, seasonNum, episodes, episodesError_1, err_1;
         var e_1, _f;
-        var _g, _h, _j, _k, _l, _m, _o;
+        var _g, _h;
         var link = _b.link, providerContext = _b.providerContext;
-        return __generator(this, function (_p) {
-            switch (_p.label) {
+        return __generator(this, function (_j) {
+            switch (_j.label) {
                 case 0:
-                    _p.trys.push([0, 7, , 8]);
-                    getBaseUrl = providerContext.getBaseUrl, axios = providerContext.axios;
-                    return [4 /*yield*/, axios.get(link)];
-                case 1:
-                    res = _p.sent();
-                    data = res.data;
-                    meta = {
-                        title: "",
-                        synopsis: "",
-                        image: "",
-                        imdbId: ((_g = data === null || data === void 0 ? void 0 : data.meta) === null || _g === void 0 ? void 0 : _g.imdb_id) || "",
-                        type: ((_h = data === null || data === void 0 ? void 0 : data.meta) === null || _h === void 0 ? void 0 : _h.type) || "movie",
-                    };
+                    _j.trys.push([0, 7, , 8]);
+                    axios = providerContext.axios, getBaseUrl = providerContext.getBaseUrl, cheerio = providerContext.cheerio, headers = providerContext.commonHeaders;
                     return [4 /*yield*/, getBaseUrl("ridomovies")];
+                case 1:
+                    baseUrl_1 = _j.sent();
+                    console.log("ridomovies meta link:", link);
+                    slug = link.replace(baseUrl_1 + "/", "");
+                    console.log("ridomovies slug:", slug);
+                    apiUrl = "".concat(baseUrl_1, "/core/api/content/").concat(slug);
+                    console.log("ridomovies API URL:", apiUrl);
+                    return [4 /*yield*/, axios.get(apiUrl, {
+                            headers: headers,
+                        })];
                 case 2:
-                    baseUrl = _p.sent();
-                    slug = "";
-                    _p.label = 3;
-                case 3:
-                    _p.trys.push([3, 5, , 6]);
-                    return [4 /*yield*/, axios.get(baseUrl + "/core/api/search?q=" + meta.imdbId)];
-                case 4:
-                    res2 = _p.sent();
-                    data2 = res2.data;
-                    slug = (_k = (_j = data2 === null || data2 === void 0 ? void 0 : data2.data) === null || _j === void 0 ? void 0 : _j.items[0]) === null || _k === void 0 ? void 0 : _k.fullSlug;
-                    if (!slug || (meta === null || meta === void 0 ? void 0 : meta.type) === "series") {
-                        return [2 /*return*/, {
-                                title: "",
-                                synopsis: "",
-                                image: "",
-                                imdbId: ((_l = data === null || data === void 0 ? void 0 : data.meta) === null || _l === void 0 ? void 0 : _l.imdb_id) || "",
-                                type: (meta === null || meta === void 0 ? void 0 : meta.type) || "movie",
-                                linkList: [],
-                            }];
+                    res = _j.sent();
+                    data = res.data;
+                    console.log("ridomovies API response:", data);
+                    if (!((_g = data === null || data === void 0 ? void 0 : data.data) === null || _g === void 0 ? void 0 : _g.contentable)) {
+                        throw new Error("No contentable data found");
                     }
-                    return [3 /*break*/, 6];
-                case 5:
-                    err_1 = _p.sent();
-                    return [2 /*return*/, {
-                            title: "",
-                            synopsis: "",
-                            image: "",
-                            imdbId: (meta === null || meta === void 0 ? void 0 : meta.imdbId) || "",
-                            type: (meta === null || meta === void 0 ? void 0 : meta.type) || "movie",
-                            linkList: [],
-                        }];
-                case 6:
+                    content = data.data.contentable;
+                    meta = {
+                        title: content.originalTitle || data.data.title,
+                        synopsis: content.overview || "",
+                        image: content.apiPosterPath || "".concat(baseUrl_1).concat(content.posterPath),
+                        imdbId: content.imdbId || "",
+                        type: data.data.type || "movie",
+                    };
+                    console.log("ridomovies meta extracted:", meta);
+                    // For movies, create a single link
+                    if (meta.type === "movie") {
+                        links = [{
+                                title: "Movie",
+                                directLinks: [{
+                                        title: "Movie",
+                                        link: link,
+                                    }],
+                            }];
+                        return [2 /*return*/, __assign(__assign({}, meta), { linkList: links })];
+                    }
+                    if (!(meta.type === "series")) return [3 /*break*/, 6];
+                    episodesUrl = "".concat(baseUrl_1, "/core/api/series/").concat(slug, "/episodes");
+                    console.log("ridomovies episodes URL:", episodesUrl);
+                    _j.label = 3;
+                case 3:
+                    _j.trys.push([3, 5, , 6]);
+                    return [4 /*yield*/, axios.get(episodesUrl, {
+                            headers: headers,
+                        })];
+                case 4:
+                    episodesRes = _j.sent();
+                    episodesData = episodesRes.data;
+                    console.log("ridomovies episodes response:", episodesData);
                     links = [];
-                    directLinks = [];
-                    season_1 = new Map();
-                    if (meta.type === "series") {
-                        (_o = (_m = data === null || data === void 0 ? void 0 : data.meta) === null || _m === void 0 ? void 0 : _m.videos) === null || _o === void 0 ? void 0 : _o.map(function (video) {
-                            if ((video === null || video === void 0 ? void 0 : video.season) <= 0)
-                                return;
-                            if (!season_1.has(video === null || video === void 0 ? void 0 : video.season)) {
-                                season_1.set(video === null || video === void 0 ? void 0 : video.season, []);
+                    seasonMap_1 = new Map();
+                    if ((_h = episodesData === null || episodesData === void 0 ? void 0 : episodesData.data) === null || _h === void 0 ? void 0 : _h.episodes) {
+                        episodesData.data.episodes.forEach(function (episode) {
+                            var seasonNum = episode.season || 1;
+                            if (!seasonMap_1.has(seasonNum)) {
+                                seasonMap_1.set(seasonNum, []);
                             }
-                            season_1.get(video === null || video === void 0 ? void 0 : video.season).push({
-                                title: "Episode " + (video === null || video === void 0 ? void 0 : video.episode),
-                                link: "",
+                            seasonMap_1.get(seasonNum).push({
+                                title: "Episode ".concat(episode.episode),
+                                link: "".concat(baseUrl_1, "/").concat(episode.slug),
                             });
                         });
                         try {
-                            for (_c = __values(season_1.entries()), _d = _c.next(); !_d.done; _d = _c.next()) {
+                            // Convert map to links array
+                            for (_c = __values(seasonMap_1.entries()), _d = _c.next(); !_d.done; _d = _c.next()) {
                                 _e = __read(_d.value, 2), seasonNum = _e[0], episodes = _e[1];
                                 links.push({
-                                    title: "Season " + seasonNum,
+                                    title: "Season ".concat(seasonNum),
                                     directLinks: episodes,
                                 });
                             }
@@ -163,13 +168,16 @@ var getMeta = function (_a) {
                             finally { if (e_1) throw e_1.error; }
                         }
                     }
-                    else {
-                        directLinks.push({ title: "Movie", link: link });
-                        links.push({ title: "Movie", directLinks: directLinks });
-                    }
                     return [2 /*return*/, __assign(__assign({}, meta), { linkList: links })];
+                case 5:
+                    episodesError_1 = _j.sent();
+                    console.log("ridomovies episodes error:", episodesError_1);
+                    // Return empty episodes for series
+                    return [2 /*return*/, __assign(__assign({}, meta), { linkList: [] })];
+                case 6: return [2 /*return*/, __assign(__assign({}, meta), { linkList: [] })];
                 case 7:
-                    err_2 = _p.sent();
+                    err_1 = _j.sent();
+                    console.error("ridomovies meta error:", err_1);
                     return [2 /*return*/, {
                             title: "",
                             synopsis: "",
