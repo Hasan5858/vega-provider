@@ -183,20 +183,18 @@ var getStream = function (_a) {
                 case 3:
                     _l.sent();
                     return [4 /*yield*/, Promise.all(secondIdList_1.map(function (id) { return __awaiter(_this, void 0, void 0, function () {
-                            var idRes, ppd, gofileLink, gofileId, goRes, vikingLink, gdtotLink, error_1;
-                            return __generator(this, function (_a) {
-                                switch (_a.label) {
+                            var idRes, gofileLink, gofileId, goRes, error_1;
+                            var _a;
+                            return __generator(this, function (_b) {
+                                switch (_b.label) {
                                     case 0:
-                                        _a.trys.push([0, 6, , 7]);
+                                        _b.trys.push([0, 6, , 7]);
                                         return [4 /*yield*/, axios.post("".concat(baseUrl_1, "/tmp/").concat(id.id))];
                                     case 1:
-                                        idRes = _a.sent();
+                                        idRes = _b.sent();
                                         console.log("idRes.data structure:", JSON.stringify(idRes.data, null, 2));
-                                        if (!(idRes.data && idRes.data.ppd)) return [3 /*break*/, 4];
-                                        ppd = idRes.data.ppd;
-                                        console.log("Available file hosts:", Object.keys(ppd));
-                                        if (!ppd["gofile.io"]) return [3 /*break*/, 3];
-                                        gofileLink = ppd["gofile.io"].link;
+                                        if (!(idRes.data && idRes.data.ppd && idRes.data.ppd["gofile.io"])) return [3 /*break*/, 4];
+                                        gofileLink = idRes.data.ppd["gofile.io"].link;
                                         console.log("gofile link found:", gofileLink);
                                         if (!gofileLink) return [3 /*break*/, 3];
                                         gofileId = gofileLink.split("/").pop();
@@ -204,7 +202,7 @@ var getStream = function (_a) {
                                         if (!gofileId) return [3 /*break*/, 3];
                                         return [4 /*yield*/, gofileExtracter(gofileId)];
                                     case 2:
-                                        goRes = _a.sent();
+                                        goRes = _b.sent();
                                         console.log("gofile extracter result:", goRes);
                                         if (goRes && goRes.link) {
                                             streamLinks_1.push({
@@ -218,54 +216,16 @@ var getStream = function (_a) {
                                                     cookie: "accountToken=" + goRes.token,
                                                 },
                                             });
-                                            return [2 /*return*/]; // Success, no need to try other hosts
                                         }
-                                        _a.label = 3;
-                                    case 3:
-                                        // Fallback to VikingFile if GoFile fails
-                                        if (ppd["vikingfile"]) {
-                                            vikingLink = ppd["vikingfile"].link;
-                                            console.log("vikingfile link found:", vikingLink);
-                                            if (vikingLink) {
-                                                streamLinks_1.push({
-                                                    link: vikingLink,
-                                                    server: "vikingfile " + id.quality,
-                                                    type: "mkv",
-                                                    headers: {
-                                                        referer: "https://vikingfile.com",
-                                                        connection: "keep-alive",
-                                                        contentType: "video/x-matroska",
-                                                    },
-                                                });
-                                                return [2 /*return*/]; // Success with VikingFile
-                                            }
-                                        }
-                                        // Fallback to GDTot if others fail
-                                        if (ppd["gdtot"]) {
-                                            gdtotLink = ppd["gdtot"].link;
-                                            console.log("gdtot link found:", gdtotLink);
-                                            if (gdtotLink) {
-                                                streamLinks_1.push({
-                                                    link: gdtotLink,
-                                                    server: "gdtot " + id.quality,
-                                                    type: "mkv",
-                                                    headers: {
-                                                        referer: "https://gdtot.dad",
-                                                        connection: "keep-alive",
-                                                        contentType: "video/x-matroska",
-                                                    },
-                                                });
-                                                return [2 /*return*/]; // Success with GDTot
-                                            }
-                                        }
-                                        console.log("No working file hosts found in ppd structure");
-                                        return [3 /*break*/, 5];
+                                        _b.label = 3;
+                                    case 3: return [3 /*break*/, 5];
                                     case 4:
-                                        console.log("No ppd structure found");
-                                        _a.label = 5;
+                                        console.log("No gofile.io link found in ppd structure");
+                                        console.log("Available ppd keys:", ((_a = idRes.data) === null || _a === void 0 ? void 0 : _a.ppd) ? Object.keys(idRes.data.ppd) : "ppd is undefined");
+                                        _b.label = 5;
                                     case 5: return [3 /*break*/, 7];
                                     case 6:
-                                        error_1 = _a.sent();
+                                        error_1 = _b.sent();
                                         console.log("Error processing gofile link:", error_1);
                                         return [3 /*break*/, 7];
                                     case 7: return [2 /*return*/];
