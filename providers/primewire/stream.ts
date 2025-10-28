@@ -532,6 +532,163 @@ const resolveGoEntries = async (
 };
 
 /**
+ * Fallback: Use PrimeSrc API when age verification or no links found
+ * Fetches from OMDB → TMDB → PrimeSrc API chain
+ */
+async function fetchPrimeSrcFallback(
+  url: string,
+  type: string,
+  axios: ProviderContext["axios"],
+  providerContext: ProviderContext
+): Promise<Stream[]> {
+  try {
+    console.log("Primewire: Primary scrape failed, trying PrimeSrc API fallback...");
+    
+    // Extract IMDB ID from URL or fetch from OMDB
+    // URL format: https://www.primewire.mov/movie/1153991-love or /tv/...
+    const urlMatch = url.match(/\/(movie|tv)\/(\d+)-([^/?]+)/);
+    if (!urlMatch) {
+      console.log("Primewire: Cannot parse URL for fallback");
+      return [];
+    }
+    
+    const [, contentType, id, slug] = urlMatch;
+    const title = slug.replace(/-/g, " ");
+    
+    console.log(`Primewire: Searching OMDB for "${title}" (${contentType})`);
+    
+    // Search OMDB API to get IMDB ID
+    const omdbSearchUrl = `https://www.omdbapi.com/?apikey=84448d47&t=${encodeURIComponent(title)}&type=${contentType}`;
+    let imdbId: string | null = null;
+    
+    try {
+      const omdbRes = await axios.get(omdbSearchUrl, { timeout: 10000 });
+      imdbId = omdbRes.data?.imdbID;
+      
+      if (!imdbId) {
+        console.log("Primewire: No IMDB ID found in OMDB");
+        return [];
+      }
+      
+      console.log(`Primewire: Found IMDB ID: ${imdbId}`);
+    } catch (omdbError) {
+      console.error("Primewire: OMDB API failed", omdbError);
+      return [];
+    }
+    
+    // Fetch available servers from PrimeSrc API
+    const primeSrcApiUrl = `https://primesrc.me/api/v1/s?imdb=${imdbId}&type=${contentType}`;
+    console.log(`Primewire: Fetching servers from PrimeSrc API...`);
+    
+    let serversData: any;
+    try {
+      const apiRes = await axios.get(primeSrcApiUrl, {
+        timeout: 15000,
+        headers: {
+          'User-Agent': USER_AGENT,
+          'Accept': 'application/json',
+        }
+      });
+      serversData = apiRes.data;
+    } catch (apiError) {
+      console.error("Primewire: PrimeSrc API failed", apiError);
+      return [];
+    }
+    
+    if (!serversData?.servers || !Array.isArray(serversData.servers)) {
+      console.log("Primewire: No servers in PrimeSrc API response");
+      return [];
+    }
+    
+    console.log(`Primewire: Found ${serversData.servers.length} servers in PrimeSrc API`);
+    
+    const results: Stream[] = [];
+    let firstExtracted = false;
+    
+    // Extract first supported server, add rest as lazy
+    for (const server of serversData.servers) {
+      const serverName = server.name || "Unknown";
+      const serverKey = server.key;
+      
+      if (!serverKey) {
+        console.log(`Primewire: Server ${serverName} has no key, skipping`);
+        continue;
+      }
+      
+      // Check if we have an extractor for this host
+      if (!hasExtractor(serverName)) {
+        console.log(`Primewire: No extractor for ${serverName}, skipping`);
+        continue;
+      }
+      
+      // Extract first server immediately
+      if (!firstExtracted) {
+        console.log(`Primewire: Fetching link for ${serverName}...`);
+        
+        try {
+          const linkApiUrl = `https://primesrc.me/api/v1/l?key=${serverKey}`;
+          const linkRes = await axios.get(linkApiUrl, {
+            timeout: 10000,
+            headers: {
+              'User-Agent': USER_AGENT,
+              'Accept': 'application/json',
+            }
+          });
+          
+          const directLink = linkRes.data?.link;
+          if (!directLink) {
+            console.log(`Primewire: No link returned for ${serverName}`);
+            continue;
+          }
+          
+          console.log(`Primewire: Got direct link for ${serverName}, extracting...`);
+          const extracted = await extractStreamForHost(serverName, directLink, axios, providerContext);
+          
+          if (extracted) {
+            console.log(`Primewire: Successfully extracted ${serverName} via PrimeSrc API`);
+            results.push({
+              server: `${serverName} (PrimeSrc)`,
+              link: extracted.link,
+              type: extracted.type || "mp4",
+              headers: extracted.headers,
+            });
+            firstExtracted = true;
+          } else {
+            console.log(`Primewire: Extraction failed for ${serverName}, trying next...`);
+            continue;
+          }
+        } catch (linkError) {
+          console.error(`Primewire: Failed to fetch/extract ${serverName}`, linkError);
+          continue;
+        }
+      } else {
+        // Add remaining servers as lazy-load
+        results.push({
+          server: `${serverName} (PrimeSrc)`,
+          link: JSON.stringify({
+            type: "primesrc-lazy",
+            serverName: serverName,
+            serverKey: serverKey,
+          }),
+          type: "lazy",
+        });
+      }
+    }
+    
+    if (results.length > 0) {
+      console.log(`Primewire: PrimeSrc API fallback returned ${results.length} servers`);
+      return results;
+    }
+    
+    console.log("Primewire: PrimeSrc API fallback found no working servers");
+    return [];
+  } catch (error) {
+    console.error("Primewire: PrimeSrc API fallback error", error);
+    return [];
+  }
+}
+
+/**
  * Extract a single Primewire server on-demand (lazy extraction)
  * Used when user selects a lazy-loaded server from the player
  */
@@ -548,6 +705,48 @@ export const extractLazyServer = async function ({
     // Parse lazy-load metadata
     const metadata = JSON.parse(link);
     
+    // Handle PrimeSrc API lazy-load
+    if (metadata.type === "primesrc-lazy") {
+      console.log(`Primewire: PrimeSrc lazy-load for ${metadata.serverName}`);
+      
+      try {
+        const linkApiUrl = `https://primesrc.me/api/v1/l?key=${metadata.serverKey}`;
+        const linkRes = await axios.get(linkApiUrl, {
+          timeout: 10000,
+          headers: {
+            'User-Agent': USER_AGENT,
+            'Accept': 'application/json',
+          }
+        });
+        
+        const directLink = linkRes.data?.link;
+        if (!directLink) {
+          console.error("Primewire: No link in PrimeSrc lazy-load response");
+          return [];
+        }
+        
+        console.log(`Primewire: Extracting PrimeSrc lazy-load ${metadata.serverName}...`);
+        const extracted = await extractStreamForHost(metadata.serverName, directLink, axios, providerContext);
+        
+        if (extracted) {
+          console.log(`Primewire: Successfully extracted PrimeSrc ${metadata.serverName}`);
+          return [{
+            server: `${metadata.serverName} (PrimeSrc)`,
+            link: extracted.link,
+            type: extracted.type || "mp4",
+            headers: extracted.headers,
+          }];
+        }
+        
+        console.error(`Primewire: PrimeSrc extraction failed for ${metadata.serverName}`);
+        return [];
+      } catch (error) {
+        console.error("Primewire: PrimeSrc lazy-load error", error);
+        return [];
+      }
+    }
+    
+    // Handle regular Primewire lazy-load
     if (metadata.type !== "primewire-lazy") {
       console.error("Primewire: Invalid lazy-load metadata");
       return [];
@@ -615,7 +814,7 @@ export const getStream = async function ({
 
   try {
     // Handle lazy-load extraction (when user selects unextracted server)
-    if (url.startsWith("{") && url.includes("primewire-lazy")) {
+    if (url.startsWith("{") && (url.includes("primewire-lazy") || url.includes("primesrc-lazy"))) {
       console.log("Primewire: Detected lazy-load request");
       return await extractLazyServer({ link: url, providerContext });
     }
@@ -634,10 +833,30 @@ export const getStream = async function ({
     });
 
     const $ = cheerio.load(pageResponse.data);
+    
+    // Check for age verification message
+    const pageText = $("body").text().toLowerCase();
+    const needsAgeVerification = 
+      pageText.includes("please sign in and confirm your age") ||
+      pageText.includes("age verification") ||
+      pageText.includes("verify your age") ||
+      $(".signin-message").length > 0;
+    
+    if (needsAgeVerification) {
+      console.log("Primewire: Age verification required, using PrimeSrc API fallback");
+      return await fetchPrimeSrcFallback(url, type, axios, providerContext);
+    }
 
     const decodedStreams = await resolveGoEntries(url, $, axios, providerContext);
     if (decodedStreams.length) {
       return decodedStreams;
+    }
+
+    // If no links found, try PrimeSrc API fallback
+    console.log("Primewire: No links found via primary scrape, trying PrimeSrc API fallback");
+    const fallbackStreams = await fetchPrimeSrcFallback(url, type, axios, providerContext);
+    if (fallbackStreams.length) {
+      return fallbackStreams;
     }
 
     // Fallback: if nothing was decoded, try mixdrop legacy extraction
