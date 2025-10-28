@@ -106,7 +106,7 @@ const modflixData = {
     },
     "protonMovies": {
         "name": "protonMovies",
-        "url": "https://m3.protonmovies.top"
+        "url": "https://m.protonmovies.site/"
     },
     "dramafull": {
         "name": "dramafull",
