@@ -43,13 +43,16 @@ export const getPosts = async function ({
         
         if (data?.data?.items) {
           data.data.items.forEach((item: any) => {
-            if (item?.contentable && item.contentable.type === 'movie') {
+            if (item?.contentable) {
               const movie = item.contentable;
-              catalog.push({
-                title: movie.originalTitle || item.title,
-                link: `${baseUrl}/${item.fullSlug}`,
-                image: movie.apiPosterPath || `${baseUrl}${movie.posterPath}`,
-              });
+              // Check if it's a movie (not a series)
+              if (movie && item.type === 'movie') {
+                catalog.push({
+                  title: movie.originalTitle || item.title,
+                  link: `${baseUrl}/${item.fullSlug}`,
+                  image: movie.apiPosterPath || `${baseUrl}${movie.posterPath}`,
+                });
+              }
             }
           });
         }

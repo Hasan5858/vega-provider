@@ -93,13 +93,16 @@ var getPosts = function (_a) {
                     console.log("ridomovies search response:", data);
                     if ((_d = data === null || data === void 0 ? void 0 : data.data) === null || _d === void 0 ? void 0 : _d.items) {
                         data.data.items.forEach(function (item) {
-                            if ((item === null || item === void 0 ? void 0 : item.contentable) && item.contentable.type === 'movie') {
+                            if (item === null || item === void 0 ? void 0 : item.contentable) {
                                 var movie = item.contentable;
-                                catalog_1.push({
-                                    title: movie.originalTitle || item.title,
-                                    link: "".concat(baseUrl_1, "/").concat(item.fullSlug),
-                                    image: movie.apiPosterPath || "".concat(baseUrl_1).concat(movie.posterPath),
-                                });
+                                // Check if it's a movie (not a series)
+                                if (movie && item.type === 'movie') {
+                                    catalog_1.push({
+                                        title: movie.originalTitle || item.title,
+                                        link: "".concat(baseUrl_1, "/").concat(item.fullSlug),
+                                        image: movie.apiPosterPath || "".concat(baseUrl_1).concat(movie.posterPath),
+                                    });
+                                }
                             }
                         });
                     }
