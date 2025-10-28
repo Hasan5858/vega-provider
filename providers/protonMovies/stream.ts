@@ -174,25 +174,44 @@ export const getStream = async function ({
     );
     await Promise.all(
       secondIdList.map(async (id) => {
-        const idRes = await axios.post(`${baseUrl}/tmp/${id.id}`);
-        if (idRes.data.ppd["gofile.io"]) {
-          const goRes = await gofileExtracter(
-            idRes.data.ppd["gofile.io"].link.split("/").pop()
-          );
-          console.log("link", goRes.link);
-          if (goRes.link) {
-            streamLinks.push({
-              link: goRes.link,
-              server: "gofile " + id.quality,
-              type: "mkv",
-              headers: {
-                referer: "https://gofile.io",
-                connection: "keep-alive",
-                contentType: "video/x-matroska",
-                cookie: "accountToken=" + goRes.token,
-              },
-            });
+        try {
+          const idRes = await axios.post(`${baseUrl}/tmp/${id.id}`);
+          console.log("idRes.data structure:", JSON.stringify(idRes.data, null, 2));
+          
+          // Check if ppd exists and has gofile.io
+          if (idRes.data && idRes.data.ppd && idRes.data.ppd["gofile.io"]) {
+            const gofileLink = idRes.data.ppd["gofile.io"].link;
+            console.log("gofile link found:", gofileLink);
+            
+            if (gofileLink) {
+              const gofileId = gofileLink.split("/").pop();
+              console.log("gofile ID:", gofileId);
+              
+              if (gofileId) {
+                const goRes = await gofileExtracter(gofileId);
+                console.log("gofile extracter result:", goRes);
+                
+                if (goRes && goRes.link) {
+                  streamLinks.push({
+                    link: goRes.link,
+                    server: "gofile " + id.quality,
+                    type: "mkv",
+                    headers: {
+                      referer: "https://gofile.io",
+                      connection: "keep-alive",
+                      contentType: "video/x-matroska",
+                      cookie: "accountToken=" + goRes.token,
+                    },
+                  });
+                }
+              }
+            }
+          } else {
+            console.log("No gofile.io link found in ppd structure");
+            console.log("Available ppd keys:", idRes.data?.ppd ? Object.keys(idRes.data.ppd) : "ppd is undefined");
           }
+        } catch (error) {
+          console.log("Error processing gofile link:", error);
         }
       })
     );

@@ -43,11 +43,12 @@ exports.gofileExtracter = gofileExtracter;
 var axios_1 = __importDefault(require("axios"));
 function gofileExtracter(id) {
     return __awaiter(this, void 0, void 0, function () {
-        var gofileRes, genAccountres, token, wtRes, wt, res, oId, link, e_1;
+        var gofileRes, genAccountres, token, wtRes, wtMatch, wt, res, childrenKeys, oId, link, e_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     _a.trys.push([0, 5, , 6]);
+                    console.log('gofile extracter starting for ID:', id);
                     return [4 /*yield*/, axios_1.default.get('https://gofile.io/d/' + id)];
                 case 1:
                     gofileRes = _a.sent();
@@ -59,7 +60,11 @@ function gofileExtracter(id) {
                     return [4 /*yield*/, axios_1.default.get('https://gofile.io/dist/js/global.js')];
                 case 3:
                     wtRes = _a.sent();
-                    wt = wtRes.data.match(/appdata\.wt\s*=\s*["']([^"']+)["']/)[1];
+                    wtMatch = wtRes.data.match(/appdata\.wt\s*=\s*["']([^"']+)["']/);
+                    if (!wtMatch) {
+                        throw new Error('Could not extract wt parameter');
+                    }
+                    wt = wtMatch[1];
                     console.log('gofile wt', wt);
                     return [4 /*yield*/, axios_1.default.get("https://api.gofile.io/contents/".concat(id, "?wt=").concat(wt), {
                             headers: {
@@ -68,9 +73,19 @@ function gofileExtracter(id) {
                         })];
                 case 4:
                     res = _a.sent();
-                    oId = Object.keys(res.data.data.children)[0];
-                    console.log('gofile extracter', res.data.data.children[oId].link);
+                    if (!res.data.data || !res.data.data.children) {
+                        throw new Error('Invalid response structure from gofile API');
+                    }
+                    childrenKeys = Object.keys(res.data.data.children);
+                    if (childrenKeys.length === 0) {
+                        throw new Error('No children found in gofile response');
+                    }
+                    oId = childrenKeys[0];
                     link = res.data.data.children[oId].link;
+                    if (!link) {
+                        throw new Error('No link found in gofile response');
+                    }
+                    console.log('gofile extracter', link);
                     return [2 /*return*/, {
                             link: link,
                             token: token,

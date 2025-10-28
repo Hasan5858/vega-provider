@@ -183,18 +183,28 @@ var getStream = function (_a) {
                 case 3:
                     _l.sent();
                     return [4 /*yield*/, Promise.all(secondIdList_1.map(function (id) { return __awaiter(_this, void 0, void 0, function () {
-                            var idRes, goRes;
-                            return __generator(this, function (_a) {
-                                switch (_a.label) {
-                                    case 0: return [4 /*yield*/, axios.post("".concat(baseUrl_1, "/tmp/").concat(id.id))];
+                            var idRes, gofileLink, gofileId, goRes, error_1;
+                            var _a;
+                            return __generator(this, function (_b) {
+                                switch (_b.label) {
+                                    case 0:
+                                        _b.trys.push([0, 6, , 7]);
+                                        return [4 /*yield*/, axios.post("".concat(baseUrl_1, "/tmp/").concat(id.id))];
                                     case 1:
-                                        idRes = _a.sent();
-                                        if (!idRes.data.ppd["gofile.io"]) return [3 /*break*/, 3];
-                                        return [4 /*yield*/, gofileExtracter(idRes.data.ppd["gofile.io"].link.split("/").pop())];
+                                        idRes = _b.sent();
+                                        console.log("idRes.data structure:", JSON.stringify(idRes.data, null, 2));
+                                        if (!(idRes.data && idRes.data.ppd && idRes.data.ppd["gofile.io"])) return [3 /*break*/, 4];
+                                        gofileLink = idRes.data.ppd["gofile.io"].link;
+                                        console.log("gofile link found:", gofileLink);
+                                        if (!gofileLink) return [3 /*break*/, 3];
+                                        gofileId = gofileLink.split("/").pop();
+                                        console.log("gofile ID:", gofileId);
+                                        if (!gofileId) return [3 /*break*/, 3];
+                                        return [4 /*yield*/, gofileExtracter(gofileId)];
                                     case 2:
-                                        goRes = _a.sent();
-                                        console.log("link", goRes.link);
-                                        if (goRes.link) {
+                                        goRes = _b.sent();
+                                        console.log("gofile extracter result:", goRes);
+                                        if (goRes && goRes.link) {
                                             streamLinks_1.push({
                                                 link: goRes.link,
                                                 server: "gofile " + id.quality,
@@ -207,8 +217,18 @@ var getStream = function (_a) {
                                                 },
                                             });
                                         }
-                                        _a.label = 3;
-                                    case 3: return [2 /*return*/];
+                                        _b.label = 3;
+                                    case 3: return [3 /*break*/, 5];
+                                    case 4:
+                                        console.log("No gofile.io link found in ppd structure");
+                                        console.log("Available ppd keys:", ((_a = idRes.data) === null || _a === void 0 ? void 0 : _a.ppd) ? Object.keys(idRes.data.ppd) : "ppd is undefined");
+                                        _b.label = 5;
+                                    case 5: return [3 /*break*/, 7];
+                                    case 6:
+                                        error_1 = _b.sent();
+                                        console.log("Error processing gofile link:", error_1);
+                                        return [3 /*break*/, 7];
+                                    case 7: return [2 /*return*/];
                                 }
                             });
                         }); }))];
