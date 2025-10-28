@@ -93,14 +93,14 @@ var getPosts = function (_a) {
                     console.log("ridomovies search response:", data);
                     if ((_d = data === null || data === void 0 ? void 0 : data.data) === null || _d === void 0 ? void 0 : _d.items) {
                         data.data.items.forEach(function (item) {
-                            if (item === null || item === void 0 ? void 0 : item.contentable) {
-                                var movie = item.contentable;
-                                // Check if it's a movie (not a series)
-                                if (movie && item.type === 'movie') {
+                            if ((item === null || item === void 0 ? void 0 : item.contentable) && (item === null || item === void 0 ? void 0 : item.fullSlug)) {
+                                var content = item.contentable;
+                                // Include movies and series, filter by slug prefix
+                                if (content && (item.fullSlug.startsWith('movies/') || item.fullSlug.startsWith('series/'))) {
                                     catalog_1.push({
-                                        title: movie.originalTitle || item.title,
+                                        title: content.originalTitle || item.title,
                                         link: "".concat(baseUrl_1, "/").concat(item.fullSlug),
-                                        image: movie.apiPosterPath || "".concat(baseUrl_1).concat(movie.posterPath),
+                                        image: content.apiPosterPath || "".concat(baseUrl_1).concat(content.posterPath || ''),
                                     });
                                 }
                             }
@@ -170,13 +170,16 @@ var getSearchPosts = function (_a) {
                     console.log("ridomovies search response:", data);
                     if ((_c = data === null || data === void 0 ? void 0 : data.data) === null || _c === void 0 ? void 0 : _c.items) {
                         data.data.items.forEach(function (item) {
-                            if (item === null || item === void 0 ? void 0 : item.contentable) {
-                                var movie = item.contentable;
-                                catalog_2.push({
-                                    title: movie.originalTitle || item.title,
-                                    link: "".concat(baseUrl_2, "/").concat(item.fullSlug),
-                                    image: movie.apiPosterPath || "".concat(baseUrl_2).concat(movie.posterPath),
-                                });
+                            if ((item === null || item === void 0 ? void 0 : item.contentable) && (item === null || item === void 0 ? void 0 : item.fullSlug)) {
+                                var content = item.contentable;
+                                // Include movies and series, filter by slug prefix
+                                if (content && (item.fullSlug.startsWith('movies/') || item.fullSlug.startsWith('series/'))) {
+                                    catalog_2.push({
+                                        title: content.originalTitle || item.title,
+                                        link: "".concat(baseUrl_2, "/").concat(item.fullSlug),
+                                        image: content.apiPosterPath || "".concat(baseUrl_2).concat(content.posterPath || ''),
+                                    });
+                                }
                             }
                         });
                     }

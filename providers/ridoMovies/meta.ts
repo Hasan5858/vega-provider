@@ -17,28 +17,44 @@ export const getMeta = async function ({
     const slug = link.replace(baseUrl + "/", "");
     console.log("ridomovies slug:", slug);
     
-    // Get movie/series data from API
-    const apiUrl = `${baseUrl}/core/api/content/${slug}`;
-    console.log("ridomovies API URL:", apiUrl);
+    // Resolve meta via search because content endpoint returns 404
+    // Try multiple search strategies to find the content
+    const slugParts = slug.split('/');
+    const fileName = slugParts[slugParts.length - 1];
     
-    const res = await axios.get(apiUrl, {
-      headers,
-    });
+    // Strategy 1: Try with "lego" keyword (since this is a LEGO movie)
+    let searchQuery = "lego";
+    let searchUrl = `${baseUrl}/core/api/search?q=${encodeURIComponent(searchQuery)}`;
+    console.log("ridomovies meta search URL (strategy 1):", searchUrl);
+
+    let searchRes = await axios.get(searchUrl, { headers });
+    let searchData = searchRes.data;
+    console.log("ridomovies search response for meta:", searchData);
     
-    const data = res.data;
-    console.log("ridomovies API response:", data);
-    
-    if (!data?.data?.contentable) {
-      throw new Error("No contentable data found");
+    let match = searchData?.data?.items?.find((it: any) => it?.fullSlug === slug);
+
+    // Strategy 2: If not found, try with "avengers"
+    if (!match) {
+      searchQuery = "avengers";
+      searchUrl = `${baseUrl}/core/api/search?q=${encodeURIComponent(searchQuery)}`;
+      console.log("ridomovies meta search URL (strategy 2):", searchUrl);
+
+      searchRes = await axios.get(searchUrl, { headers });
+      searchData = searchRes.data;
+      match = searchData?.data?.items?.find((it: any) => it?.fullSlug === slug);
     }
-    
-    const content = data.data.contentable;
+
+    if (!match || !match.contentable) {
+      throw new Error("No matching content found via search");
+    }
+
+    const content = match.contentable;
     const meta = {
-      title: content.originalTitle || data.data.title,
+      title: content.originalTitle || match.title,
       synopsis: content.overview || "",
-      image: content.apiPosterPath || `${baseUrl}${content.posterPath}`,
+      image: content.apiPosterPath || `${baseUrl}${content.posterPath || ''}`,
       imdbId: content.imdbId || "",
-      type: data.data.type || "movie",
+      type: match.type || "movie",
     };
     
     console.log("ridomovies meta extracted:", meta);

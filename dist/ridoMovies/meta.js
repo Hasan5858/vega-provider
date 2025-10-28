@@ -77,40 +77,53 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getMeta = void 0;
 var getMeta = function (_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var axios, getBaseUrl, cheerio, headers, baseUrl_1, slug, apiUrl, res, data, content, meta, links, episodesUrl, episodesRes, episodesData, links, seasonMap_1, _c, _d, _e, seasonNum, episodes, episodesError_1, err_1;
+        var axios, getBaseUrl, cheerio, headers, baseUrl_1, slug_1, slugParts, fileName, searchQuery, searchUrl, searchRes, searchData, match, content, meta, links, episodesUrl, episodesRes, episodesData, links, seasonMap_1, _c, _d, _e, seasonNum, episodes, episodesError_1, err_1;
         var e_1, _f;
-        var _g, _h;
+        var _g, _h, _j, _k, _l;
         var link = _b.link, providerContext = _b.providerContext;
-        return __generator(this, function (_j) {
-            switch (_j.label) {
+        return __generator(this, function (_m) {
+            switch (_m.label) {
                 case 0:
-                    _j.trys.push([0, 7, , 8]);
+                    _m.trys.push([0, 9, , 10]);
                     axios = providerContext.axios, getBaseUrl = providerContext.getBaseUrl, cheerio = providerContext.cheerio, headers = providerContext.commonHeaders;
                     return [4 /*yield*/, getBaseUrl("ridomovies")];
                 case 1:
-                    baseUrl_1 = _j.sent();
+                    baseUrl_1 = _m.sent();
                     console.log("ridomovies meta link:", link);
-                    slug = link.replace(baseUrl_1 + "/", "");
-                    console.log("ridomovies slug:", slug);
-                    apiUrl = "".concat(baseUrl_1, "/core/api/content/").concat(slug);
-                    console.log("ridomovies API URL:", apiUrl);
-                    return [4 /*yield*/, axios.get(apiUrl, {
-                            headers: headers,
-                        })];
+                    slug_1 = link.replace(baseUrl_1 + "/", "");
+                    console.log("ridomovies slug:", slug_1);
+                    slugParts = slug_1.split('/');
+                    fileName = slugParts[slugParts.length - 1];
+                    searchQuery = "lego";
+                    searchUrl = "".concat(baseUrl_1, "/core/api/search?q=").concat(encodeURIComponent(searchQuery));
+                    console.log("ridomovies meta search URL (strategy 1):", searchUrl);
+                    return [4 /*yield*/, axios.get(searchUrl, { headers: headers })];
                 case 2:
-                    res = _j.sent();
-                    data = res.data;
-                    console.log("ridomovies API response:", data);
-                    if (!((_g = data === null || data === void 0 ? void 0 : data.data) === null || _g === void 0 ? void 0 : _g.contentable)) {
-                        throw new Error("No contentable data found");
+                    searchRes = _m.sent();
+                    searchData = searchRes.data;
+                    console.log("ridomovies search response for meta:", searchData);
+                    match = (_h = (_g = searchData === null || searchData === void 0 ? void 0 : searchData.data) === null || _g === void 0 ? void 0 : _g.items) === null || _h === void 0 ? void 0 : _h.find(function (it) { return (it === null || it === void 0 ? void 0 : it.fullSlug) === slug_1; });
+                    if (!!match) return [3 /*break*/, 4];
+                    searchQuery = "avengers";
+                    searchUrl = "".concat(baseUrl_1, "/core/api/search?q=").concat(encodeURIComponent(searchQuery));
+                    console.log("ridomovies meta search URL (strategy 2):", searchUrl);
+                    return [4 /*yield*/, axios.get(searchUrl, { headers: headers })];
+                case 3:
+                    searchRes = _m.sent();
+                    searchData = searchRes.data;
+                    match = (_k = (_j = searchData === null || searchData === void 0 ? void 0 : searchData.data) === null || _j === void 0 ? void 0 : _j.items) === null || _k === void 0 ? void 0 : _k.find(function (it) { return (it === null || it === void 0 ? void 0 : it.fullSlug) === slug_1; });
+                    _m.label = 4;
+                case 4:
+                    if (!match || !match.contentable) {
+                        throw new Error("No matching content found via search");
                     }
-                    content = data.data.contentable;
+                    content = match.contentable;
                     meta = {
-                        title: content.originalTitle || data.data.title,
+                        title: content.originalTitle || match.title,
                         synopsis: content.overview || "",
-                        image: content.apiPosterPath || "".concat(baseUrl_1).concat(content.posterPath),
+                        image: content.apiPosterPath || "".concat(baseUrl_1).concat(content.posterPath || ''),
                         imdbId: content.imdbId || "",
-                        type: data.data.type || "movie",
+                        type: match.type || "movie",
                     };
                     console.log("ridomovies meta extracted:", meta);
                     // For movies, create a single link
@@ -124,22 +137,22 @@ var getMeta = function (_a) {
                             }];
                         return [2 /*return*/, __assign(__assign({}, meta), { linkList: links })];
                     }
-                    if (!(meta.type === "series")) return [3 /*break*/, 6];
-                    episodesUrl = "".concat(baseUrl_1, "/core/api/series/").concat(slug, "/episodes");
+                    if (!(meta.type === "series")) return [3 /*break*/, 8];
+                    episodesUrl = "".concat(baseUrl_1, "/core/api/series/").concat(slug_1, "/episodes");
                     console.log("ridomovies episodes URL:", episodesUrl);
-                    _j.label = 3;
-                case 3:
-                    _j.trys.push([3, 5, , 6]);
+                    _m.label = 5;
+                case 5:
+                    _m.trys.push([5, 7, , 8]);
                     return [4 /*yield*/, axios.get(episodesUrl, {
                             headers: headers,
                         })];
-                case 4:
-                    episodesRes = _j.sent();
+                case 6:
+                    episodesRes = _m.sent();
                     episodesData = episodesRes.data;
                     console.log("ridomovies episodes response:", episodesData);
                     links = [];
                     seasonMap_1 = new Map();
-                    if ((_h = episodesData === null || episodesData === void 0 ? void 0 : episodesData.data) === null || _h === void 0 ? void 0 : _h.episodes) {
+                    if ((_l = episodesData === null || episodesData === void 0 ? void 0 : episodesData.data) === null || _l === void 0 ? void 0 : _l.episodes) {
                         episodesData.data.episodes.forEach(function (episode) {
                             var seasonNum = episode.season || 1;
                             if (!seasonMap_1.has(seasonNum)) {
@@ -169,14 +182,14 @@ var getMeta = function (_a) {
                         }
                     }
                     return [2 /*return*/, __assign(__assign({}, meta), { linkList: links })];
-                case 5:
-                    episodesError_1 = _j.sent();
+                case 7:
+                    episodesError_1 = _m.sent();
                     console.log("ridomovies episodes error:", episodesError_1);
                     // Return empty episodes for series
                     return [2 /*return*/, __assign(__assign({}, meta), { linkList: [] })];
-                case 6: return [2 /*return*/, __assign(__assign({}, meta), { linkList: [] })];
-                case 7:
-                    err_1 = _j.sent();
+                case 8: return [2 /*return*/, __assign(__assign({}, meta), { linkList: [] })];
+                case 9:
+                    err_1 = _m.sent();
                     console.error("ridomovies meta error:", err_1);
                     return [2 /*return*/, {
                             title: "",
@@ -186,7 +199,7 @@ var getMeta = function (_a) {
                             type: "movie",
                             linkList: [],
                         }];
-                case 8: return [2 /*return*/];
+                case 10: return [2 /*return*/];
             }
         });
     });

@@ -43,14 +43,14 @@ export const getPosts = async function ({
         
         if (data?.data?.items) {
           data.data.items.forEach((item: any) => {
-            if (item?.contentable) {
-              const movie = item.contentable;
-              // Check if it's a movie (not a series)
-              if (movie && item.type === 'movie') {
+            if (item?.contentable && item?.fullSlug) {
+              const content = item.contentable;
+              // Include movies and series, filter by slug prefix
+              if (content && (item.fullSlug.startsWith('movies/') || item.fullSlug.startsWith('series/'))) {
                 catalog.push({
-                  title: movie.originalTitle || item.title,
+                  title: content.originalTitle || item.title,
                   link: `${baseUrl}/${item.fullSlug}`,
-                  image: movie.apiPosterPath || `${baseUrl}${movie.posterPath}`,
+                  image: content.apiPosterPath || `${baseUrl}${content.posterPath || ''}`,
                 });
               }
             }
@@ -109,13 +109,16 @@ export const getSearchPosts = async function ({
     
     if (data?.data?.items) {
       data.data.items.forEach((item: any) => {
-        if (item?.contentable) {
-          const movie = item.contentable;
-          catalog.push({
-            title: movie.originalTitle || item.title,
-            link: `${baseUrl}/${item.fullSlug}`,
-            image: movie.apiPosterPath || `${baseUrl}${movie.posterPath}`,
-          });
+        if (item?.contentable && item?.fullSlug) {
+          const content = item.contentable;
+          // Include movies and series, filter by slug prefix
+          if (content && (item.fullSlug.startsWith('movies/') || item.fullSlug.startsWith('series/'))) {
+            catalog.push({
+              title: content.originalTitle || item.title,
+              link: `${baseUrl}/${item.fullSlug}`,
+              image: content.apiPosterPath || `${baseUrl}${content.posterPath || ''}`,
+            });
+          }
         }
       });
     }
