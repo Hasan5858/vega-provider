@@ -100,10 +100,6 @@ const modflixData = {
         "name": "animerulz",
         "url": "https://animerulz.co"
     },
-    "ridomovies": {
-        "name": "ridomovies",
-        "url": "https://ridomovies.tv"
-    },
     "protonMovies": {
         "name": "protonMovies",
         "url": "https://m.protonmovies.site/"

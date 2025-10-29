@@ -178,85 +178,37 @@ export const getStream = async function ({
           const idRes = await axios.post(`${baseUrl}/tmp/${id.id}`);
           console.log("idRes.data structure:", JSON.stringify(idRes.data, null, 2));
           
-          // Check if ppd exists and try multiple file hosts
-          if (idRes.data && idRes.data.ppd) {
-            const ppd = idRes.data.ppd;
-            console.log("Available file hosts:", Object.keys(ppd));
+          // Check if ppd exists and has gofile.io
+          if (idRes.data && idRes.data.ppd && idRes.data.ppd["gofile.io"]) {
+            const gofileLink = idRes.data.ppd["gofile.io"].link;
+            console.log("gofile link found:", gofileLink);
             
-            // Try GoFile first
-            if (ppd["gofile.io"]) {
-              const gofileLink = ppd["gofile.io"].link;
-              console.log("gofile link found:", gofileLink);
+            if (gofileLink) {
+              const gofileId = gofileLink.split("/").pop();
+              console.log("gofile ID:", gofileId);
               
-              if (gofileLink) {
-                const gofileId = gofileLink.split("/").pop();
-                console.log("gofile ID:", gofileId);
+              if (gofileId) {
+                const goRes = await gofileExtracter(gofileId);
+                console.log("gofile extracter result:", goRes);
                 
-                if (gofileId) {
-                  const goRes = await gofileExtracter(gofileId);
-                  console.log("gofile extracter result:", goRes);
-                  
-                  if (goRes && goRes.link) {
-                    streamLinks.push({
-                      link: goRes.link,
-                      server: "gofile " + id.quality,
-                      type: "mkv",
-                      headers: {
-                        referer: "https://gofile.io",
-                        connection: "keep-alive",
-                        contentType: "video/x-matroska",
-                        cookie: "accountToken=" + goRes.token,
-                      },
-                    });
-                    return; // Success, no need to try other hosts
-                  }
+                if (goRes && goRes.link) {
+                  streamLinks.push({
+                    link: goRes.link,
+                    server: "gofile " + id.quality,
+                    type: "mkv",
+                    headers: {
+                      referer: "https://gofile.io",
+                      connection: "keep-alive",
+                      contentType: "video/x-matroska",
+                      cookie: "accountToken=" + goRes.token,
+                    },
+                  });
                 }
               }
             }
-            
-            // Fallback to VikingFile if GoFile fails
-            if (ppd["vikingfile"]) {
-              const vikingLink = ppd["vikingfile"].link;
-              console.log("vikingfile link found:", vikingLink);
-              
-              if (vikingLink) {
-                streamLinks.push({
-                  link: vikingLink,
-                  server: "vikingfile " + id.quality,
-                  type: "mkv",
-                  headers: {
-                    referer: "https://vikingfile.com",
-                    connection: "keep-alive",
-                    contentType: "video/x-matroska",
-                  },
-                });
-                return; // Success with VikingFile
-              }
-            }
-            
-            // Fallback to GDTot if others fail
-            if (ppd["gdtot"]) {
-              const gdtotLink = ppd["gdtot"].link;
-              console.log("gdtot link found:", gdtotLink);
-              
-              if (gdtotLink) {
-                streamLinks.push({
-                  link: gdtotLink,
-                  server: "gdtot " + id.quality,
-                  type: "mkv",
-                  headers: {
-                    referer: "https://gdtot.dad",
-                    connection: "keep-alive",
-                    contentType: "video/x-matroska",
-                  },
-                });
-                return; // Success with GDTot
-              }
-            }
-            
-            console.log("No working file hosts found in ppd structure");
           } else {
-            console.log("No ppd structure found");
+            console.log("No gofile.io link found in ppd structure");
+            console.log("Available ppd keys:", idRes.data?.ppd ? Object.keys(idRes.data.ppd) : "ppd is undefined");
           }
         } catch (error) {
           console.log("Error processing gofile link:", error);

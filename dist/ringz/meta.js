@@ -35,8 +35,61 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getMeta = void 0;
+// Helper function to check if URL is a Cloudflare R2 URL
+var isR2Url = function (url) {
+    if (!url || typeof url !== 'string')
+        return false;
+    return (url.includes(".r2.dev") ||
+        !!url.match(/https?:\/\/pub-[a-z0-9-]+\.dev/i) ||
+        !!url.match(/https?:\/\/pub-[a-z0-9-]+\.r2\.dev/i));
+};
+// Sort directLinks to prioritize non-R2 URLs (working servers first)
+var sortLinksByPriority = function (links) {
+    if (!links || !Array.isArray(links))
+        return links;
+    return __spreadArray([], __read(links), false).sort(function (a, b) {
+        try {
+            var aData = JSON.parse(a.link);
+            var bData = JSON.parse(b.link);
+            var aIsR2 = isR2Url(aData === null || aData === void 0 ? void 0 : aData.url);
+            var bIsR2 = isR2Url(bData === null || bData === void 0 ? void 0 : bData.url);
+            // Non-R2 URLs (false) come before R2 URLs (true)
+            if (aIsR2 === bIsR2)
+                return 0;
+            return aIsR2 ? 1 : -1;
+        }
+        catch (_a) {
+            return 0;
+        }
+    });
+};
 var getMeta = function (_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
         var dataJson_1, title, image, tags, type, linkList_1, directLinks_1;
@@ -67,7 +120,7 @@ var getMeta = function (_a) {
                             });
                             linkList_1.push({
                                 title: (dataJson_1 === null || dataJson_1 === void 0 ? void 0 : dataJson_1.pn) + " (Server " + item + ")",
-                                directLinks: directLinks,
+                                directLinks: sortLinksByPriority(directLinks),
                             });
                         }
                     });
@@ -96,7 +149,7 @@ var getMeta = function (_a) {
                     });
                     linkList_1.push({
                         title: dataJson_1 === null || dataJson_1 === void 0 ? void 0 : dataJson_1.pn,
-                        directLinks: directLinks_1,
+                        directLinks: sortLinksByPriority(directLinks_1),
                     });
                 }
                 return [2 /*return*/, {

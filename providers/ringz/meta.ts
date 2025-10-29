@@ -1,4 +1,33 @@
 import { Info, Link, ProviderContext } from "../types";
+
+// Helper function to check if URL is a Cloudflare R2 URL
+const isR2Url = (url: string): boolean => {
+  if (!url || typeof url !== 'string') return false;
+  return (
+    url.includes(".r2.dev") || 
+    !!url.match(/https?:\/\/pub-[a-z0-9-]+\.dev/i) ||
+    !!url.match(/https?:\/\/pub-[a-z0-9-]+\.r2\.dev/i)
+  );
+};
+
+// Sort directLinks to prioritize non-R2 URLs (working servers first)
+const sortLinksByPriority = (links: Link["directLinks"]): Link["directLinks"] => {
+  if (!links || !Array.isArray(links)) return links;
+  return [...links].sort((a, b) => {
+    try {
+      const aData = JSON.parse(a.link);
+      const bData = JSON.parse(b.link);
+      const aIsR2 = isR2Url(aData?.url);
+      const bIsR2 = isR2Url(bData?.url);
+      // Non-R2 URLs (false) come before R2 URLs (true)
+      if (aIsR2 === bIsR2) return 0;
+      return aIsR2 ? 1 : -1;
+    } catch {
+      return 0;
+    }
+  });
+};
+
 export const getMeta = async function ({
   link: data,
 }: {
@@ -33,7 +62,7 @@ export const getMeta = async function ({
           });
           linkList.push({
             title: dataJson?.pn + " (Server " + item + ")",
-            directLinks,
+            directLinks: sortLinksByPriority(directLinks),
           });
         }
       });
@@ -61,7 +90,7 @@ export const getMeta = async function ({
       });
       linkList.push({
         title: dataJson?.pn,
-        directLinks,
+        directLinks: sortLinksByPriority(directLinks),
       });
     }
     return {

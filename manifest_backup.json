@@ -128,22 +128,6 @@
     "disabled": false
   },
   {
-    "display_name": "NetflixMirror",
-    "value": "netflixMirror",
-    "version": "1.7",
-    "icon": "",
-    "type": "global",
-    "disabled": true
-  },
-  {
-    "display_name": "PrimeMirror",
-    "value": "primeMirror",
-    "version": "1.6",
-    "icon": "",
-    "type": "global",
-    "disabled": true
-  },
-  {
     "display_name": "HdHub4u",
     "value": "hdhub4u",
     "version": "1.0",
@@ -187,14 +171,6 @@
     "display_name": "ShowBox",
     "value": "showbox",
     "version": "1.1",
-    "icon": "",
-    "type": "english",
-    "disabled": false
-  },
-  {
-    "display_name": "RidoMovies",
-    "value": "ridoMovies",
-    "version": "1.0",
     "icon": "",
     "type": "english",
     "disabled": false
