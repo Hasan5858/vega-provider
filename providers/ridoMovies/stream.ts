@@ -82,6 +82,7 @@ export const getStream = async ({
           // Construct embed URL: https://closeload.top/video/embed/{link}/
           embedUrl = `https://closeload.top/video/embed/${embedLink}/`;
           console.log("ridomovies embed URL constructed:", embedUrl);
+          
         } else {
           console.log("ridomovies warning: No link field in API response");
         }
@@ -181,11 +182,18 @@ export const getStream = async ({
           
           if (!text) return;
           
+          // Extract embed link ID for pattern matching
+          const embedLinkMatch = embedUrl.match(/\/([^\/]+)\/$/);
+          const embedLinkId = embedLinkMatch ? embedLinkMatch[1] : '';
+          
           // Look for HLS master playlist URLs (including .txt extensions and various patterns)
           const hlsPatterns = [
-            // Exact CDN pattern from network request
+            // Exact CDN pattern from network request - prioritize this
+            new RegExp(`https?://srv\\d+\\.cdnimages\\d+\\.sbs/hls/[^\\s"'<>)]*${embedLinkId}[^\\s"'<>)]*\\.mp4/txt/master\\.txt`, 'gi'),
+            // General cdnimages pattern with embed link
+            new RegExp(`https?://[^\\s"'<>)]*cdnimages\\d+\\.sbs/hls/[^\\s"'<>)]*${embedLinkId}[^\\s"'<>)]*\\.mp4/txt/master\\.txt`, 'gi'),
+            // General cdnimages pattern (any)
             /https?:\/\/srv\d+\.cdnimages\d+\.sbs\/hls\/[^\s"'<>)]+\.mp4\/txt\/master\.txt/gi,
-            // General cdnimages pattern
             /https?:\/\/[^\s"'<>)]+cdnimages\d+\.sbs\/hls\/[^\s"'<>)]+\.mp4\/txt\/master\.txt/gi,
             // playmix patterns
             /https?:\/\/[^\s"'<>)]+\.playmix\.uno\/hls\/[^\s"'<>)]+\/master\.txt/gi,
@@ -202,40 +210,26 @@ export const getStream = async ({
           ];
           
           hlsPatterns.forEach((pattern, patternIndex) => {
-            const matches = text.match(pattern);
-            if (matches) {
-              matches.forEach(match => {
+            // Patterns with capture groups (10, 11, 12) need exec() to extract the captured group
+            if (patternIndex === 10 || patternIndex === 11 || patternIndex === 12) {
+              let match;
+              while ((match = pattern.exec(text)) !== null) {
                 let cleanUrl: string | null = null;
                 
-                // Handle base64 encoded URLs (pattern index 10)
-                if (patternIndex === 10) {
+                // Pattern 12 is base64
+                if (patternIndex === 12) {
                   try {
-                    // Try to decode base64
-                    const decoded = Buffer.from(match, 'base64').toString('utf-8');
-                    // Check if decoded string contains HLS URL
+                    const decoded = Buffer.from(match[1], 'base64').toString('utf-8');
                     const urlMatch = decoded.match(/https?:\/\/[^\s"']+\/(?:hls|txt|master)[^\s"']*master\.txt/gi);
                     if (urlMatch) {
                       cleanUrl = urlMatch[0];
                     }
                   } catch (e) {
-                    // Base64 decode failed, skip
+                    // Base64 decode failed
                   }
                 } else {
-                  // Extract URL from match (handle capture groups)
-                  if (match.includes('http')) {
-                    cleanUrl = match.replace(/["'\s()]/g, '').trim();
-                  } else if (match.match(/^[A-Za-z0-9+/=]+$/)) {
-                    // Might be base64, try decoding
-                    try {
-                      const decoded = Buffer.from(match, 'base64').toString('utf-8');
-                      const urlMatch = decoded.match(/https?:\/\/[^\s"']+/gi);
-                      if (urlMatch) {
-                        cleanUrl = urlMatch[0];
-                      }
-                    } catch (e) {
-                      // Not base64 or decode failed
-                    }
-                  }
+                  // Patterns 8 and 9 have capture group 1 with the URL
+                  cleanUrl = match[1];
                 }
                 
                 if (cleanUrl && cleanUrl.includes('http') && (cleanUrl.includes('/hls/') || cleanUrl.includes('master.txt'))) {
@@ -254,7 +248,36 @@ export const getStream = async ({
                     },
                   });
                 }
-              });
+              }
+            } else {
+              // Patterns without capture groups use match()
+              const matches = text.match(pattern);
+              if (matches) {
+                matches.forEach(match => {
+                  let cleanUrl: string | null = null;
+                  
+                  if (match.includes('http')) {
+                    cleanUrl = match.replace(/["'\s()]/g, '').trim();
+                  }
+                  
+                  if (cleanUrl && cleanUrl.includes('http') && (cleanUrl.includes('/hls/') || cleanUrl.includes('master.txt'))) {
+                    streamLinks.push({
+                      link: cleanUrl,
+                      server: "rido hls",
+                      type: "m3u8",
+                      headers: {
+                        Referer: 'https://closeload.top/',
+                        Origin: 'https://closeload.top',
+                        'User-Agent': headers['User-Agent'] || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
+                        'Accept': '*/*',
+                        'Accept-Language': 'en-US,en;q=0.9,bn;q=0.8',
+                        'Accept-Encoding': 'gzip, deflate, br, zstd',
+                        ...(cookies && { Cookie: cookies }),
+                      },
+                    });
+                  }
+                });
+              }
             }
           });
         });
@@ -266,10 +289,19 @@ export const getStream = async ({
         streamLinks.length = 0;
         streamLinks.push(...uniqueStreams);
         
-        // Prioritize cdnimages*.sbs URLs over playmix.uno (cdnimages is the actual working CDN)
+        // Prioritize: 1) cdnimages*.sbs URLs with embed link ID, 2) cdnimages*.sbs URLs, 3) others
         streamLinks.sort((a, b) => {
+          const embedLinkMatch = embedUrl.match(/\/([^\/]+)\/$/);
+          const embedLinkId = embedLinkMatch ? embedLinkMatch[1] : '';
+          
           const aIsCdnImages = a.link.includes('cdnimages') && a.link.includes('.sbs');
           const bIsCdnImages = b.link.includes('cdnimages') && b.link.includes('.sbs');
+          const aHasEmbedId = embedLinkId && a.link.includes(embedLinkId);
+          const bHasEmbedId = embedLinkId && b.link.includes(embedLinkId);
+          
+          // Priority: cdnimages with embed ID > cdnimages > others
+          if (aIsCdnImages && aHasEmbedId && (!bIsCdnImages || !bHasEmbedId)) return -1;
+          if (bIsCdnImages && bHasEmbedId && (!aIsCdnImages || !aHasEmbedId)) return 1;
           if (aIsCdnImages && !bIsCdnImages) return -1;
           if (!aIsCdnImages && bIsCdnImages) return 1;
           return 0;
