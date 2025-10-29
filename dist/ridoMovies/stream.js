@@ -46,10 +46,35 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getStream = void 0;
 var getStream = function (_a) { return __awaiter(void 0, [_a], void 0, function (_b) {
-    var cheerio, headers_1, axios, getBaseUrl, baseUrl, slug_1, streamLinks_1, searchQuery, searchUrl, searchRes, searchData, match, content, slugParts, movieSlug, embedUrl_1, apiUrl, apiRes, apiData, streamData, embedLink, apiError_1, embedRes, $embed_1, embedError_1, e_1;
+    var cheerio, headers_1, axios, getBaseUrl, baseUrl, slug_1, streamLinks_1, searchQuery, searchUrl, searchRes, searchData, match, content, slugParts, movieSlug, embedUrl, apiUrl, apiRes, apiData, streamData, embedLink, apiError_1, embedRes, setCookieHeaders, cookies_1, $embed_1, uniqueStreams, embedError_1, e_1;
     var _c, _d, _e, _f;
     var link = _b.link, providerContext = _b.providerContext;
     return __generator(this, function (_g) {
@@ -91,7 +116,7 @@ var getStream = function (_a) { return __awaiter(void 0, [_a], void 0, function 
                 slugParts = slug_1.split('/');
                 movieSlug = slugParts[slugParts.length - 1];
                 console.log("ridomovies movie slug:", movieSlug);
-                embedUrl_1 = null;
+                embedUrl = null;
                 _g.label = 5;
             case 5:
                 _g.trys.push([5, 7, , 8]);
@@ -109,8 +134,8 @@ var getStream = function (_a) { return __awaiter(void 0, [_a], void 0, function 
                     embedLink = streamData.link;
                     if (embedLink) {
                         // Construct embed URL: https://closeload.top/video/embed/{link}/
-                        embedUrl_1 = "https://closeload.top/video/embed/".concat(embedLink, "/");
-                        console.log("ridomovies embed URL constructed:", embedUrl_1);
+                        embedUrl = "https://closeload.top/video/embed/".concat(embedLink, "/");
+                        console.log("ridomovies embed URL constructed:", embedUrl);
                     }
                     else {
                         console.log("ridomovies warning: No link field in API response");
@@ -128,16 +153,19 @@ var getStream = function (_a) { return __awaiter(void 0, [_a], void 0, function 
                 }
                 return [3 /*break*/, 8];
             case 8:
-                if (!embedUrl_1) return [3 /*break*/, 13];
+                if (!embedUrl) return [3 /*break*/, 13];
                 _g.label = 9;
             case 9:
                 _g.trys.push([9, 11, , 12]);
-                console.log("ridomovies fetching embed page:", embedUrl_1);
-                return [4 /*yield*/, axios.get(embedUrl_1, {
-                        headers: __assign(__assign({}, headers_1), { 'Referer': link })
+                console.log("ridomovies fetching embed page:", embedUrl);
+                return [4 /*yield*/, axios.get(embedUrl, {
+                        headers: __assign(__assign({}, headers_1), { 'Referer': link, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 'Accept-Language': 'en-US,en;q=0.9' }),
+                        withCredentials: true,
                     })];
             case 10:
                 embedRes = _g.sent();
+                setCookieHeaders = embedRes.headers['set-cookie'] || [];
+                cookies_1 = setCookieHeaders.join('; ');
                 $embed_1 = cheerio.load(embedRes.data);
                 // Extract contentUrl from JSON-LD structured data
                 $embed_1('script[type="application/ld+json"]').each(function (i, element) {
@@ -160,10 +188,7 @@ var getStream = function (_a) { return __awaiter(void 0, [_a], void 0, function 
                                 link: contentUrl,
                                 server: "rido closeload",
                                 type: streamType,
-                                headers: {
-                                    Referer: embedUrl_1,
-                                    'User-Agent': headers_1['User-Agent'],
-                                },
+                                headers: __assign({ Referer: 'https://closeload.top/', Origin: 'https://closeload.top', 'User-Agent': headers_1['User-Agent'] || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36', 'Accept': '*/*', 'Accept-Language': 'en-US,en;q=0.9,bn;q=0.8', 'Accept-Encoding': 'gzip, deflate, br, zstd' }, (cookies_1 && { Cookie: cookies_1 })),
                             });
                         }
                     }
@@ -171,27 +196,44 @@ var getStream = function (_a) { return __awaiter(void 0, [_a], void 0, function 
                         console.log("ridomovies JSON-LD parse error:", parseError);
                     }
                 });
-                // Fallback: Look for HLS URLs in script tags if JSON-LD didn't work
-                if (streamLinks_1.length === 0) {
-                    $embed_1('script').each(function (i, element) {
-                        var text = $embed_1(element).text();
-                        // Look for HLS master playlist URLs (including .txt extensions)
-                        var hlsMatch = text.match(/https?:\/\/[^\s"']+\/(?:hls|master|playlist)[^\s"']*\.(m3u8|txt)/gi);
-                        if (hlsMatch) {
-                            hlsMatch.forEach(function (url) {
-                                streamLinks_1.push({
-                                    link: url,
-                                    server: "rido hls",
-                                    type: "m3u8",
-                                    headers: {
-                                        Referer: embedUrl_1,
-                                        'User-Agent': headers_1['User-Agent'],
-                                    },
-                                });
+                // Also look for HLS URLs in script tags (including obfuscated JavaScript)
+                $embed_1('script').each(function (i, element) {
+                    var text = $embed_1(element).text();
+                    if (!text)
+                        return;
+                    // Look for HLS master playlist URLs (including .txt extensions and various patterns)
+                    var hlsPatterns = [
+                        /https?:\/\/[^\s"']+\/(?:hls|master|playlist)[^\s"']*\.(m3u8|txt)/gi,
+                        /https?:\/\/[^\s"']+\.(playmix|cdnimages)[^\s"']*\/hls\/[^\s"']*(?:\.mp4)?\/?txt\/master\.txt/gi, // /txt/master.txt format
+                        /https?:\/\/[^\s"']+\.(playmix|cdnimages)[^\s"']*\/hls\/[^\s"']*\.(mp4|txt)/gi,
+                        /https?:\/\/[^\s"']*\/(?:txt\/)?master\.txt/gi,
+                        /contentUrl["']?\s*:\s*["'](https?:\/\/[^"']+(?:\/txt\/)?master\.txt[^"']*)/gi,
+                        /src["']?\s*:\s*["'](https?:\/\/[^"']+(?:\/txt\/)?master\.txt[^"']*)/gi,
+                        /https?:\/\/srv\d+\.cdnimages\d+\.sbs\/hls\/[^\s"']+\.mp4\/txt\/master\.txt/gi, // Exact pattern from the network request
+                    ];
+                    hlsPatterns.forEach(function (pattern) {
+                        var matches = text.match(pattern);
+                        if (matches) {
+                            matches.forEach(function (url) {
+                                // Clean up the URL (remove quotes, whitespace)
+                                var cleanUrl = url.replace(/["'\s]/g, '').trim();
+                                if (cleanUrl && cleanUrl.includes('http')) {
+                                    streamLinks_1.push({
+                                        link: cleanUrl,
+                                        server: "rido hls",
+                                        type: "m3u8",
+                                        headers: __assign({ Referer: 'https://closeload.top/', Origin: 'https://closeload.top', 'User-Agent': headers_1['User-Agent'] || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36', 'Accept': '*/*', 'Accept-Language': 'en-US,en;q=0.9,bn;q=0.8', 'Accept-Encoding': 'gzip, deflate, br, zstd' }, (cookies_1 && { Cookie: cookies_1 })),
+                                    });
+                                }
                             });
                         }
                     });
-                }
+                });
+                uniqueStreams = streamLinks_1.filter(function (stream, index, self) {
+                    return index === self.findIndex(function (s) { return s.link === stream.link; });
+                });
+                streamLinks_1.length = 0;
+                streamLinks_1.push.apply(streamLinks_1, __spreadArray([], __read(uniqueStreams), false));
                 console.log("ridomovies stream extraction found:", streamLinks_1.length, "sources");
                 return [3 /*break*/, 12];
             case 11:

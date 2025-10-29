@@ -103,8 +103,15 @@ export const getStream = async ({
           headers: {
             ...headers,
             'Referer': link,
-          }
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+          },
+          withCredentials: true,
         });
+        
+        // Extract cookies from response for subsequent requests
+        const setCookieHeaders = embedRes.headers['set-cookie'] || [];
+        const cookies = setCookieHeaders.join('; ');
         
         const $embed = cheerio.load(embedRes.data);
         
@@ -132,8 +139,13 @@ export const getStream = async ({
                 server: "rido closeload",
                 type: streamType,
                 headers: {
-                  Referer: embedUrl,
-                  'User-Agent': headers['User-Agent'],
+                  Referer: 'https://closeload.top/',
+                  Origin: 'https://closeload.top',
+                  'User-Agent': headers['User-Agent'] || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
+                  'Accept': '*/*',
+                  'Accept-Language': 'en-US,en;q=0.9,bn;q=0.8',
+                  'Accept-Encoding': 'gzip, deflate, br, zstd',
+                  ...(cookies && { Cookie: cookies }),
                 },
               });
             }
@@ -142,28 +154,56 @@ export const getStream = async ({
           }
         });
         
-        // Fallback: Look for HLS URLs in script tags if JSON-LD didn't work
-        if (streamLinks.length === 0) {
-          $embed('script').each((i, element) => {
-            const text = $embed(element).text();
-            
-            // Look for HLS master playlist URLs (including .txt extensions)
-            const hlsMatch = text.match(/https?:\/\/[^\s"']+\/(?:hls|master|playlist)[^\s"']*\.(m3u8|txt)/gi);
-            if (hlsMatch) {
-              hlsMatch.forEach(url => {
-                streamLinks.push({
-                  link: url,
-                  server: "rido hls",
-                  type: "m3u8",
-                  headers: {
-                    Referer: embedUrl,
-                    'User-Agent': headers['User-Agent'],
-                  },
-                });
+        // Also look for HLS URLs in script tags (including obfuscated JavaScript)
+        $embed('script').each((i, element) => {
+          const text = $embed(element).text();
+          
+          if (!text) return;
+          
+          // Look for HLS master playlist URLs (including .txt extensions and various patterns)
+          const hlsPatterns = [
+            /https?:\/\/[^\s"']+\/(?:hls|master|playlist)[^\s"']*\.(m3u8|txt)/gi,
+            /https?:\/\/[^\s"']+\.(playmix|cdnimages)[^\s"']*\/hls\/[^\s"']*(?:\.mp4)?\/?txt\/master\.txt/gi, // /txt/master.txt format
+            /https?:\/\/[^\s"']+\.(playmix|cdnimages)[^\s"']*\/hls\/[^\s"']*\.(mp4|txt)/gi,
+            /https?:\/\/[^\s"']*\/(?:txt\/)?master\.txt/gi,
+            /contentUrl["']?\s*:\s*["'](https?:\/\/[^"']+(?:\/txt\/)?master\.txt[^"']*)/gi,
+            /src["']?\s*:\s*["'](https?:\/\/[^"']+(?:\/txt\/)?master\.txt[^"']*)/gi,
+            /https?:\/\/srv\d+\.cdnimages\d+\.sbs\/hls\/[^\s"']+\.mp4\/txt\/master\.txt/gi, // Exact pattern from the network request
+          ];
+          
+          hlsPatterns.forEach(pattern => {
+            const matches = text.match(pattern);
+            if (matches) {
+              matches.forEach(url => {
+                // Clean up the URL (remove quotes, whitespace)
+                const cleanUrl = url.replace(/["'\s]/g, '').trim();
+                if (cleanUrl && cleanUrl.includes('http')) {
+                  streamLinks.push({
+                    link: cleanUrl,
+                    server: "rido hls",
+                    type: "m3u8",
+                    headers: {
+                      Referer: 'https://closeload.top/',
+                      Origin: 'https://closeload.top',
+                      'User-Agent': headers['User-Agent'] || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
+                      'Accept': '*/*',
+                      'Accept-Language': 'en-US,en;q=0.9,bn;q=0.8',
+                      'Accept-Encoding': 'gzip, deflate, br, zstd',
+                      ...(cookies && { Cookie: cookies }),
+                    },
+                  });
+                }
               });
             }
           });
-        }
+        });
+        
+        // Remove duplicates based on link
+        const uniqueStreams = streamLinks.filter((stream, index, self) => 
+          index === self.findIndex(s => s.link === stream.link)
+        );
+        streamLinks.length = 0;
+        streamLinks.push(...uniqueStreams);
         
         console.log("ridomovies stream extraction found:", streamLinks.length, "sources");
       } catch (embedError) {
