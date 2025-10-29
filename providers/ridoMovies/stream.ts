@@ -154,6 +154,27 @@ export const getStream = async ({
           }
         });
         
+        // Also check video element data attributes for source
+        $embed('video, [data-video], [data-src]').each((i, element) => {
+          const dataSrc = $embed(element).attr('data-src') || $embed(element).attr('data-video') || $embed(element).attr('src');
+          if (dataSrc && (dataSrc.includes('/hls/') || dataSrc.includes('master.txt'))) {
+            streamLinks.push({
+              link: dataSrc.startsWith('http') ? dataSrc : `https://${new URL(embedUrl).host}${dataSrc}`,
+              server: "rido video element",
+              type: "m3u8",
+              headers: {
+                Referer: 'https://closeload.top/',
+                Origin: 'https://closeload.top',
+                'User-Agent': headers['User-Agent'] || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
+                'Accept': '*/*',
+                'Accept-Language': 'en-US,en;q=0.9,bn;q=0.8',
+                'Accept-Encoding': 'gzip, deflate, br, zstd',
+                ...(cookies && { Cookie: cookies }),
+              },
+            });
+          }
+        });
+        
         // Also look for HLS URLs in script tags (including obfuscated JavaScript)
         $embed('script').each((i, element) => {
           const text = $embed(element).text();
@@ -162,22 +183,62 @@ export const getStream = async ({
           
           // Look for HLS master playlist URLs (including .txt extensions and various patterns)
           const hlsPatterns = [
+            // Exact CDN pattern from network request
+            /https?:\/\/srv\d+\.cdnimages\d+\.sbs\/hls\/[^\s"'<>)]+\.mp4\/txt\/master\.txt/gi,
+            // General cdnimages pattern
+            /https?:\/\/[^\s"'<>)]+cdnimages\d+\.sbs\/hls\/[^\s"'<>)]+\.mp4\/txt\/master\.txt/gi,
+            // playmix patterns
+            /https?:\/\/[^\s"'<>)]+\.playmix\.uno\/hls\/[^\s"'<>)]+\/master\.txt/gi,
+            // General patterns
             /https?:\/\/[^\s"']+\/(?:hls|master|playlist)[^\s"']*\.(m3u8|txt)/gi,
-            /https?:\/\/[^\s"']+\.(playmix|cdnimages)[^\s"']*\/hls\/[^\s"']*(?:\.mp4)?\/?txt\/master\.txt/gi, // /txt/master.txt format
+            /https?:\/\/[^\s"']+\.(playmix|cdnimages)[^\s"']*\/hls\/[^\s"']*(?:\.mp4)?\/?txt\/master\.txt/gi,
             /https?:\/\/[^\s"']+\.(playmix|cdnimages)[^\s"']*\/hls\/[^\s"']*\.(mp4|txt)/gi,
             /https?:\/\/[^\s"']*\/(?:txt\/)?master\.txt/gi,
+            // Video.js src patterns
+            /(?:src|source|url)\s*[:=]\s*["'](https?:\/\/[^"']+(?:\/txt\/)?master\.txt[^"']*)/gi,
             /contentUrl["']?\s*:\s*["'](https?:\/\/[^"']+(?:\/txt\/)?master\.txt[^"']*)/gi,
-            /src["']?\s*:\s*["'](https?:\/\/[^"']+(?:\/txt\/)?master\.txt[^"']*)/gi,
-            /https?:\/\/srv\d+\.cdnimages\d+\.sbs\/hls\/[^\s"']+\.mp4\/txt\/master\.txt/gi, // Exact pattern from the network request
+            // Base64 encoded URLs (decode them)
+            /(?:atob|decodeURIComponent)\(['"]([A-Za-z0-9+/=]+)['"]\)/gi,
           ];
           
-          hlsPatterns.forEach(pattern => {
+          hlsPatterns.forEach((pattern, patternIndex) => {
             const matches = text.match(pattern);
             if (matches) {
-              matches.forEach(url => {
-                // Clean up the URL (remove quotes, whitespace)
-                const cleanUrl = url.replace(/["'\s]/g, '').trim();
-                if (cleanUrl && cleanUrl.includes('http')) {
+              matches.forEach(match => {
+                let cleanUrl: string | null = null;
+                
+                // Handle base64 encoded URLs (pattern index 10)
+                if (patternIndex === 10) {
+                  try {
+                    // Try to decode base64
+                    const decoded = Buffer.from(match, 'base64').toString('utf-8');
+                    // Check if decoded string contains HLS URL
+                    const urlMatch = decoded.match(/https?:\/\/[^\s"']+\/(?:hls|txt|master)[^\s"']*master\.txt/gi);
+                    if (urlMatch) {
+                      cleanUrl = urlMatch[0];
+                    }
+                  } catch (e) {
+                    // Base64 decode failed, skip
+                  }
+                } else {
+                  // Extract URL from match (handle capture groups)
+                  if (match.includes('http')) {
+                    cleanUrl = match.replace(/["'\s()]/g, '').trim();
+                  } else if (match.match(/^[A-Za-z0-9+/=]+$/)) {
+                    // Might be base64, try decoding
+                    try {
+                      const decoded = Buffer.from(match, 'base64').toString('utf-8');
+                      const urlMatch = decoded.match(/https?:\/\/[^\s"']+/gi);
+                      if (urlMatch) {
+                        cleanUrl = urlMatch[0];
+                      }
+                    } catch (e) {
+                      // Not base64 or decode failed
+                    }
+                  }
+                }
+                
+                if (cleanUrl && cleanUrl.includes('http') && (cleanUrl.includes('/hls/') || cleanUrl.includes('master.txt'))) {
                   streamLinks.push({
                     link: cleanUrl,
                     server: "rido hls",
@@ -204,6 +265,17 @@ export const getStream = async ({
         );
         streamLinks.length = 0;
         streamLinks.push(...uniqueStreams);
+        
+        // Prioritize cdnimages*.sbs URLs over playmix.uno (cdnimages is the actual working CDN)
+        streamLinks.sort((a, b) => {
+          const aIsCdnImages = a.link.includes('cdnimages') && a.link.includes('.sbs');
+          const bIsCdnImages = b.link.includes('cdnimages') && b.link.includes('.sbs');
+          if (aIsCdnImages && !bIsCdnImages) return -1;
+          if (!aIsCdnImages && bIsCdnImages) return 1;
+          return 0;
+        });
+        
+        console.log("ridomovies prioritized streams (cdnimages first):", streamLinks.map(s => s.link));
         
         console.log("ridomovies stream extraction found:", streamLinks.length, "sources");
       } catch (embedError) {
