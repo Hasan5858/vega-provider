@@ -114,7 +114,7 @@
   {
     "display_name": "Ringz",
     "value": "ringz",
-    "version": "1.0",
+    "version": "1.1",
     "icon": "",
     "type": "global",
     "disabled": false
@@ -158,14 +158,6 @@
     "icon": "",
     "type": "english",
     "disabled": false
-  },
-  {
-    "display_name": "RidoMovies",
-    "value": "ridoMovies",
-    "version": "2.8",
-    "icon": "",
-    "type": "english",
-    "disabled": true
   },
   {
     "display_name": "Primewire",

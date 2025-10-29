@@ -37,17 +37,29 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getStream = void 0;
+// Cloudflare Access headers required for R2 bucket authentication
+var headers = {
+    "cf-access-client-id": "833049b087acf6e787cedfd85d1ccdb8.access",
+    "cf-access-client-secret": "02db296a961d7513c3102d7785df4113eff036b2d57d060ffcc2ba3ba820c6aa",
+};
 var getStream = function (_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var streamLinks, dataJson;
+        var streamLinks, dataJson, url, isR2Url;
         var data = _b.link;
         return __generator(this, function (_c) {
             streamLinks = [];
             dataJson = JSON.parse(data);
+            url = dataJson.url;
+            isR2Url = url && (url.includes(".r2.dev") ||
+                (url.includes("pub-") && url.includes(".dev")) ||
+                url.startsWith("https://pub-"));
             streamLinks.push({
-                link: dataJson.url,
+                link: url,
                 server: dataJson.server,
                 type: "mkv",
+                // Add Cloudflare Access headers for R2 bucket URLs to prevent 401 errors
+                // These headers authenticate with Cloudflare Access to allow access to protected R2 buckets
+                headers: isR2Url ? headers : undefined,
             });
             return [2 /*return*/, streamLinks];
         });
