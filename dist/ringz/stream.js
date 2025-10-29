@@ -1,4 +1,15 @@
 "use strict";
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -44,22 +55,26 @@ var headers = {
 };
 var getStream = function (_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var streamLinks, dataJson, url, isR2Url;
+        var streamLinks, dataJson, url, isR2Url, streamHeaders;
         var data = _b.link;
         return __generator(this, function (_c) {
             streamLinks = [];
             dataJson = JSON.parse(data);
             url = dataJson.url;
-            isR2Url = url && (url.includes(".r2.dev") ||
-                (url.includes("pub-") && url.includes(".dev")) ||
-                url.startsWith("https://pub-"));
+            isR2Url = url && typeof url === 'string' && (url.includes(".r2.dev") ||
+                url.match(/https?:\/\/pub-[a-z0-9]+\.dev/i) ||
+                url.match(/https?:\/\/pub-[a-z0-9-]+\.r2\.dev/i));
+            streamHeaders = isR2Url ? __assign({}, headers) : undefined;
+            console.log("🔐 [Ringz Stream] URL:", url);
+            console.log("🔐 [Ringz Stream] Is R2 URL:", isR2Url);
+            console.log("🔐 [Ringz Stream] Headers:", streamHeaders ? Object.keys(streamHeaders).join(", ") : "none");
             streamLinks.push({
                 link: url,
                 server: dataJson.server,
                 type: "mkv",
                 // Add Cloudflare Access headers for R2 bucket URLs to prevent 401 errors
                 // These headers authenticate with Cloudflare Access to allow access to protected R2 buckets
-                headers: isR2Url ? headers : undefined,
+                headers: streamHeaders,
             });
             return [2 /*return*/, streamLinks];
         });

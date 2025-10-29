@@ -19,11 +19,17 @@ export const getStream = async function ({
   // Check if URL is a Cloudflare R2 URL (requires authentication headers)
   const url = dataJson.url;
   // R2 buckets typically use .r2.dev domain or pub-*.r2.dev subdomain
-  const isR2Url = url && (
+  // Apply headers to all R2 URLs to ensure authentication
+  const isR2Url = url && typeof url === 'string' && (
     url.includes(".r2.dev") || 
-    (url.includes("pub-") && url.includes(".dev")) ||
-    url.startsWith("https://pub-")
+    url.match(/https?:\/\/pub-[a-z0-9]+\.dev/i) ||
+    url.match(/https?:\/\/pub-[a-z0-9-]+\.r2\.dev/i)
   );
+  
+  const streamHeaders = isR2Url ? {...headers} : undefined;
+  console.log("🔐 [Ringz Stream] URL:", url);
+  console.log("🔐 [Ringz Stream] Is R2 URL:", isR2Url);
+  console.log("🔐 [Ringz Stream] Headers:", streamHeaders ? Object.keys(streamHeaders).join(", ") : "none");
   
   streamLinks.push({
     link: url,
@@ -31,7 +37,7 @@ export const getStream = async function ({
     type: "mkv",
     // Add Cloudflare Access headers for R2 bucket URLs to prevent 401 errors
     // These headers authenticate with Cloudflare Access to allow access to protected R2 buckets
-    headers: isR2Url ? headers : undefined,
+    headers: streamHeaders,
   });
   return streamLinks;
 };
