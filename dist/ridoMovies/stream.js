@@ -49,25 +49,23 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getStream = void 0;
 var getStream = function (_a) { return __awaiter(void 0, [_a], void 0, function (_b) {
-    var cheerio, headers_1, axios, getBaseUrl, baseUrl_1, slug_1, streamLinks_1, slugParts, fileName, searchQuery, searchUrl, searchRes, searchData, match, content, pageRes, $_1, pageError_1, e_1;
+    var cheerio, headers_1, axios, getBaseUrl, baseUrl, slug_1, streamLinks_1, searchQuery, searchUrl, searchRes, searchData, match, content, slugParts, movieSlug, embedUrl_1, apiUrl, apiRes, apiData, streamData, embedLink, apiError_1, embedRes, $embed_1, embedError_1, e_1;
     var _c, _d, _e, _f;
     var link = _b.link, providerContext = _b.providerContext;
     return __generator(this, function (_g) {
         switch (_g.label) {
             case 0:
-                _g.trys.push([0, 9, , 10]);
+                _g.trys.push([0, 15, , 16]);
                 cheerio = providerContext.cheerio, headers_1 = providerContext.commonHeaders, axios = providerContext.axios, getBaseUrl = providerContext.getBaseUrl;
                 return [4 /*yield*/, getBaseUrl("ridomovies")];
             case 1:
-                baseUrl_1 = _g.sent();
+                baseUrl = _g.sent();
                 console.log("ridomovies stream link:", link);
-                slug_1 = link.replace(baseUrl_1 + "/", "");
+                slug_1 = link.replace(baseUrl + "/", "");
                 console.log("ridomovies stream slug:", slug_1);
                 streamLinks_1 = [];
-                slugParts = slug_1.split('/');
-                fileName = slugParts[slugParts.length - 1];
                 searchQuery = "lego";
-                searchUrl = "".concat(baseUrl_1, "/core/api/search?q=").concat(encodeURIComponent(searchQuery));
+                searchUrl = "".concat(baseUrl, "/core/api/search?q=").concat(encodeURIComponent(searchQuery));
                 console.log("ridomovies stream search URL (strategy 1):", searchUrl);
                 return [4 /*yield*/, axios.get(searchUrl, { headers: headers_1 })];
             case 2:
@@ -77,7 +75,7 @@ var getStream = function (_a) { return __awaiter(void 0, [_a], void 0, function 
                 match = (_d = (_c = searchData === null || searchData === void 0 ? void 0 : searchData.data) === null || _c === void 0 ? void 0 : _c.items) === null || _d === void 0 ? void 0 : _d.find(function (it) { return (it === null || it === void 0 ? void 0 : it.fullSlug) === slug_1; });
                 if (!!match) return [3 /*break*/, 4];
                 searchQuery = "avengers";
-                searchUrl = "".concat(baseUrl_1, "/core/api/search?q=").concat(encodeURIComponent(searchQuery));
+                searchUrl = "".concat(baseUrl, "/core/api/search?q=").concat(encodeURIComponent(searchQuery));
                 console.log("ridomovies stream search URL (strategy 2):", searchUrl);
                 return [4 /*yield*/, axios.get(searchUrl, { headers: headers_1 })];
             case 3:
@@ -90,87 +88,128 @@ var getStream = function (_a) { return __awaiter(void 0, [_a], void 0, function 
                     throw new Error("No matching content found for streaming");
                 }
                 content = match.contentable;
+                slugParts = slug_1.split('/');
+                movieSlug = slugParts[slugParts.length - 1];
+                console.log("ridomovies movie slug:", movieSlug);
+                embedUrl_1 = null;
                 _g.label = 5;
             case 5:
                 _g.trys.push([5, 7, , 8]);
-                console.log("ridomovies scraping page for video sources:", link);
-                return [4 /*yield*/, axios.get(link, {
-                        headers: __assign(__assign({}, headers_1), { 'Referer': baseUrl_1 })
+                apiUrl = "".concat(baseUrl, "/api/movies/").concat(movieSlug);
+                console.log("ridomovies API URL for embed:", apiUrl);
+                return [4 /*yield*/, axios.get(apiUrl, {
+                        headers: __assign(__assign({}, headers_1), { 'Referer': link, 'Accept': '*/*' })
                     })];
             case 6:
-                pageRes = _g.sent();
-                $_1 = cheerio.load(pageRes.data);
-                // Debug: Log page content structure
-                console.log("ridomovies page title:", $_1('title').text());
-                console.log("ridomovies page has video tags:", $_1('video').length);
-                console.log("ridomovies page has iframe tags:", $_1('iframe').length);
-                console.log("ridomovies page has script tags:", $_1('script').length);
-                // Look for video sources in script tags
-                $_1('script').each(function (i, element) {
-                    var text = $_1(element).text();
-                    // Check for various video URL patterns
-                    if (text) {
-                        // Look for direct video URLs
-                        var videoUrls = text.match(/https?:\/\/[^\s"']+\.(mp4|m3u8|avi|mkv|webm)/gi);
-                        if (videoUrls) {
-                            videoUrls.forEach(function (url) {
-                                streamLinks_1.push({
-                                    link: url,
-                                    server: "rido script",
-                                    type: url.includes('.m3u8') ? "m3u8" : "mp4",
-                                    headers: {
-                                        Referer: baseUrl_1,
-                                        'User-Agent': headers_1['User-Agent'],
-                                    },
-                                });
-                            });
-                        }
-                        // Look for base64 encoded video URLs
-                        var base64Urls = text.match(/data:video\/[^;]+;base64,[A-Za-z0-9+/=]+/g);
-                        if (base64Urls) {
-                            base64Urls.forEach(function (url) {
-                                streamLinks_1.push({
-                                    link: url,
-                                    server: "rido base64",
-                                    type: "mp4",
-                                    headers: {
-                                        Referer: baseUrl_1,
-                                        'User-Agent': headers_1['User-Agent'],
-                                    },
-                                });
-                            });
-                        }
-                        // Look for player URLs
-                        var playerUrls = text.match(/https?:\/\/[^\s"']*player[^\s"']*/gi);
-                        if (playerUrls) {
-                            playerUrls.forEach(function (url) {
-                                streamLinks_1.push({
-                                    link: url,
-                                    server: "rido player",
-                                    type: "m3u8",
-                                    headers: {
-                                        Referer: baseUrl_1,
-                                        'User-Agent': headers_1['User-Agent'],
-                                    },
-                                });
+                apiRes = _g.sent();
+                apiData = apiRes.data;
+                console.log("ridomovies API response:", JSON.stringify(apiData, null, 2));
+                if ((apiData === null || apiData === void 0 ? void 0 : apiData.code) === 200 && (apiData === null || apiData === void 0 ? void 0 : apiData.data) && Array.isArray(apiData.data) && apiData.data.length > 0) {
+                    streamData = apiData.data[0];
+                    embedLink = streamData.link;
+                    if (embedLink) {
+                        // Construct embed URL: https://closeload.top/video/embed/{link}/
+                        embedUrl_1 = "https://closeload.top/video/embed/".concat(embedLink, "/");
+                        console.log("ridomovies embed URL constructed:", embedUrl_1);
+                    }
+                    else {
+                        console.log("ridomovies warning: No link field in API response");
+                    }
+                }
+                else {
+                    console.log("ridomovies warning: Invalid API response structure");
+                }
+                return [3 /*break*/, 8];
+            case 7:
+                apiError_1 = _g.sent();
+                console.log("ridomovies API error:", apiError_1.message);
+                if (apiError_1.response) {
+                    console.log("ridomovies API error response:", apiError_1.response.status, apiError_1.response.data);
+                }
+                return [3 /*break*/, 8];
+            case 8:
+                if (!embedUrl_1) return [3 /*break*/, 13];
+                _g.label = 9;
+            case 9:
+                _g.trys.push([9, 11, , 12]);
+                console.log("ridomovies fetching embed page:", embedUrl_1);
+                return [4 /*yield*/, axios.get(embedUrl_1, {
+                        headers: __assign(__assign({}, headers_1), { 'Referer': link })
+                    })];
+            case 10:
+                embedRes = _g.sent();
+                $embed_1 = cheerio.load(embedRes.data);
+                // Extract contentUrl from JSON-LD structured data
+                $embed_1('script[type="application/ld+json"]').each(function (i, element) {
+                    try {
+                        var jsonText = $embed_1(element).text();
+                        var jsonData = JSON.parse(jsonText);
+                        if (jsonData['@type'] === 'VideoObject' && jsonData.contentUrl) {
+                            var contentUrl = jsonData.contentUrl;
+                            console.log("ridomovies contentUrl found:", contentUrl);
+                            // Determine stream type based on URL
+                            // Priority: Check for HLS indicators first (even if URL has .mp4, if it's in /hls/ path, it's HLS)
+                            var streamType = "m3u8";
+                            if (contentUrl.includes('/hls/') || contentUrl.includes('master.txt') || contentUrl.includes('.m3u8')) {
+                                streamType = "m3u8"; // HLS stream
+                            }
+                            else if (contentUrl.includes('.mp4') && !contentUrl.includes('/hls/')) {
+                                streamType = "mp4"; // Direct MP4 stream
+                            }
+                            streamLinks_1.push({
+                                link: contentUrl,
+                                server: "rido closeload",
+                                type: streamType,
+                                headers: {
+                                    Referer: embedUrl_1,
+                                    'User-Agent': headers_1['User-Agent'],
+                                },
                             });
                         }
                     }
+                    catch (parseError) {
+                        console.log("ridomovies JSON-LD parse error:", parseError);
+                    }
                 });
-                console.log("ridomovies page scraping found:", streamLinks_1.length, "sources");
-                return [3 /*break*/, 8];
-            case 7:
-                pageError_1 = _g.sent();
-                console.log("ridomovies page scraping error:", pageError_1);
-                return [3 /*break*/, 8];
-            case 8:
+                // Fallback: Look for HLS URLs in script tags if JSON-LD didn't work
+                if (streamLinks_1.length === 0) {
+                    $embed_1('script').each(function (i, element) {
+                        var text = $embed_1(element).text();
+                        // Look for HLS master playlist URLs (including .txt extensions)
+                        var hlsMatch = text.match(/https?:\/\/[^\s"']+\/(?:hls|master|playlist)[^\s"']*\.(m3u8|txt)/gi);
+                        if (hlsMatch) {
+                            hlsMatch.forEach(function (url) {
+                                streamLinks_1.push({
+                                    link: url,
+                                    server: "rido hls",
+                                    type: "m3u8",
+                                    headers: {
+                                        Referer: embedUrl_1,
+                                        'User-Agent': headers_1['User-Agent'],
+                                    },
+                                });
+                            });
+                        }
+                    });
+                }
+                console.log("ridomovies stream extraction found:", streamLinks_1.length, "sources");
+                return [3 /*break*/, 12];
+            case 11:
+                embedError_1 = _g.sent();
+                console.log("ridomovies embed page error:", embedError_1);
+                return [3 /*break*/, 12];
+            case 12: return [3 /*break*/, 14];
+            case 13:
+                console.log("ridomovies error: Could not get embed URL from API");
+                _g.label = 14;
+            case 14:
                 console.log("ridomovies stream links found:", streamLinks_1.length);
                 return [2 /*return*/, streamLinks_1];
-            case 9:
+            case 15:
                 e_1 = _g.sent();
                 console.log("ridomovies get stream error:", e_1);
                 return [2 /*return*/, []];
-            case 10: return [2 /*return*/];
+            case 16: return [2 /*return*/];
         }
     });
 }); };
