@@ -175,14 +175,18 @@ function getRingzMovies() {
                         })];
                 case 1:
                     response = _a.sent();
+                    if (!response.ok) {
+                        console.error("Ringz Movies: HTTP ".concat(response.status, " ").concat(response.statusText));
+                        return [2 /*return*/, []];
+                    }
                     return [4 /*yield*/, response.json()];
                 case 2:
                     data = _a.sent();
-                    return [2 /*return*/, data.AllMovieDataList];
+                    return [2 /*return*/, data.AllMovieDataList || []];
                 case 3:
                     error_1 = _a.sent();
-                    console.error(error_1);
-                    return [3 /*break*/, 4];
+                    console.error('Ringz Movies fetch error:', error_1);
+                    return [2 /*return*/, []];
                 case 4: return [2 /*return*/];
             }
         });
@@ -200,14 +204,18 @@ function getRingzShows() {
                         })];
                 case 1:
                     response = _a.sent();
+                    if (!response.ok) {
+                        console.error("Ringz Shows: HTTP ".concat(response.status, " ").concat(response.statusText));
+                        return [2 /*return*/, []];
+                    }
                     return [4 /*yield*/, response.json()];
                 case 2:
                     data = _a.sent();
-                    return [2 /*return*/, data.webSeriesDataList];
+                    return [2 /*return*/, data.webSeriesDataList || []];
                 case 3:
                     error_2 = _a.sent();
-                    console.error(error_2);
-                    return [3 /*break*/, 4];
+                    console.error('Ringz Shows fetch error:', error_2);
+                    return [2 /*return*/, []];
                 case 4: return [2 /*return*/];
             }
         });
@@ -225,14 +233,18 @@ function getRingzAnime() {
                         })];
                 case 1:
                     response = _a.sent();
+                    if (!response.ok) {
+                        console.error("Ringz Anime: HTTP ".concat(response.status, " ").concat(response.statusText));
+                        return [2 /*return*/, []];
+                    }
                     return [4 /*yield*/, response.json()];
                 case 2:
                     data = _a.sent();
-                    return [2 /*return*/, data.webSeriesDataList];
+                    return [2 /*return*/, data.webSeriesDataList || []];
                 case 3:
                     error_3 = _a.sent();
-                    console.error(error_3);
-                    return [3 /*break*/, 4];
+                    console.error('Ringz Anime fetch error:', error_3);
+                    return [2 /*return*/, []];
                 case 4: return [2 /*return*/];
             }
         });

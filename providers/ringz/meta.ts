@@ -10,16 +10,32 @@ const isR2Url = (url: string): boolean => {
   );
 };
 
-// Sort directLinks to prioritize non-R2 URLs (working servers first)
+// Helper to check if URL is pixeldrain (prioritize - it works!)
+const isPixeldrainUrl = (url: string): boolean => {
+  if (!url || typeof url !== 'string') return false;
+  return url.includes("pixeldrain.dev");
+};
+
+// Sort directLinks to prioritize working servers
+// Priority: pixeldrain > non-R2 URLs > R2 URLs
 const sortLinksByPriority = (links: Link["directLinks"]): Link["directLinks"] => {
   if (!links || !Array.isArray(links)) return links;
   return [...links].sort((a, b) => {
     try {
       const aData = JSON.parse(a.link);
       const bData = JSON.parse(b.link);
-      const aIsR2 = isR2Url(aData?.url);
-      const bIsR2 = isR2Url(bData?.url);
-      // Non-R2 URLs (false) come before R2 URLs (true)
+      const aUrl = aData?.url || '';
+      const bUrl = bData?.url || '';
+      const aIsPixeldrain = isPixeldrainUrl(aUrl);
+      const bIsPixeldrain = isPixeldrainUrl(bUrl);
+      const aIsR2 = isR2Url(aUrl);
+      const bIsR2 = isR2Url(bUrl);
+      
+      // Pixeldrain URLs get highest priority
+      if (aIsPixeldrain && !bIsPixeldrain) return -1;
+      if (!aIsPixeldrain && bIsPixeldrain) return 1;
+      
+      // Non-R2 URLs come before R2 URLs
       if (aIsR2 === bIsR2) return 0;
       return aIsR2 ? 1 : -1;
     } catch {
@@ -69,11 +85,12 @@ export const getMeta = async function ({
     } else {
       const directLinks: Link["directLinks"] = [];
       ["1", "2", "3", "4"]?.forEach((item) => {
+        // Fix: Use correct server URL for each item (was using s1 for all)
         if (dataJson?.["s" + item]) {
           directLinks.push({
             title: "Server " + item + " (HD)",
             link: JSON.stringify({
-              url: dataJson?.s1,
+              url: dataJson?.["s" + item],
               server: "Server " + item,
             }),
           });

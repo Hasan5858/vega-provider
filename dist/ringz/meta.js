@@ -70,7 +70,14 @@ var isR2Url = function (url) {
         !!url.match(/https?:\/\/pub-[a-z0-9-]+\.dev/i) ||
         !!url.match(/https?:\/\/pub-[a-z0-9-]+\.r2\.dev/i));
 };
-// Sort directLinks to prioritize non-R2 URLs (working servers first)
+// Helper to check if URL is pixeldrain (prioritize - it works!)
+var isPixeldrainUrl = function (url) {
+    if (!url || typeof url !== 'string')
+        return false;
+    return url.includes("pixeldrain.dev");
+};
+// Sort directLinks to prioritize working servers
+// Priority: pixeldrain > non-R2 URLs > R2 URLs
 var sortLinksByPriority = function (links) {
     if (!links || !Array.isArray(links))
         return links;
@@ -78,9 +85,18 @@ var sortLinksByPriority = function (links) {
         try {
             var aData = JSON.parse(a.link);
             var bData = JSON.parse(b.link);
-            var aIsR2 = isR2Url(aData === null || aData === void 0 ? void 0 : aData.url);
-            var bIsR2 = isR2Url(bData === null || bData === void 0 ? void 0 : bData.url);
-            // Non-R2 URLs (false) come before R2 URLs (true)
+            var aUrl = (aData === null || aData === void 0 ? void 0 : aData.url) || '';
+            var bUrl = (bData === null || bData === void 0 ? void 0 : bData.url) || '';
+            var aIsPixeldrain = isPixeldrainUrl(aUrl);
+            var bIsPixeldrain = isPixeldrainUrl(bUrl);
+            var aIsR2 = isR2Url(aUrl);
+            var bIsR2 = isR2Url(bUrl);
+            // Pixeldrain URLs get highest priority
+            if (aIsPixeldrain && !bIsPixeldrain)
+                return -1;
+            if (!aIsPixeldrain && bIsPixeldrain)
+                return 1;
+            // Non-R2 URLs come before R2 URLs
             if (aIsR2 === bIsR2)
                 return 0;
             return aIsR2 ? 1 : -1;
@@ -128,11 +144,12 @@ var getMeta = function (_a) {
                 else {
                     directLinks_1 = [];
                     (_d = ["1", "2", "3", "4"]) === null || _d === void 0 ? void 0 : _d.forEach(function (item) {
+                        // Fix: Use correct server URL for each item (was using s1 for all)
                         if (dataJson_1 === null || dataJson_1 === void 0 ? void 0 : dataJson_1["s" + item]) {
                             directLinks_1.push({
                                 title: "Server " + item + " (HD)",
                                 link: JSON.stringify({
-                                    url: dataJson_1 === null || dataJson_1 === void 0 ? void 0 : dataJson_1.s1,
+                                    url: dataJson_1 === null || dataJson_1 === void 0 ? void 0 : dataJson_1["s" + item],
                                     server: "Server " + item,
                                 }),
                             });

@@ -116,10 +116,15 @@ export async function getRingzMovies() {
         ...headers,
       },
     });
+    if (!response.ok) {
+      console.error(`Ringz Movies: HTTP ${response.status} ${response.statusText}`);
+      return [];
+    }
     const data = await response.json();
-    return data.AllMovieDataList;
+    return data.AllMovieDataList || [];
   } catch (error) {
-    console.error(error);
+    console.error('Ringz Movies fetch error:', error);
+    return [];
   }
 }
 
@@ -130,10 +135,15 @@ export async function getRingzShows() {
         ...headers,
       },
     });
+    if (!response.ok) {
+      console.error(`Ringz Shows: HTTP ${response.status} ${response.statusText}`);
+      return [];
+    }
     const data = await response.json();
-    return data.webSeriesDataList;
+    return data.webSeriesDataList || [];
   } catch (error) {
-    console.error(error);
+    console.error('Ringz Shows fetch error:', error);
+    return [];
   }
 }
 
@@ -144,10 +154,15 @@ export async function getRingzAnime() {
         ...headers,
       },
     });
+    if (!response.ok) {
+      console.error(`Ringz Anime: HTTP ${response.status} ${response.statusText}`);
+      return [];
+    }
     const data = await response.json();
-    return data.webSeriesDataList;
+    return data.webSeriesDataList || [];
   } catch (error) {
-    console.error(error);
+    console.error('Ringz Anime fetch error:', error);
+    return [];
   }
 }
 
