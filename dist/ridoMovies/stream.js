@@ -46,53 +46,28 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __read = (this && this.__read) || function (o, n) {
-    var m = typeof Symbol === "function" && o[Symbol.iterator];
-    if (!m) return o;
-    var i = m.call(o), r, ar = [], e;
-    try {
-        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
-    }
-    catch (error) { e = { error: error }; }
-    finally {
-        try {
-            if (r && !r.done && (m = i["return"])) m.call(i);
-        }
-        finally { if (e) throw e.error; }
-    }
-    return ar;
-};
-var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
-    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
-        if (ar || !(i in from)) {
-            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
-            ar[i] = from[i];
-        }
-    }
-    return to.concat(ar || Array.prototype.slice.call(from));
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getStream = void 0;
 var getStream = function (_a) { return __awaiter(void 0, [_a], void 0, function (_b) {
-    var cheerio, headers_1, axios, getBaseUrl, baseUrl, slug_1, streamLinks_1, searchQuery, searchUrl, searchRes, searchData, match, content, slugParts, movieSlug, embedUrl_1, apiUrl, apiRes, apiData, streamData, embedLink, apiError_1, embedRes, setCookieHeaders, cookies_1, $embed_1, uniqueStreams, embedError_1, e_1;
+    var cheerio, headers, axios, getBaseUrl, baseUrl, slug_1, streamLinks, searchQuery, searchUrl, searchRes, searchData, match, content, slugParts, movieSlug, embedUrl, apiUrl, apiRes, apiData, streamData, embedLink, apiError_1, e_1;
     var _c, _d, _e, _f;
     var link = _b.link, providerContext = _b.providerContext;
     return __generator(this, function (_g) {
         switch (_g.label) {
             case 0:
-                _g.trys.push([0, 15, , 16]);
-                cheerio = providerContext.cheerio, headers_1 = providerContext.commonHeaders, axios = providerContext.axios, getBaseUrl = providerContext.getBaseUrl;
+                _g.trys.push([0, 9, , 10]);
+                cheerio = providerContext.cheerio, headers = providerContext.commonHeaders, axios = providerContext.axios, getBaseUrl = providerContext.getBaseUrl;
                 return [4 /*yield*/, getBaseUrl("ridomovies")];
             case 1:
                 baseUrl = _g.sent();
                 console.log("ridomovies stream link:", link);
                 slug_1 = link.replace(baseUrl + "/", "");
                 console.log("ridomovies stream slug:", slug_1);
-                streamLinks_1 = [];
+                streamLinks = [];
                 searchQuery = "lego";
                 searchUrl = "".concat(baseUrl, "/core/api/search?q=").concat(encodeURIComponent(searchQuery));
                 console.log("ridomovies stream search URL (strategy 1):", searchUrl);
-                return [4 /*yield*/, axios.get(searchUrl, { headers: headers_1 })];
+                return [4 /*yield*/, axios.get(searchUrl, { headers: headers })];
             case 2:
                 searchRes = _g.sent();
                 searchData = searchRes.data;
@@ -102,7 +77,7 @@ var getStream = function (_a) { return __awaiter(void 0, [_a], void 0, function 
                 searchQuery = "avengers";
                 searchUrl = "".concat(baseUrl, "/core/api/search?q=").concat(encodeURIComponent(searchQuery));
                 console.log("ridomovies stream search URL (strategy 2):", searchUrl);
-                return [4 /*yield*/, axios.get(searchUrl, { headers: headers_1 })];
+                return [4 /*yield*/, axios.get(searchUrl, { headers: headers })];
             case 3:
                 searchRes = _g.sent();
                 searchData = searchRes.data;
@@ -116,14 +91,14 @@ var getStream = function (_a) { return __awaiter(void 0, [_a], void 0, function 
                 slugParts = slug_1.split('/');
                 movieSlug = slugParts[slugParts.length - 1];
                 console.log("ridomovies movie slug:", movieSlug);
-                embedUrl_1 = null;
+                embedUrl = null;
                 _g.label = 5;
             case 5:
                 _g.trys.push([5, 7, , 8]);
                 apiUrl = "".concat(baseUrl, "/api/movies/").concat(movieSlug);
                 console.log("ridomovies API URL for embed:", apiUrl);
                 return [4 /*yield*/, axios.get(apiUrl, {
-                        headers: __assign(__assign({}, headers_1), { 'Referer': link, 'Accept': '*/*' })
+                        headers: __assign(__assign({}, headers), { 'Referer': link, 'Accept': '*/*' })
                     })];
             case 6:
                 apiRes = _g.sent();
@@ -134,8 +109,15 @@ var getStream = function (_a) { return __awaiter(void 0, [_a], void 0, function 
                     embedLink = streamData.link;
                     if (embedLink) {
                         // Construct embed URL: https://closeload.top/video/embed/{link}/
-                        embedUrl_1 = "https://closeload.top/video/embed/".concat(embedLink, "/");
-                        console.log("ridomovies embed URL constructed:", embedUrl_1);
+                        embedUrl = "https://closeload.top/video/embed/".concat(embedLink, "/");
+                        console.log("ridomovies embed URL constructed:", embedUrl);
+                        // Return embed URL directly for WebView playback instead of trying to extract HLS
+                        streamLinks.push({
+                            link: embedUrl,
+                            server: "rido embed",
+                            type: "webview",
+                        });
+                        console.log("ridomovies returning embed URL for WebView playback");
                     }
                     else {
                         console.log("ridomovies warning: No link field in API response");
@@ -153,189 +135,13 @@ var getStream = function (_a) { return __awaiter(void 0, [_a], void 0, function 
                 }
                 return [3 /*break*/, 8];
             case 8:
-                if (!embedUrl_1) return [3 /*break*/, 13];
-                _g.label = 9;
+                console.log("ridomovies stream links found:", streamLinks.length);
+                return [2 /*return*/, streamLinks];
             case 9:
-                _g.trys.push([9, 11, , 12]);
-                console.log("ridomovies fetching embed page:", embedUrl_1);
-                return [4 /*yield*/, axios.get(embedUrl_1, {
-                        headers: __assign(__assign({}, headers_1), { 'Referer': link, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 'Accept-Language': 'en-US,en;q=0.9' }),
-                        withCredentials: true,
-                    })];
-            case 10:
-                embedRes = _g.sent();
-                setCookieHeaders = embedRes.headers['set-cookie'] || [];
-                cookies_1 = setCookieHeaders.join('; ');
-                $embed_1 = cheerio.load(embedRes.data);
-                // Extract contentUrl from JSON-LD structured data
-                $embed_1('script[type="application/ld+json"]').each(function (i, element) {
-                    try {
-                        var jsonText = $embed_1(element).text();
-                        var jsonData = JSON.parse(jsonText);
-                        if (jsonData['@type'] === 'VideoObject' && jsonData.contentUrl) {
-                            var contentUrl = jsonData.contentUrl;
-                            console.log("ridomovies contentUrl found:", contentUrl);
-                            // Determine stream type based on URL
-                            // Priority: Check for HLS indicators first (even if URL has .mp4, if it's in /hls/ path, it's HLS)
-                            var streamType = "m3u8";
-                            if (contentUrl.includes('/hls/') || contentUrl.includes('master.txt') || contentUrl.includes('.m3u8')) {
-                                streamType = "m3u8"; // HLS stream
-                            }
-                            else if (contentUrl.includes('.mp4') && !contentUrl.includes('/hls/')) {
-                                streamType = "mp4"; // Direct MP4 stream
-                            }
-                            streamLinks_1.push({
-                                link: contentUrl,
-                                server: "rido closeload",
-                                type: streamType,
-                                headers: __assign({ Referer: 'https://closeload.top/', Origin: 'https://closeload.top', 'User-Agent': headers_1['User-Agent'] || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36', 'Accept': '*/*', 'Accept-Language': 'en-US,en;q=0.9,bn;q=0.8', 'Accept-Encoding': 'gzip, deflate, br, zstd' }, (cookies_1 && { Cookie: cookies_1 })),
-                            });
-                        }
-                    }
-                    catch (parseError) {
-                        console.log("ridomovies JSON-LD parse error:", parseError);
-                    }
-                });
-                // Also check video element data attributes for source
-                $embed_1('video, [data-video], [data-src]').each(function (i, element) {
-                    var dataSrc = $embed_1(element).attr('data-src') || $embed_1(element).attr('data-video') || $embed_1(element).attr('src');
-                    if (dataSrc && (dataSrc.includes('/hls/') || dataSrc.includes('master.txt'))) {
-                        streamLinks_1.push({
-                            link: dataSrc.startsWith('http') ? dataSrc : "https://".concat(new URL(embedUrl_1).host).concat(dataSrc),
-                            server: "rido video element",
-                            type: "m3u8",
-                            headers: __assign({ Referer: 'https://closeload.top/', Origin: 'https://closeload.top', 'User-Agent': headers_1['User-Agent'] || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36', 'Accept': '*/*', 'Accept-Language': 'en-US,en;q=0.9,bn;q=0.8', 'Accept-Encoding': 'gzip, deflate, br, zstd' }, (cookies_1 && { Cookie: cookies_1 })),
-                        });
-                    }
-                });
-                // Also look for HLS URLs in script tags (including obfuscated JavaScript)
-                $embed_1('script').each(function (i, element) {
-                    var text = $embed_1(element).text();
-                    if (!text)
-                        return;
-                    // Extract embed link ID for pattern matching
-                    var embedLinkMatch = embedUrl_1.match(/\/([^\/]+)\/$/);
-                    var embedLinkId = embedLinkMatch ? embedLinkMatch[1] : '';
-                    // Look for HLS master playlist URLs (including .txt extensions and various patterns)
-                    var hlsPatterns = [
-                        // Exact CDN pattern from network request - prioritize this
-                        new RegExp("https?://srv\\d+\\.cdnimages\\d+\\.sbs/hls/[^\\s\"'<>)]*".concat(embedLinkId, "[^\\s\"'<>)]*\\.mp4/txt/master\\.txt"), 'gi'),
-                        // General cdnimages pattern with embed link
-                        new RegExp("https?://[^\\s\"'<>)]*cdnimages\\d+\\.sbs/hls/[^\\s\"'<>)]*".concat(embedLinkId, "[^\\s\"'<>)]*\\.mp4/txt/master\\.txt"), 'gi'),
-                        // General cdnimages pattern (any)
-                        /https?:\/\/srv\d+\.cdnimages\d+\.sbs\/hls\/[^\s"'<>)]+\.mp4\/txt\/master\.txt/gi,
-                        /https?:\/\/[^\s"'<>)]+cdnimages\d+\.sbs\/hls\/[^\s"'<>)]+\.mp4\/txt\/master\.txt/gi,
-                        // playmix patterns
-                        /https?:\/\/[^\s"'<>)]+\.playmix\.uno\/hls\/[^\s"'<>)]+\/master\.txt/gi,
-                        // General patterns
-                        /https?:\/\/[^\s"']+\/(?:hls|master|playlist)[^\s"']*\.(m3u8|txt)/gi,
-                        /https?:\/\/[^\s"']+\.(playmix|cdnimages)[^\s"']*\/hls\/[^\s"']*(?:\.mp4)?\/?txt\/master\.txt/gi,
-                        /https?:\/\/[^\s"']+\.(playmix|cdnimages)[^\s"']*\/hls\/[^\s"']*\.(mp4|txt)/gi,
-                        /https?:\/\/[^\s"']*\/(?:txt\/)?master\.txt/gi,
-                        // Video.js src patterns
-                        /(?:src|source|url)\s*[:=]\s*["'](https?:\/\/[^"']+(?:\/txt\/)?master\.txt[^"']*)/gi,
-                        /contentUrl["']?\s*:\s*["'](https?:\/\/[^"']+(?:\/txt\/)?master\.txt[^"']*)/gi,
-                        // Base64 encoded URLs (decode them)
-                        /(?:atob|decodeURIComponent)\(['"]([A-Za-z0-9+/=]+)['"]\)/gi,
-                    ];
-                    hlsPatterns.forEach(function (pattern, patternIndex) {
-                        // Patterns with capture groups (10, 11, 12) need exec() to extract the captured group
-                        if (patternIndex === 10 || patternIndex === 11 || patternIndex === 12) {
-                            var match_1;
-                            while ((match_1 = pattern.exec(text)) !== null) {
-                                var cleanUrl = null;
-                                // Pattern 12 is base64
-                                if (patternIndex === 12) {
-                                    try {
-                                        var decoded = Buffer.from(match_1[1], 'base64').toString('utf-8');
-                                        var urlMatch = decoded.match(/https?:\/\/[^\s"']+\/(?:hls|txt|master)[^\s"']*master\.txt/gi);
-                                        if (urlMatch) {
-                                            cleanUrl = urlMatch[0];
-                                        }
-                                    }
-                                    catch (e) {
-                                        // Base64 decode failed
-                                    }
-                                }
-                                else {
-                                    // Patterns 8 and 9 have capture group 1 with the URL
-                                    cleanUrl = match_1[1];
-                                }
-                                if (cleanUrl && cleanUrl.includes('http') && (cleanUrl.includes('/hls/') || cleanUrl.includes('master.txt'))) {
-                                    streamLinks_1.push({
-                                        link: cleanUrl,
-                                        server: "rido hls",
-                                        type: "m3u8",
-                                        headers: __assign({ Referer: 'https://closeload.top/', Origin: 'https://closeload.top', 'User-Agent': headers_1['User-Agent'] || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36', 'Accept': '*/*', 'Accept-Language': 'en-US,en;q=0.9,bn;q=0.8', 'Accept-Encoding': 'gzip, deflate, br, zstd' }, (cookies_1 && { Cookie: cookies_1 })),
-                                    });
-                                }
-                            }
-                        }
-                        else {
-                            // Patterns without capture groups use match()
-                            var matches = text.match(pattern);
-                            if (matches) {
-                                matches.forEach(function (match) {
-                                    var cleanUrl = null;
-                                    if (match.includes('http')) {
-                                        cleanUrl = match.replace(/["'\s()]/g, '').trim();
-                                    }
-                                    if (cleanUrl && cleanUrl.includes('http') && (cleanUrl.includes('/hls/') || cleanUrl.includes('master.txt'))) {
-                                        streamLinks_1.push({
-                                            link: cleanUrl,
-                                            server: "rido hls",
-                                            type: "m3u8",
-                                            headers: __assign({ Referer: 'https://closeload.top/', Origin: 'https://closeload.top', 'User-Agent': headers_1['User-Agent'] || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36', 'Accept': '*/*', 'Accept-Language': 'en-US,en;q=0.9,bn;q=0.8', 'Accept-Encoding': 'gzip, deflate, br, zstd' }, (cookies_1 && { Cookie: cookies_1 })),
-                                        });
-                                    }
-                                });
-                            }
-                        }
-                    });
-                });
-                uniqueStreams = streamLinks_1.filter(function (stream, index, self) {
-                    return index === self.findIndex(function (s) { return s.link === stream.link; });
-                });
-                streamLinks_1.length = 0;
-                streamLinks_1.push.apply(streamLinks_1, __spreadArray([], __read(uniqueStreams), false));
-                // Prioritize: 1) cdnimages*.sbs URLs with embed link ID, 2) cdnimages*.sbs URLs, 3) others
-                streamLinks_1.sort(function (a, b) {
-                    var embedLinkMatch = embedUrl_1.match(/\/([^\/]+)\/$/);
-                    var embedLinkId = embedLinkMatch ? embedLinkMatch[1] : '';
-                    var aIsCdnImages = a.link.includes('cdnimages') && a.link.includes('.sbs');
-                    var bIsCdnImages = b.link.includes('cdnimages') && b.link.includes('.sbs');
-                    var aHasEmbedId = embedLinkId && a.link.includes(embedLinkId);
-                    var bHasEmbedId = embedLinkId && b.link.includes(embedLinkId);
-                    // Priority: cdnimages with embed ID > cdnimages > others
-                    if (aIsCdnImages && aHasEmbedId && (!bIsCdnImages || !bHasEmbedId))
-                        return -1;
-                    if (bIsCdnImages && bHasEmbedId && (!aIsCdnImages || !aHasEmbedId))
-                        return 1;
-                    if (aIsCdnImages && !bIsCdnImages)
-                        return -1;
-                    if (!aIsCdnImages && bIsCdnImages)
-                        return 1;
-                    return 0;
-                });
-                console.log("ridomovies prioritized streams (cdnimages first):", streamLinks_1.map(function (s) { return s.link; }));
-                console.log("ridomovies stream extraction found:", streamLinks_1.length, "sources");
-                return [3 /*break*/, 12];
-            case 11:
-                embedError_1 = _g.sent();
-                console.log("ridomovies embed page error:", embedError_1);
-                return [3 /*break*/, 12];
-            case 12: return [3 /*break*/, 14];
-            case 13:
-                console.log("ridomovies error: Could not get embed URL from API");
-                _g.label = 14;
-            case 14:
-                console.log("ridomovies stream links found:", streamLinks_1.length);
-                return [2 /*return*/, streamLinks_1];
-            case 15:
                 e_1 = _g.sent();
                 console.log("ridomovies get stream error:", e_1);
                 return [2 /*return*/, []];
-            case 16: return [2 /*return*/];
+            case 10: return [2 /*return*/];
         }
     });
 }); };
