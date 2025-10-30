@@ -205,7 +205,7 @@
     "version": "1.1",
     "icon": "",
     "type": "global",
-    "disabled": true
+    "disabled": false
   },
   {
     "display_name": "Joya9tv",
