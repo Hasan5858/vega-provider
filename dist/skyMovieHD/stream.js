@@ -57,34 +57,9 @@ var __values = (this && this.__values) || function(o) {
     };
     throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
 };
-var __read = (this && this.__read) || function (o, n) {
-    var m = typeof Symbol === "function" && o[Symbol.iterator];
-    if (!m) return o;
-    var i = m.call(o), r, ar = [], e;
-    try {
-        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
-    }
-    catch (error) { e = { error: error }; }
-    finally {
-        try {
-            if (r && !r.done && (m = i["return"])) m.call(i);
-        }
-        finally { if (e) throw e.error; }
-    }
-    return ar;
-};
-var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
-    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
-        if (ar || !(i in from)) {
-            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
-            ar[i] = from[i];
-        }
-    }
-    return to.concat(ar || Array.prototype.slice.call(from));
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getStream = getStream;
-var headers = {
+var REQUEST_HEADERS = {
     Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
     "Cache-Control": "no-store",
     "Accept-Language": "en-US,en;q=0.9",
@@ -96,30 +71,105 @@ var headers = {
     "Sec-Fetch-Mode": "navigate",
     "Sec-Fetch-Site": "none",
     "Sec-Fetch-User": "?1",
-    Cookie: "xla=s4t; _ga=GA1.1.1081149560.1756378968; _ga_BLZGKYN5PF=GS2.1.s1756378968$o1$g1$t1756378984$j44$l0$h0",
     "Upgrade-Insecure-Requests": "1",
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
 };
+var DEFAULT_STREAM_HEADERS = {
+    Range: "bytes=0-",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
+};
+var SUPPORTED_AGGREGATE_SERVERS = [
+    /gofile\.io\/d\//i,
+    /gdflix/i,
+    /hubcloud/i,
+    /filepress\./i,
+];
+var UNSUPPORTED_SERVERS = /media\.cm|dgdrive|hubdrive|gdtot/i;
+var preferHostScore = function (url) {
+    if (/googleusercontent\.com|googlevideo\.com|googleapis\.com/i.test(url)) {
+        return 120;
+    }
+    if (/gofile\.io|gofilecdn\.com/i.test(url)) {
+        return 110;
+    }
+    if (/filepress/i.test(url)) {
+        return 95;
+    }
+    if (/hubcloud|hubcdn|cloudflarestorage/i.test(url)) {
+        return 80;
+    }
+    if (/gdflix|resumecloud|resumebot|fastcdn/i.test(url)) {
+        return 70;
+    }
+    return 10;
+};
+var inferTypeFromUrl = function (url) {
+    if (/\.m3u8($|\?|#)/i.test(url))
+        return "m3u8";
+    if (/\.mkv($|\?|#)/i.test(url))
+        return "mkv";
+    if (/\.mpd($|\?|#)/i.test(url))
+        return "mpd";
+    if (/\.mp4($|\?|#)|googleusercontent\.com/i.test(url))
+        return "mp4";
+    return "mp4";
+};
+var withDefaultHeaders = function (stream) {
+    var _a, _b;
+    var url = stream.link || "";
+    var headers = __assign({}, (stream.headers || {}));
+    if (/googleusercontent\.com|googlevideo\.com|gofile\.io|gofilecdn\.com/i.test(url)) {
+        (_a = headers.Range) !== null && _a !== void 0 ? _a : (headers.Range = DEFAULT_STREAM_HEADERS.Range);
+        (_b = headers["User-Agent"]) !== null && _b !== void 0 ? _b : (headers["User-Agent"] = DEFAULT_STREAM_HEADERS["User-Agent"]);
+    }
+    if (!Object.keys(headers).length) {
+        return __assign(__assign({}, stream), { headers: undefined });
+    }
+    return __assign(__assign({}, stream), { headers: headers });
+};
+var normaliseStream = function (raw, fallbackServer) {
+    var _a;
+    if (!(raw === null || raw === void 0 ? void 0 : raw.link))
+        return null;
+    var link = raw.link.trim();
+    if (!link)
+        return null;
+    var server = ((_a = raw.server) === null || _a === void 0 ? void 0 : _a.trim()) || fallbackServer;
+    var type = raw.type || inferTypeFromUrl(link);
+    return withDefaultHeaders(__assign(__assign({}, raw), { server: server, link: link, type: type }));
+};
+var dedupeStreams = function (streams) {
+    var seen = new Set();
+    return streams.filter(function (item) {
+        var key = item.link;
+        if (seen.has(key))
+            return false;
+        seen.add(key);
+        return true;
+    });
+};
 function getStream(_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var axios, cheerio, extractors, hubcloudExtracter, streamtapeExtractor, streamhgExtractor, gdFlixExtracter, filepresExtractor, gofileExtracter, target, id, res, $, anchors, out, anchors_1, anchors_1_1, a, href, id, go, _c, links, _d, links, _e, fp, _f, e_1_1, filtered, shg, arr, st, arr, error_1;
-        var e_1, _g;
-        var _h;
+        var axios, cheerio, extractors, hubcloudExtracter, streamtapeExtractor, streamhgExtractor, gdFlixExtracter, filepresExtractor, gofileExtracter, target, id, res, $, anchors, collected_1, _loop_1, anchors_1, anchors_1_1, anchor, e_1_1, cleaned, shg, arr, st, arr, fallbackStreams, cleanedFallback, error_1;
+        var e_1, _c;
+        var _d;
         var link = _b.link, type = _b.type, signal = _b.signal, providerContext = _b.providerContext;
-        return __generator(this, function (_j) {
-            switch (_j.label) {
+        return __generator(this, function (_e) {
+            switch (_e.label) {
                 case 0:
                     axios = providerContext.axios, cheerio = providerContext.cheerio, extractors = providerContext.extractors;
                     hubcloudExtracter = extractors.hubcloudExtracter;
-                    streamtapeExtractor = extractors.streamtapeExtractor;
-                    streamhgExtractor = extractors.streamhgExtractor;
+                    streamtapeExtractor = extractors
+                        .streamtapeExtractor;
+                    streamhgExtractor = extractors
+                        .streamhgExtractor;
                     gdFlixExtracter = extractors.gdFlixExtracter;
                     filepresExtractor = extractors.filepresExtractor;
                     gofileExtracter = extractors.gofileExtracter;
-                    _j.label = 1;
+                    _e.label = 1;
                 case 1:
-                    _j.trys.push([1, 35, , 36]);
-                    console.log("dotlink", link);
+                    _e.trys.push([1, 17, , 18]);
+                    console.log("[skyMovieHD] Incoming link:", link);
                     target = link;
                     // Normalize StreamHG hglink -> dumbalag embed
                     if (/hglink\.to\//i.test(target)) {
@@ -128,166 +178,235 @@ function getStream(_a) {
                             if (id)
                                 target = "https://dumbalag.com/e/".concat(id);
                         }
-                        catch (_k) { }
+                        catch (_f) { }
                     }
-                    if (!/howblogs\.xyz\//i.test(target)) return [3 /*break*/, 29];
-                    return [4 /*yield*/, axios.get(target, { signal: signal })];
+                    if (!/howblogs\.xyz\//i.test(target)) return [3 /*break*/, 11];
+                    console.log("[skyMovieHD] Loading howblogs aggregator:", target);
+                    return [4 /*yield*/, axios.get(target, { signal: signal, headers: REQUEST_HEADERS })];
                 case 2:
-                    res = _j.sent();
+                    res = _e.sent();
                     $ = cheerio.load(res.data || "");
                     anchors = $("a[href]").toArray();
-                    out = [];
-                    _j.label = 3;
+                    collected_1 = [];
+                    _loop_1 = function (anchor) {
+                        var hrefRaw, href, id, gofile, stream, error_2, streams, error_3, streams, error_4, streams, error_5;
+                        return __generator(this, function (_g) {
+                            switch (_g.label) {
+                                case 0:
+                                    hrefRaw = ($(anchor).attr("href") || "").trim();
+                                    if (!hrefRaw)
+                                        return [2 /*return*/, "continue"];
+                                    href = hrefRaw.startsWith("//") ? "https:".concat(hrefRaw) : hrefRaw;
+                                    if (UNSUPPORTED_SERVERS.test(href)) {
+                                        console.log("[skyMovieHD] ⏭️ Skipping unsupported server:", href);
+                                        return [2 /*return*/, "continue"];
+                                    }
+                                    if (!SUPPORTED_AGGREGATE_SERVERS.some(function (regex) { return regex.test(href); })) {
+                                        return [2 /*return*/, "continue"];
+                                    }
+                                    if (!/gofile\.io\/d\//i.test(href)) return [3 /*break*/, 5];
+                                    id = (_d = href.split("/d/")[1]) === null || _d === void 0 ? void 0 : _d.split(/[?#]/)[0];
+                                    if (!id) {
+                                        console.log("[skyMovieHD] ⚠️ Unable to extract GoFile id from:", href);
+                                        return [2 /*return*/, "continue"];
+                                    }
+                                    _g.label = 1;
+                                case 1:
+                                    _g.trys.push([1, 3, , 4]);
+                                    console.log("[skyMovieHD] 🔗 Resolving GoFile:", id);
+                                    return [4 /*yield*/, gofileExtracter(id)];
+                                case 2:
+                                    gofile = _g.sent();
+                                    stream = normaliseStream({
+                                        server: "GoFile",
+                                        link: gofile === null || gofile === void 0 ? void 0 : gofile.link,
+                                        type: inferTypeFromUrl((gofile === null || gofile === void 0 ? void 0 : gofile.link) || ""),
+                                        headers: __assign(__assign({}, DEFAULT_STREAM_HEADERS), { Referer: "https://gofile.io/" }),
+                                    }, "GoFile");
+                                    if (stream) {
+                                        collected_1.push(stream);
+                                    }
+                                    return [3 /*break*/, 4];
+                                case 3:
+                                    error_2 = _g.sent();
+                                    console.log("[skyMovieHD] ❌ GoFile extraction failed:", error_2);
+                                    return [3 /*break*/, 4];
+                                case 4: return [2 /*return*/, "continue"];
+                                case 5:
+                                    if (!/gdflix/i.test(href)) return [3 /*break*/, 10];
+                                    _g.label = 6;
+                                case 6:
+                                    _g.trys.push([6, 8, , 9]);
+                                    console.log("[skyMovieHD] 🔗 Resolving GDFlix:", href);
+                                    return [4 /*yield*/, gdFlixExtracter(href, signal)];
+                                case 7:
+                                    streams = _g.sent();
+                                    streams
+                                        .filter(function (item) {
+                                        var link = (item === null || item === void 0 ? void 0 : item.link) || "";
+                                        if (!link)
+                                            return false;
+                                        // Skip PixelDrain wrappers – they trigger download UI instead of streaming.
+                                        if (/pixeldrain|hubcdn|fastcdn-dl|pages\.dev/i.test(link)) {
+                                            return false;
+                                        }
+                                        return true;
+                                    })
+                                        .forEach(function (item) {
+                                        var stream = normaliseStream(__assign(__assign({}, item), { server: item.server || "GDFlix" }), "GDFlix");
+                                        if (stream) {
+                                            collected_1.push(stream);
+                                        }
+                                    });
+                                    return [3 /*break*/, 9];
+                                case 8:
+                                    error_3 = _g.sent();
+                                    console.log("[skyMovieHD] ❌ GDFlix extraction failed:", error_3);
+                                    return [3 /*break*/, 9];
+                                case 9: return [2 /*return*/, "continue"];
+                                case 10:
+                                    if (!/hubcloud/i.test(href)) return [3 /*break*/, 15];
+                                    _g.label = 11;
+                                case 11:
+                                    _g.trys.push([11, 13, , 14]);
+                                    console.log("[skyMovieHD] 🔗 Resolving HubCloud:", href);
+                                    return [4 /*yield*/, hubcloudExtracter(href, signal)];
+                                case 12:
+                                    streams = _g.sent();
+                                    streams
+                                        .filter(function (item) {
+                                        var link = (item === null || item === void 0 ? void 0 : item.link) || "";
+                                        if (!link)
+                                            return false;
+                                        // Skip known slow CDN mirrors – we prefer direct hubcloud or google links.
+                                        if (/pixeldrain|hubcdn|pages\.dev|fastcdn/i.test(link)) {
+                                            return false;
+                                        }
+                                        return true;
+                                    })
+                                        .forEach(function (item) {
+                                        var stream = normaliseStream(__assign(__assign({}, item), { server: item.server || "HubCloud" }), "HubCloud");
+                                        if (stream) {
+                                            collected_1.push(stream);
+                                        }
+                                    });
+                                    return [3 /*break*/, 14];
+                                case 13:
+                                    error_4 = _g.sent();
+                                    console.log("[skyMovieHD] ❌ HubCloud extraction failed:", error_4);
+                                    return [3 /*break*/, 14];
+                                case 14: return [2 /*return*/, "continue"];
+                                case 15:
+                                    if (!/filepress\./i.test(href)) return [3 /*break*/, 20];
+                                    _g.label = 16;
+                                case 16:
+                                    _g.trys.push([16, 18, , 19]);
+                                    console.log("[skyMovieHD] 🔗 Resolving FilePress:", href);
+                                    return [4 /*yield*/, filepresExtractor(href, signal)];
+                                case 17:
+                                    streams = _g.sent();
+                                    streams.forEach(function (item) {
+                                        var stream = normaliseStream(__assign(__assign({}, item), { server: item.server || "FilePress" }), "FilePress");
+                                        if (stream) {
+                                            collected_1.push(stream);
+                                        }
+                                    });
+                                    return [3 /*break*/, 19];
+                                case 18:
+                                    error_5 = _g.sent();
+                                    console.log("[skyMovieHD] ❌ FilePress extraction failed:", error_5);
+                                    return [3 /*break*/, 19];
+                                case 19: return [2 /*return*/, "continue"];
+                                case 20: return [2 /*return*/];
+                            }
+                        });
+                    };
+                    _e.label = 3;
                 case 3:
-                    _j.trys.push([3, 26, 27, 28]);
+                    _e.trys.push([3, 8, 9, 10]);
                     anchors_1 = __values(anchors), anchors_1_1 = anchors_1.next();
-                    _j.label = 4;
+                    _e.label = 4;
                 case 4:
-                    if (!!anchors_1_1.done) return [3 /*break*/, 25];
-                    a = anchors_1_1.value;
-                    href = ($(a).attr("href") || "").trim();
-                    if (!href)
-                        return [3 /*break*/, 24];
-                    // skip media.cm, dgdrive, hubdrive, gdtot
-                    if (/media\.cm|dgdrive|hubdrive|gdtot/i.test(href))
-                        return [3 /*break*/, 24];
-                    if (!/gofile\.io\/d\//i.test(href)) return [3 /*break*/, 9];
-                    id = (_h = href.split("/d/")[1]) === null || _h === void 0 ? void 0 : _h.split("?")[0];
-                    if (!id) return [3 /*break*/, 8];
-                    _j.label = 5;
+                    if (!!anchors_1_1.done) return [3 /*break*/, 7];
+                    anchor = anchors_1_1.value;
+                    return [5 /*yield**/, _loop_1(anchor)];
                 case 5:
-                    _j.trys.push([5, 7, , 8]);
-                    return [4 /*yield*/, gofileExtracter(id)];
+                    _e.sent();
+                    _e.label = 6;
                 case 6:
-                    go = _j.sent();
-                    if (go === null || go === void 0 ? void 0 : go.link)
-                        out.push({ server: "GoFile", link: go.link, type: "mkv" });
-                    return [3 /*break*/, 8];
-                case 7:
-                    _c = _j.sent();
-                    return [3 /*break*/, 8];
-                case 8: return [3 /*break*/, 24];
-                case 9:
-                    if (!/gdflix/i.test(href)) return [3 /*break*/, 14];
-                    _j.label = 10;
-                case 10:
-                    _j.trys.push([10, 12, , 13]);
-                    return [4 /*yield*/, gdFlixExtracter(href, signal)];
-                case 11:
-                    links = _j.sent();
-                    out.push.apply(out, __spreadArray([], __read(links.map(function (l) { return (__assign(__assign({}, l), { server: l.server || "GDFLIX" })); })), false));
-                    return [3 /*break*/, 13];
-                case 12:
-                    _d = _j.sent();
-                    return [3 /*break*/, 13];
-                case 13: return [3 /*break*/, 24];
-                case 14:
-                    if (!/hubcloud/i.test(href)) return [3 /*break*/, 19];
-                    _j.label = 15;
-                case 15:
-                    _j.trys.push([15, 17, , 18]);
-                    return [4 /*yield*/, hubcloudExtracter(href, signal)];
-                case 16:
-                    links = _j.sent();
-                    out.push.apply(out, __spreadArray([], __read(links.map(function (l) { return (__assign(__assign({}, l), { server: l.server || "HubCloud" })); })), false));
-                    return [3 /*break*/, 18];
-                case 17:
-                    _e = _j.sent();
-                    return [3 /*break*/, 18];
-                case 18: return [3 /*break*/, 24];
-                case 19:
-                    if (!/filepress\./i.test(href)) return [3 /*break*/, 24];
-                    _j.label = 20;
-                case 20:
-                    _j.trys.push([20, 22, , 23]);
-                    return [4 /*yield*/, filepresExtractor(href, axios, signal)];
-                case 21:
-                    fp = _j.sent();
-                    if (fp === null || fp === void 0 ? void 0 : fp.link)
-                        out.push({ server: "FilePress", link: fp.link, type: fp.type || "m3u8", headers: fp.headers });
-                    return [3 /*break*/, 23];
-                case 22:
-                    _f = _j.sent();
-                    return [3 /*break*/, 23];
-                case 23: return [3 /*break*/, 24];
-                case 24:
                     anchors_1_1 = anchors_1.next();
                     return [3 /*break*/, 4];
-                case 25: return [3 /*break*/, 28];
-                case 26:
-                    e_1_1 = _j.sent();
+                case 7: return [3 /*break*/, 10];
+                case 8:
+                    e_1_1 = _e.sent();
                     e_1 = { error: e_1_1 };
-                    return [3 /*break*/, 28];
-                case 27:
+                    return [3 /*break*/, 10];
+                case 9:
                     try {
-                        if (anchors_1_1 && !anchors_1_1.done && (_g = anchors_1.return)) _g.call(anchors_1);
+                        if (anchors_1_1 && !anchors_1_1.done && (_c = anchors_1.return)) _c.call(anchors_1);
                     }
                     finally { if (e_1) throw e_1.error; }
                     return [7 /*endfinally*/];
-                case 28:
-                    filtered = out
-                        .filter(function (s) { return s.link &&
-                        !/fastcdn-dl\.|workers\.dev\//i.test(s.link) && // HTML wrappers
-                        !/\.zip($|\?|#)/i.test(s.link) && // archives not playable
-                        // drop known non-streamable CDNs
-                        !/pixeldrain\.|hubcdn\./i.test(s.link); })
-                        .map(function (s) {
-                        var link = s.link;
-                        var type = s.type || "mp4";
-                        if (/googleusercontent\.com/i.test(link) || /\.mp4($|\?|#)/i.test(link))
-                            type = "mp4";
-                        else if (/\.m3u8($|\?|#)/i.test(link))
-                            type = "m3u8";
-                        else if (/\.mkv($|\?|#)/i.test(link))
-                            type = "mkv";
-                        return __assign(__assign({}, s), { type: type });
-                    });
-                    // Sort: prefer Google (mp4), then GoFile, then HubCloud/others
-                    filtered.sort(function (a, b) {
-                        var score = function (x) { return (/googleusercontent\.com/i.test(x.link) ? 100 :
-                            /gofile\.io/i.test(x.link) ? 90 :
-                                /hubcloud/i.test(x.link) ? 60 :
-                                    /gdflix/i.test(x.link) ? 50 : 10); };
-                        return score(b) - score(a);
-                    });
-                    return [2 /*return*/, filtered];
-                case 29:
-                    if (!(/dumbalag\.com\//i.test(target) && typeof streamhgExtractor === "function")) return [3 /*break*/, 31];
+                case 10:
+                    cleaned = dedupeStreams(collected_1.map(function (stream) { return (__assign(__assign({}, stream), { type: stream.type || inferTypeFromUrl(stream.link) })); })).sort(function (a, b) { return preferHostScore(b.link) - preferHostScore(a.link); });
+                    console.log("[skyMovieHD] ✅ Aggregator resolved streams:", cleaned.map(function (item) {
+                        var _a;
+                        return ({
+                            server: item.server,
+                            type: item.type,
+                            link: (_a = item.link) === null || _a === void 0 ? void 0 : _a.slice(0, 120),
+                        });
+                    }));
+                    return [2 /*return*/, cleaned];
+                case 11:
+                    if (!(/dumbalag\.com\//i.test(target) && typeof streamhgExtractor === "function")) return [3 /*break*/, 13];
                     return [4 /*yield*/, streamhgExtractor(target, axios, signal)];
-                case 30:
-                    shg = _j.sent();
+                case 12:
+                    shg = _e.sent();
                     if (shg) {
                         arr = [
                             { server: "StreamHG", link: shg.link, type: shg.type || "m3u8", headers: shg.headers },
                         ];
                         return [2 /*return*/, arr];
                     }
-                    _j.label = 31;
-                case 31:
-                    if (!(/streamtape|watchadsontape|tape/i.test(target) && typeof streamtapeExtractor === "function")) return [3 /*break*/, 33];
+                    _e.label = 13;
+                case 13:
+                    if (!(/streamtape|watchadsontape|tape/i.test(target) && typeof streamtapeExtractor === "function")) return [3 /*break*/, 15];
                     return [4 /*yield*/, streamtapeExtractor(target, axios, signal)];
-                case 32:
-                    st = _j.sent();
+                case 14:
+                    st = _e.sent();
                     if (st) {
                         arr = [
                             { server: "StreamTape", link: st.link, type: st.type || "mp4", headers: st.headers },
                         ];
                         return [2 /*return*/, arr];
                     }
-                    _j.label = 33;
-                case 33: return [4 /*yield*/, hubcloudExtracter(target, signal)];
-                case 34: 
-                // Fallback
-                return [2 /*return*/, _j.sent()];
-                case 35:
-                    error_1 = _j.sent();
-                    console.log("getStream error: ", error_1);
-                    if (error_1.message.includes("Aborted")) {
-                    }
-                    else {
-                    }
+                    _e.label = 15;
+                case 15:
+                    // Fallback
+                    console.log("[skyMovieHD] ⚠️ Falling back to HubCloud extractor");
+                    return [4 /*yield*/, hubcloudExtracter(target, signal)];
+                case 16:
+                    fallbackStreams = _e.sent();
+                    cleanedFallback = dedupeStreams(fallbackStreams
+                        .map(function (stream) {
+                        return normaliseStream(__assign(__assign({}, stream), { server: stream.server || "HubCloud" }), "HubCloud");
+                    })
+                        .filter(Boolean));
+                    console.log("[skyMovieHD] 🔄 Fallback streams:", cleanedFallback.map(function (item) {
+                        var _a;
+                        return ({
+                            server: item.server,
+                            type: item.type,
+                            link: (_a = item.link) === null || _a === void 0 ? void 0 : _a.slice(0, 120),
+                        });
+                    }));
+                    return [2 /*return*/, cleanedFallback];
+                case 17:
+                    error_1 = _e.sent();
+                    console.log("[skyMovieHD] ❌ getStream error:", (error_1 === null || error_1 === void 0 ? void 0 : error_1.message) || error_1);
                     return [2 /*return*/, []];
-                case 36: return [2 /*return*/];
+                case 18: return [2 /*return*/];
             }
         });
     });

@@ -1,6 +1,6 @@
 import { ProviderContext, Stream } from "../types";
 
-const headers = {
+const REQUEST_HEADERS = {
   Accept:
     "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
   "Cache-Control": "no-store",
@@ -14,11 +14,94 @@ const headers = {
   "Sec-Fetch-Mode": "navigate",
   "Sec-Fetch-Site": "none",
   "Sec-Fetch-User": "?1",
-  Cookie:
-    "xla=s4t; _ga=GA1.1.1081149560.1756378968; _ga_BLZGKYN5PF=GS2.1.s1756378968$o1$g1$t1756378984$j44$l0$h0",
   "Upgrade-Insecure-Requests": "1",
   "User-Agent":
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
+};
+
+const DEFAULT_STREAM_HEADERS = {
+  Range: "bytes=0-",
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
+};
+
+const SUPPORTED_AGGREGATE_SERVERS = [
+  /gofile\.io\/d\//i,
+  /gdflix/i,
+  /hubcloud/i,
+  /filepress\./i,
+];
+
+const UNSUPPORTED_SERVERS = /media\.cm|dgdrive|hubdrive|gdtot/i;
+
+const preferHostScore = (url: string) => {
+  if (/googleusercontent\.com|googlevideo\.com|googleapis\.com/i.test(url)) {
+    return 120;
+  }
+  if (/gofile\.io|gofilecdn\.com/i.test(url)) {
+    return 110;
+  }
+  if (/filepress/i.test(url)) {
+    return 95;
+  }
+  if (/hubcloud|hubcdn|cloudflarestorage/i.test(url)) {
+    return 80;
+  }
+  if (/gdflix|resumecloud|resumebot|fastcdn/i.test(url)) {
+    return 70;
+  }
+  return 10;
+};
+
+const inferTypeFromUrl = (url: string): Stream["type"] => {
+  if (/\.m3u8($|\?|#)/i.test(url)) return "m3u8";
+  if (/\.mkv($|\?|#)/i.test(url)) return "mkv";
+  if (/\.mpd($|\?|#)/i.test(url)) return "mpd";
+  if (/\.mp4($|\?|#)|googleusercontent\.com/i.test(url)) return "mp4";
+  return "mp4";
+};
+
+const withDefaultHeaders = (stream: Stream): Stream => {
+  const url = stream.link || "";
+  const headers = { ...(stream.headers || {}) };
+
+  if (/googleusercontent\.com|googlevideo\.com|gofile\.io|gofilecdn\.com/i.test(url)) {
+    headers.Range ??= DEFAULT_STREAM_HEADERS.Range;
+    headers["User-Agent"] ??= DEFAULT_STREAM_HEADERS["User-Agent"];
+  }
+
+  if (!Object.keys(headers).length) {
+    return { ...stream, headers: undefined };
+  }
+
+  return { ...stream, headers };
+};
+
+const normaliseStream = (raw: Stream, fallbackServer: string): Stream | null => {
+  if (!raw?.link) return null;
+
+  const link = raw.link.trim();
+  if (!link) return null;
+
+  const server = raw.server?.trim() || fallbackServer;
+  const type = raw.type || inferTypeFromUrl(link);
+
+  return withDefaultHeaders({
+    ...raw,
+    server,
+    link,
+    type,
+  });
+};
+
+const dedupeStreams = (streams: Stream[]) => {
+  const seen = new Set<string>();
+  return streams.filter((item) => {
+    const key = item.link;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 };
 
 export async function getStream({
@@ -34,13 +117,31 @@ export async function getStream({
 }) {
   const { axios, cheerio, extractors } = providerContext;
   const { hubcloudExtracter } = extractors as any;
-  const streamtapeExtractor = (extractors as any).streamtapeExtractor as ((u: string, a: any, s?: AbortSignal) => Promise<{ link: string; headers?: Record<string, string>; type?: string } | null>);
-  const streamhgExtractor = (extractors as any).streamhgExtractor as ((u: string, a: any, s?: AbortSignal) => Promise<{ link: string; headers?: Record<string, string>; type?: string } | null>);
-  const gdFlixExtracter = (extractors as any).gdFlixExtracter as (u: string, s?: AbortSignal) => Promise<Stream[]>;
-  const filepresExtractor = (extractors as any).filepresExtractor as (u: string, a: any, s?: AbortSignal) => Promise<{ link: string; headers?: Record<string, string>; type?: string } | null>;
-  const gofileExtracter = (extractors as any).gofileExtracter as (id: string) => Promise<{ link: string; token: string }>; 
+  const streamtapeExtractor = (extractors as any)
+    .streamtapeExtractor as (
+    u: string,
+    a: any,
+    s?: AbortSignal,
+  ) => Promise<{ link: string; headers?: Record<string, string>; type?: string } | null>;
+  const streamhgExtractor = (extractors as any)
+    .streamhgExtractor as (
+    u: string,
+    a: any,
+    s?: AbortSignal,
+  ) => Promise<{ link: string; headers?: Record<string, string>; type?: string } | null>;
+  const gdFlixExtracter = (extractors as any).gdFlixExtracter as (
+    u: string,
+    s?: AbortSignal,
+  ) => Promise<Stream[]>;
+  const filepresExtractor = (extractors as any).filepresExtractor as (
+    u: string,
+    s?: AbortSignal,
+  ) => Promise<Stream[]>;
+  const gofileExtracter = (extractors as any).gofileExtracter as (
+    id: string,
+  ) => Promise<{ link: string; token: string }>;
   try {
-    console.log("dotlink", link);
+    console.log("[skyMovieHD] Incoming link:", link);
     let target = link;
     // Normalize StreamHG hglink -> dumbalag embed
     if (/hglink\.to\//i.test(target)) {
@@ -52,77 +153,161 @@ export async function getStream({
 
     // howblogs aggregator with multiple hosts
     if (/howblogs\.xyz\//i.test(target)) {
-      const res = await axios.get(target, { signal });
+      console.log("[skyMovieHD] Loading howblogs aggregator:", target);
+      const res = await axios.get(target, { signal, headers: REQUEST_HEADERS });
       const $ = cheerio.load(res.data || "");
       const anchors = $("a[href]").toArray();
-      const out: Stream[] = [];
-      for (const a of anchors) {
-        const href = ($(a).attr("href") || "").trim();
-        if (!href) continue;
-        // skip media.cm, dgdrive, hubdrive, gdtot
-        if (/media\.cm|dgdrive|hubdrive|gdtot/i.test(href)) continue;
-        // gofile
+      const collected: Stream[] = [];
+
+      for (const anchor of anchors) {
+        const hrefRaw = ($(anchor).attr("href") || "").trim();
+        if (!hrefRaw) continue;
+
+        const href = hrefRaw.startsWith("//") ? `https:${hrefRaw}` : hrefRaw;
+
+        if (UNSUPPORTED_SERVERS.test(href)) {
+          console.log("[skyMovieHD] ⏭️ Skipping unsupported server:", href);
+          continue;
+        }
+
+        if (!SUPPORTED_AGGREGATE_SERVERS.some((regex) => regex.test(href))) {
+          continue;
+        }
+
         if (/gofile\.io\/d\//i.test(href)) {
-          const id = href.split("/d/")[1]?.split("?")[0];
-          if (id) {
-            try {
-              const go = await gofileExtracter(id);
-              if (go?.link) out.push({ server: "GoFile", link: go.link, type: "mkv" });
-            } catch {}
+          const id = href.split("/d/")[1]?.split(/[?#]/)[0];
+          if (!id) {
+            console.log("[skyMovieHD] ⚠️ Unable to extract GoFile id from:", href);
+            continue;
+          }
+          try {
+            console.log("[skyMovieHD] 🔗 Resolving GoFile:", id);
+            const gofile = await gofileExtracter(id);
+            const stream = normaliseStream(
+              {
+                server: "GoFile",
+                link: gofile?.link,
+                type: inferTypeFromUrl(gofile?.link || ""),
+                headers: {
+                  ...DEFAULT_STREAM_HEADERS,
+                  Referer: "https://gofile.io/",
+                },
+              },
+              "GoFile",
+            );
+            if (stream) {
+              collected.push(stream);
+            }
+          } catch (error) {
+            console.log("[skyMovieHD] ❌ GoFile extraction failed:", error);
           }
           continue;
         }
-        // gdflix
+
         if (/gdflix/i.test(href)) {
           try {
-            const links = await gdFlixExtracter(href, signal);
-            out.push(...links.map((l: Stream) => ({ ...l, server: (l as any).server || "GDFLIX" })));
-          } catch {}
+            console.log("[skyMovieHD] 🔗 Resolving GDFlix:", href);
+            const streams = await gdFlixExtracter(href, signal);
+            streams
+              .filter((item: Stream) => {
+                const link = item?.link || "";
+                if (!link) return false;
+                // Skip PixelDrain wrappers – they trigger download UI instead of streaming.
+                if (/pixeldrain|hubcdn|fastcdn-dl|pages\.dev/i.test(link)) {
+                  return false;
+                }
+                return true;
+              })
+              .forEach((item: Stream) => {
+                const stream = normaliseStream(
+                  {
+                    ...item,
+                    server: item.server || "GDFlix",
+                  },
+                  "GDFlix",
+                );
+                if (stream) {
+                  collected.push(stream);
+                }
+              });
+          } catch (error) {
+            console.log("[skyMovieHD] ❌ GDFlix extraction failed:", error);
+          }
           continue;
         }
-        // hubcloud
+
         if (/hubcloud/i.test(href)) {
           try {
-            const links = await hubcloudExtracter(href, signal);
-            out.push(...links.map((l: Stream) => ({ ...l, server: (l as any).server || "HubCloud" })));
-          } catch {}
+            console.log("[skyMovieHD] 🔗 Resolving HubCloud:", href);
+            const streams = await hubcloudExtracter(href, signal);
+            streams
+              .filter((item: Stream) => {
+                const link = item?.link || "";
+                if (!link) return false;
+                // Skip known slow CDN mirrors – we prefer direct hubcloud or google links.
+                if (/pixeldrain|hubcdn|pages\.dev|fastcdn/i.test(link)) {
+                  return false;
+                }
+                return true;
+              })
+              .forEach((item: Stream) => {
+                const stream = normaliseStream(
+                  {
+                    ...item,
+                    server: item.server || "HubCloud",
+                  },
+                  "HubCloud",
+                );
+                if (stream) {
+                  collected.push(stream);
+                }
+              });
+          } catch (error) {
+            console.log("[skyMovieHD] ❌ HubCloud extraction failed:", error);
+          }
           continue;
         }
-        // filepress
+
         if (/filepress\./i.test(href)) {
           try {
-            const fp = await filepresExtractor(href, axios, signal);
-            if (fp?.link) out.push({ server: "FilePress", link: fp.link, type: fp.type || "m3u8", headers: fp.headers });
-          } catch {}
+            console.log("[skyMovieHD] 🔗 Resolving FilePress:", href);
+            const streams = await filepresExtractor(href, signal);
+            streams.forEach((item: Stream) => {
+              const stream = normaliseStream(
+                {
+                  ...item,
+                  server: item.server || "FilePress",
+                },
+                "FilePress",
+              );
+              if (stream) {
+                collected.push(stream);
+              }
+            });
+          } catch (error) {
+            console.log("[skyMovieHD] ❌ FilePress extraction failed:", error);
+          }
           continue;
         }
       }
-      // Post-filter: drop known non-playable wrappers and archives; normalize types and priority
-      const filtered = out
-        .filter((s) => s.link &&
-          !/fastcdn-dl\.|workers\.dev\//i.test(s.link) && // HTML wrappers
-          !/\.zip($|\?|#)/i.test(s.link) && // archives not playable
-          // drop known non-streamable CDNs
-          !/pixeldrain\.|hubcdn\./i.test(s.link))
-        .map((s) => {
-          const link = s.link;
-          let type: string = s.type || "mp4";
-          if (/googleusercontent\.com/i.test(link) || /\.mp4($|\?|#)/i.test(link)) type = "mp4";
-          else if (/\.m3u8($|\?|#)/i.test(link)) type = "m3u8";
-          else if (/\.mkv($|\?|#)/i.test(link)) type = "mkv";
-          return { ...s, type } as Stream;
-        });
-      // Sort: prefer Google (mp4), then GoFile, then HubCloud/others
-      filtered.sort((a, b) => {
-        const score = (x: Stream) => (
-          /googleusercontent\.com/i.test(x.link) ? 100 :
-          /gofile\.io/i.test(x.link) ? 90 :
-          /hubcloud/i.test(x.link) ? 60 :
-          /gdflix/i.test(x.link) ? 50 : 10
-        );
-        return score(b) - score(a);
-      });
-      return filtered;
+
+      const cleaned = dedupeStreams(
+        collected.map((stream) => ({
+          ...stream,
+          type: stream.type || inferTypeFromUrl(stream.link),
+        })),
+      ).sort((a, b) => preferHostScore(b.link) - preferHostScore(a.link));
+
+      console.log(
+        "[skyMovieHD] ✅ Aggregator resolved streams:",
+        cleaned.map((item) => ({
+          server: item.server,
+          type: item.type,
+          link: item.link?.slice(0, 120),
+        })),
+      );
+
+      return cleaned;
     }
 
     // Prefer StreamHG
@@ -148,12 +333,32 @@ export async function getStream({
     }
 
     // Fallback
-    return await hubcloudExtracter(target, signal);
+    console.log("[skyMovieHD] ⚠️ Falling back to HubCloud extractor");
+    const fallbackStreams = await hubcloudExtracter(target, signal);
+    const cleanedFallback = dedupeStreams(
+      fallbackStreams
+        .map((stream: Stream) =>
+          normaliseStream(
+            {
+              ...stream,
+              server: stream.server || "HubCloud",
+            },
+            "HubCloud",
+          ),
+        )
+        .filter(Boolean) as Stream[],
+    );
+    console.log(
+      "[skyMovieHD] 🔄 Fallback streams:",
+      cleanedFallback.map((item) => ({
+        server: item.server,
+        type: item.type,
+        link: item.link?.slice(0, 120),
+      })),
+    );
+    return cleanedFallback;
   } catch (error: any) {
-    console.log("getStream error: ", error);
-    if (error.message.includes("Aborted")) {
-    } else {
-    }
+    console.log("[skyMovieHD] ❌ getStream error:", error?.message || error);
     return [];
   }
 }
