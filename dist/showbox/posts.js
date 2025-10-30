@@ -39,7 +39,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getSearchPosts = exports.getPosts = void 0;
 var getPosts = function (_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var getBaseUrl, axios, cheerio, baseUrl, relativePath;
+        var getBaseUrl, axios, cheerio, baseUrl, pageSep, relativePath;
         var filter = _b.filter, page = _b.page, 
         // providerValue,
         signal = _b.signal, providerContext = _b.providerContext;
@@ -50,7 +50,8 @@ var getPosts = function (_a) {
                     return [4 /*yield*/, getBaseUrl("showbox")];
                 case 1:
                     baseUrl = _c.sent();
-                    relativePath = "".concat(filter, "?page=").concat(page, "/");
+                    pageSep = filter.includes("?") ? "&" : "?";
+                    relativePath = "".concat(filter).concat(pageSep, "page=").concat(page);
                     return [2 /*return*/, posts({ url: relativePath, signal: signal, baseUrl: baseUrl, axios: axios, cheerio: cheerio })];
             }
         });

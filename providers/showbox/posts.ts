@@ -15,8 +15,13 @@ export const getPosts = async function ({
 }): Promise<Post[]> {
   const { getBaseUrl, axios, cheerio } = providerContext;
   const baseUrl = await getBaseUrl("showbox");
-  // Worker expects relative path, e.g., /movie?page=1/
-  const relativePath = `${filter}?page=${page}/`;
+  // Build relative path correctly whether filter already has query params or not
+  // Examples:
+  // - "/movie" => "/movie?page=1"
+  // - "/movie?genre=16" => "/movie?genre=16&page=1"
+  // - "/movie?quality=4K&release_year=all&genre=all&rating=all" => same + &page=1
+  const pageSep = filter.includes("?") ? "&" : "?";
+  const relativePath = `${filter}${pageSep}page=${page}`;
   return posts({ url: relativePath, signal, baseUrl, axios, cheerio });
 };
 
