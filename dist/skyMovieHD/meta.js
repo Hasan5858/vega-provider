@@ -91,8 +91,7 @@ function fetchEpisodesFromSelectedLink(url, providerContext) {
 // --- Main getMeta function
 var getMeta = function (_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var axios, cheerio, res, $_1, content, title, pageText, type, image, synopsis_1, imdbLink, imdbId, tags_1, extra_1, links_1, episodeList, isInformationalHeading_1, err_1;
-        var _c, _d;
+    var axios, cheerio, res, $_1, title, type, image, synopsis_1, imdbId, tags_1, extra_1, episodeList, links_1, directLinks, err_1;
         var link = _b.link, providerContext = _b.providerContext;
         return __generator(this, function (_e) {
             switch (_e.label) {
@@ -107,133 +106,36 @@ var getMeta = function (_a) {
                 case 2:
                     res = _e.sent();
                     $_1 = cheerio.load(res.data);
-                    content = $_1(".entry-content, .post-inner").length
-                        ? $_1(".entry-content, .post-inner")
-                        : $_1("body");
-                    title = $_1("h1.entry-title").first().text().trim() ||
-                        ((_c = $_1("meta[property='og:title']").attr("content")) === null || _c === void 0 ? void 0 : _c.trim()) ||
-                        "Unknown";
-                    pageText = content.text();
-                    type = /Season\s*\d+/i.test(pageText) || /Episode\s*\d+/i.test(pageText)
-                        ? "series"
-                        : "movie";
-                    image = $_1(".poster img").attr("src") ||
-                        $_1("meta[property='og:image']").attr("content") ||
-                        $_1("meta[name='twitter:image']").attr("content") ||
-                        "";
-                    if (image && !image.startsWith("http"))
-                        image = new URL(image, link).href;
+                    title = ($_1("title").text() || "").trim() || "Unknown";
+                    type = "movie";
+                    image = "";
                     synopsis_1 = "";
-                    $_1(".entry-content p").each(function (_, el) {
-                        var txt = $_1(el).text().trim();
-                        if (txt.length > 40 && !txt.toLowerCase().includes("download")) {
-                            synopsis_1 = txt;
-                            return false;
-                        }
-                    });
-                    imdbLink = $_1("a[href*='imdb.com']").attr("href") || "";
-                    imdbId = imdbLink
-                        ? "tt" + (((_d = imdbLink.split("/tt")[1]) === null || _d === void 0 ? void 0 : _d.split("/")[0]) || "")
-                        : "";
+                    imdbId = "";
                     tags_1 = [];
-                    $_1(".entry-content p strong").each(function (_, el) {
-                        var txt = $_1(el).text().trim();
-                        if (txt.match(/drama|biography|action|thriller|romance|adventure|animation/i))
-                            tags_1.push(txt);
-                    });
                     extra_1 = {};
-                    $_1("p").each(function (_, el) {
-                        var _a, _b, _c, _d, _e, _f;
-                        var html = $_1(el).html() || "";
-                        if (html.includes("Series Name"))
-                            extra_1.name = (_a = $_1(el).text().split(":")[1]) === null || _a === void 0 ? void 0 : _a.trim();
-                        if (html.includes("Language"))
-                            extra_1.language = (_b = $_1(el).text().split(":")[1]) === null || _b === void 0 ? void 0 : _b.trim();
-                        if (html.includes("Released Year"))
-                            extra_1.year = (_c = $_1(el).text().split(":")[1]) === null || _c === void 0 ? void 0 : _c.trim();
-                        if (html.includes("Quality"))
-                            extra_1.quality = (_d = $_1(el).text().split(":")[1]) === null || _d === void 0 ? void 0 : _d.trim();
-                        if (html.includes("Episode Size"))
-                            extra_1.size = (_e = $_1(el).text().split(":")[1]) === null || _e === void 0 ? void 0 : _e.trim();
-                        if (html.includes("Format"))
-                            extra_1.format = (_f = $_1(el).text().split(":")[1]) === null || _f === void 0 ? void 0 : _f.trim();
-                    });
-                    links_1 = [];
                     episodeList = [];
-                    isInformationalHeading_1 = function (text) {
-                        var lowerText = text.toLowerCase();
-                        return (lowerText.includes("series info") ||
-                            lowerText.includes("series name") ||
-                            lowerText.includes("language") ||
-                            lowerText.includes("released year") ||
-                            lowerText.includes("episode size") ||
-                            lowerText.includes("format") ||
-                            lowerText.includes("imdb rating") ||
-                            lowerText.includes("winding up") ||
-                            (lowerText.length < 5 && !/\d/.test(lowerText)));
-                    };
-                    if (type === "series") {
-                        // Series case: h3 text as title + episode link button (V-Cloud)
-                        content.find("h3").each(function (_, h3) {
-                            var _a;
-                            var h3Text = $_1(h3).text().trim();
-                            if (isInformationalHeading_1(h3Text))
-                                return;
-                            var qualityMatch = ((_a = h3Text.match(/\d+p/)) === null || _a === void 0 ? void 0 : _a[0]) || "AUTO";
-                            var vcloudLink = $_1(h3)
-                                .nextUntil("h3, hr")
-                                .find("a")
-                                .filter(function (_, a) { return /v-cloud|mega|gdrive|download/i.test($_1(a).text()); })
-                                .first();
-                            var href = vcloudLink.attr("href");
-                            if (href) {
-                                // Hide unwanted texts
-                                var btnText = vcloudLink.text().trim() || "Link";
-                                if (btnText.toLowerCase().includes("imdb rating") ||
-                                    btnText.toLowerCase().includes("winding up"))
-                                    return;
-                                links_1.push({
-                                    title: h3Text,
-                                    quality: qualityMatch,
-                                    episodesLink: href,
-                                });
-                            }
-                        });
-                    }
-                    else {
-                        // Movie case: h5/h3 text as title + direct download link
-                        content.find("h3, h5").each(function (_, heading) {
-                            var _a;
-                            var headingText = $_1(heading).text().trim();
-                            if (isInformationalHeading_1(headingText))
-                                return;
-                            var qualityMatch = ((_a = headingText.match(/\d+p/)) === null || _a === void 0 ? void 0 : _a[0]) || "AUTO";
-                            var linkEl = $_1(heading)
-                                .nextUntil("h3, h5, hr")
-                                .find("a[href]")
-                                .first();
-                            var href = linkEl.attr("href");
-                            if (href) {
-                                var finalHref = href.trim();
-                                if (!finalHref.startsWith("http"))
-                                    finalHref = new URL(finalHref, link).href;
-                                var btnText = linkEl.text().trim() || "Download Link"; // Hide unwanted texts
-                                if (btnText.toLowerCase().includes("imdb rating") ||
-                                    btnText.toLowerCase().includes("winding up"))
-                                    return;
-                                links_1.push({
-                                    title: headingText,
-                                    quality: qualityMatch,
-                                    episodesLink: "",
-                                    directLinks: [
-                                        {
-                                            title: btnText,
-                                            link: finalHref,
-                                            type: "movie",
-                                        },
-                                    ],
-                                });
-                            }
+                    links_1 = [];
+                    directLinks = [];
+                    $_1("a[href]")
+                        .filter(function (_, a) {
+                        var text = (($_1(a).text() || "").trim().toLowerCase());
+                        return (text.includes("watch online") || text.includes("server") || text.includes("google drive") || text.includes("direct link"));
+                    })
+                        .each(function (_, a) {
+                        var href = (($_1(a).attr("href") || "").trim());
+                        if (!href)
+                            return;
+                        if (!href.startsWith("http"))
+                            href = new URL(href, link).href;
+                        var text = (($_1(a).text() || "Link").trim());
+                        directLinks.push({ title: text, link: href, type: "movie" });
+                    });
+                    if (directLinks.length) {
+                        links_1.push({
+                            title: title,
+                            quality: (title.match(/\d+p/) || ["AUTO"])[0],
+                            episodesLink: "",
+                            directLinks: directLinks,
                         });
                     }
                     return [2 /*return*/, {
@@ -244,7 +146,7 @@ var getMeta = function (_a) {
                             type: type,
                             tags: tags_1,
                             cast: [],
-                            rating: $_1(".entry-meta .entry-date").text().trim() || "",
+                            rating: "",
                             linkList: links_1,
                             extraInfo: extra_1,
                             episodeList: episodeList,

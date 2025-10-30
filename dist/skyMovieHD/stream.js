@@ -55,20 +55,39 @@ var headers = {
 };
 function getStream(_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var axios, cheerio, extractors, hubcloudExtracter, streamLinks, error_1;
+        var axios, cheerio, extractors, streamtapeExtractor, streamhgExtractor, hubcloudExtracter, target, error_1;
         var link = _b.link, type = _b.type, signal = _b.signal, providerContext = _b.providerContext;
         return __generator(this, function (_c) {
             switch (_c.label) {
                 case 0:
                     axios = providerContext.axios, cheerio = providerContext.cheerio, extractors = providerContext.extractors;
+                    streamtapeExtractor = extractors.streamtapeExtractor;
+                    streamhgExtractor = extractors.streamhgExtractor;
                     hubcloudExtracter = extractors.hubcloudExtracter;
                     _c.label = 1;
                 case 1:
                     _c.trys.push([1, 3, , 4]);
-                    streamLinks = [];
                     console.log("dotlink", link);
-                    return [4 /*yield*/, hubcloudExtracter(link, signal)];
-                case 2: return [2 /*return*/, _c.sent()];
+                    target = link;
+                    if (/hglink\.to\//i.test(link)) {
+                        try {
+                            var id = (link.match(/hglink\.to\/([A-Za-z0-9_-]{4,})/i) || [])[1];
+                            if (id)
+                                target = "https://dumbalag.com/e/" + id;
+                        }
+                        catch (_d) {}
+                    }
+                    if (/dumbalag\.com\//i.test(target)) {
+                        return [4 /*yield*/, streamhgExtractor(target, axios, signal)];
+                    }
+                    _c.label = 2;
+                case 2:
+                    // If StreamHG extractor produced a stream, return it
+                    if (_c.sent()) return [2 /*return*/, _c.sent()];
+                    if (/streamtape|tape|watchadsontape/i.test(target)) {
+                        return [2 /*return*/, streamtapeExtractor(target, axios, signal)];
+                    }
+                    return [2 /*return*/, hubcloudExtracter(target, signal)];
                 case 3:
                     error_1 = _c.sent();
                     console.log("getStream error: ", error_1);

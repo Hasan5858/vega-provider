@@ -74,57 +74,43 @@ function fetchPosts(_a) {
             switch (_d.label) {
                 case 0:
                     _d.trys.push([0, 2, , 3]);
-                    baseUrl_1 = "https://skymovieshd.tattoo";
+                    baseUrl_1 = "https://skymovieshd.mba";
                     url = void 0;
-                    if (query && query.trim() && query.trim().toLowerCase() !== "what are you looking for?") {
+                    if (query && query.trim()) {
                         params = new URLSearchParams();
-                        params.append("s", query.trim());
-                        if (page > 1)
-                            params.append("paged", page.toString());
-                        url = "".concat(baseUrl_1, "/?").concat(params.toString());
+                        params.append("search", query.trim());
+                        params.append("cat", "All");
+                        url = "".concat(baseUrl_1, "/search.php?").concat(params.toString());
                     }
                     else if (filter) {
-                        url = filter.startsWith("/")
-                            ? "".concat(baseUrl_1).concat(filter.replace(/\/$/, "")).concat(page > 1 ? "/page/".concat(page) : "")
-                            : "".concat(baseUrl_1, "/").concat(filter).concat(page > 1 ? "/page/".concat(page) : "");
+                        url = "".concat(baseUrl_1, "/").concat(filter.startsWith("/") ? filter.slice(1) : filter);
                     }
                     else {
-                        url = "".concat(baseUrl_1).concat(page > 1 ? "/page/".concat(page) : "");
+                        url = "".concat(baseUrl_1, "/");
                     }
                     axios = providerContext.axios, cheerio = providerContext.cheerio;
                     return [4 /*yield*/, axios.get(url, { headers: defaultHeaders, signal: signal })];
                 case 1:
                     res = _d.sent();
                     $_1 = cheerio.load(res.data || "");
-                    resolveUrl_1 = function (href) {
-                        return (href === null || href === void 0 ? void 0 : href.startsWith("http")) ? href : new URL(href, baseUrl_1).href;
-                    };
+                    resolveUrl_1 = function (href) { return (href === null || href === void 0 ? void 0 : href.startsWith("http")) ? href : new URL(href, baseUrl_1).href; };
                     seen_1 = new Set();
                     catalog_1 = [];
-                    // ✅ Scrape posts
-                    $_1("article.latestpost").each(function (_, el) {
-                        var card = $_1(el);
-                        // Link
-                        var link = card.find("header.entry-header h2.entry-title a, header.entry-header h1.entry-title a").attr("href") || "";
-                        if (!link)
-                            return;
-                        link = resolveUrl_1(link);
+                    $_1("a[href]")
+                        .filter(function (_, a) {
+                        var href = (($_1(a).attr("href") || "").trim());
+                        return /(^|\/)movie\/.+\.html$/i.test(href);
+                    })
+                        .each(function (_, a) {
+                        var rawHref = (($_1(a).attr("href") || "").trim());
+                        var link = resolveUrl_1(rawHref);
                         if (seen_1.has(link))
                             return;
-                        // Title: remove "Download"
-                        var title = card.find("header.entry-header h2.entry-title a, header.entry-header h1.entry-title a")
-                            .text()
-                            .replace(/^Download\s*/i, "")
-                            .trim();
+                        var title = (($_1(a).text() || "").trim());
                         if (!title)
                             return;
-                        // Image
-                        var img = card.find("a#featured-thumbnail img").attr("data-src") ||
-                            card.find("a#featured-thumbnail img").attr("src") ||
-                            "";
-                        var image = img ? resolveUrl_1(img) : "";
                         seen_1.add(link);
-                        catalog_1.push({ title: title, link: link, image: image });
+                        catalog_1.push({ title: title, link: link, image: "" });
                     });
                     return [2 /*return*/, catalog_1.slice(0, 100)];
                 case 2:

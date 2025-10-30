@@ -33,12 +33,33 @@ export async function getStream({
   providerContext: ProviderContext;
 }) {
   const { axios, cheerio, extractors } = providerContext;
-  const { hubcloudExtracter } = extractors;
+  const { hubcloudExtracter } = extractors as any;
+  const streamtapeExtractor = (extractors as any).streamtapeExtractor as ((u: string, a: any, s?: AbortSignal) => Promise<Stream | Stream[] | null>);
+  const streamhgExtractor = (extractors as any).streamhgExtractor as ((u: string, a: any, s?: AbortSignal) => Promise<Stream | Stream[] | null>);
   try {
-    const streamLinks: Stream[] = [];
     console.log("dotlink", link);
+    let target = link;
+    // Normalize StreamHG hglink -> dumbalag embed
+    if (/hglink\.to\//i.test(target)) {
+      try {
+        const id = (target.match(/hglink\.to\/([A-Za-z0-9_-]{4,})/i) || [])[1];
+        if (id) target = `https://dumbalag.com/e/${id}`;
+      } catch {}
+    }
 
-    return await hubcloudExtracter(link, signal);
+    // Prefer StreamHG
+    if (/dumbalag\.com\//i.test(target) && typeof streamhgExtractor === "function") {
+      const shg = await streamhgExtractor(target, axios, signal);
+      if (shg) return shg;
+    }
+
+    // StreamTape family
+    if (/streamtape|watchadsontape|tape/i.test(target) && typeof streamtapeExtractor === "function") {
+      return await streamtapeExtractor(target, axios, signal);
+    }
+
+    // Fallback
+    return await hubcloudExtracter(target, signal);
   } catch (error: any) {
     console.log("getStream error: ", error);
     if (error.message.includes("Aborted")) {

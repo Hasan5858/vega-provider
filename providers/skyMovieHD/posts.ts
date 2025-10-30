@@ -56,20 +56,20 @@ async function fetchPosts({
   providerContext: ProviderContext;
 }): Promise<Post[]> {
   try {
-    const baseUrl = "https://skymovieshd.tattoo";
+    const baseUrl = "https://skymovieshd.mba";
     let url: string;
 
-    if (query && query.trim() && query.trim().toLowerCase() !== "what are you looking for?") {
+    if (query && query.trim()) {
+      // New site search endpoint
       const params = new URLSearchParams();
-      params.append("s", query.trim());
-      if (page > 1) params.append("paged", page.toString());
-      url = `${baseUrl}/?${params.toString()}`;
+      params.append("search", query.trim());
+      params.append("cat", "All");
+      url = `${baseUrl}/search.php?${params.toString()}`;
     } else if (filter) {
-      url = filter.startsWith("/")
-        ? `${baseUrl}${filter.replace(/\/$/, "")}${page > 1 ? `/page/${page}` : ""}`
-        : `${baseUrl}/${filter}${page > 1 ? `/page/${page}` : ""}`;
+      const normalized = filter.startsWith("/") ? filter.slice(1) : filter;
+      url = `${baseUrl}/${normalized}`;
     } else {
-      url = `${baseUrl}${page > 1 ? `/page/${page}` : ""}`;
+      url = `${baseUrl}/`;
     }
 
     const { axios, cheerio } = providerContext;
@@ -82,33 +82,21 @@ async function fetchPosts({
     const seen = new Set<string>();
     const catalog: Post[] = [];
 
-    // ✅ Scrape posts
-    $("article.latestpost").each((_, el) => {
-      const card = $(el);
-
-      // Link
-      let link = card.find("header.entry-header h2.entry-title a, header.entry-header h1.entry-title a").attr("href") || "";
-      if (!link) return;
-      link = resolveUrl(link);
-      if (seen.has(link)) return;
-
-      // Title: remove "Download"
-      let title = card.find("header.entry-header h2.entry-title a, header.entry-header h1.entry-title a")
-        .text()
-        .replace(/^Download\s*/i, "")
-        .trim();
-      if (!title) return;
-
-      // Image
-      let img =
-        card.find("a#featured-thumbnail img").attr("data-src") ||
-        card.find("a#featured-thumbnail img").attr("src") ||
-        "";
-      const image = img ? resolveUrl(img) : "";
-
-      seen.add(link);
-      catalog.push({ title, link, image });
-    });
+    // New site: links are simple anchors to /movie/*.html with text as title
+    $("a[href]")
+      .filter((_, a) => {
+        const href = ($(a).attr("href") || "").trim();
+        return /(^|\/)movie\/.+\.html$/i.test(href);
+      })
+      .each((_, a) => {
+        const rawHref = ($(a).attr("href") || "").trim();
+        const link = resolveUrl(rawHref);
+        if (seen.has(link)) return;
+        const title = ($(a).text() || "").trim();
+        if (!title) return;
+        seen.add(link);
+        catalog.push({ title, link, image: "" });
+      });
 
     return catalog.slice(0, 100);
   } catch (err) {
