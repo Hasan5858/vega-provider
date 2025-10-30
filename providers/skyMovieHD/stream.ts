@@ -34,8 +34,8 @@ export async function getStream({
 }) {
   const { axios, cheerio, extractors } = providerContext;
   const { hubcloudExtracter } = extractors as any;
-  const streamtapeExtractor = (extractors as any).streamtapeExtractor as ((u: string, a: any, s?: AbortSignal) => Promise<Stream | Stream[] | null>);
-  const streamhgExtractor = (extractors as any).streamhgExtractor as ((u: string, a: any, s?: AbortSignal) => Promise<Stream | Stream[] | null>);
+  const streamtapeExtractor = (extractors as any).streamtapeExtractor as ((u: string, a: any, s?: AbortSignal) => Promise<{ link: string; headers?: Record<string, string>; type?: string } | null>);
+  const streamhgExtractor = (extractors as any).streamhgExtractor as ((u: string, a: any, s?: AbortSignal) => Promise<{ link: string; headers?: Record<string, string>; type?: string } | null>);
   try {
     console.log("dotlink", link);
     let target = link;
@@ -50,12 +50,23 @@ export async function getStream({
     // Prefer StreamHG
     if (/dumbalag\.com\//i.test(target) && typeof streamhgExtractor === "function") {
       const shg = await streamhgExtractor(target, axios, signal);
-      if (shg) return shg;
+      if (shg) {
+        const arr: Stream[] = [
+          { server: "StreamHG", link: shg.link, type: shg.type || "m3u8", headers: shg.headers },
+        ];
+        return arr;
+      }
     }
 
     // StreamTape family
     if (/streamtape|watchadsontape|tape/i.test(target) && typeof streamtapeExtractor === "function") {
-      return await streamtapeExtractor(target, axios, signal);
+      const st = await streamtapeExtractor(target, axios, signal);
+      if (st) {
+        const arr: Stream[] = [
+          { server: "StreamTape", link: st.link, type: st.type || "mp4", headers: st.headers },
+        ];
+        return arr;
+      }
     }
 
     // Fallback

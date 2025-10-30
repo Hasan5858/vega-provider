@@ -55,7 +55,7 @@ var headers = {
 };
 function getStream(_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var axios, cheerio, extractors, hubcloudExtracter, streamtapeExtractor, streamhgExtractor, target, id, shg, error_1;
+        var axios, cheerio, extractors, hubcloudExtracter, streamtapeExtractor, streamhgExtractor, target, id, shg, arr, st, arr, error_1;
         var link = _b.link, type = _b.type, signal = _b.signal, providerContext = _b.providerContext;
         return __generator(this, function (_c) {
             switch (_c.label) {
@@ -82,13 +82,25 @@ function getStream(_a) {
                     return [4 /*yield*/, streamhgExtractor(target, axios, signal)];
                 case 2:
                     shg = _c.sent();
-                    if (shg)
-                        return [2 /*return*/, shg];
+                    if (shg) {
+                        arr = [
+                            { server: "StreamHG", link: shg.link, type: shg.type || "m3u8", headers: shg.headers },
+                        ];
+                        return [2 /*return*/, arr];
+                    }
                     _c.label = 3;
                 case 3:
                     if (!(/streamtape|watchadsontape|tape/i.test(target) && typeof streamtapeExtractor === "function")) return [3 /*break*/, 5];
                     return [4 /*yield*/, streamtapeExtractor(target, axios, signal)];
-                case 4: return [2 /*return*/, _c.sent()];
+                case 4:
+                    st = _c.sent();
+                    if (st) {
+                        arr = [
+                            { server: "StreamTape", link: st.link, type: st.type || "mp4", headers: st.headers },
+                        ];
+                        return [2 /*return*/, arr];
+                    }
+                    _c.label = 5;
                 case 5: return [4 /*yield*/, hubcloudExtracter(target, signal)];
                 case 6: 
                 // Fallback
