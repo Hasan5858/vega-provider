@@ -36,6 +36,9 @@ export async function getStream({
   const { hubcloudExtracter } = extractors as any;
   const streamtapeExtractor = (extractors as any).streamtapeExtractor as ((u: string, a: any, s?: AbortSignal) => Promise<{ link: string; headers?: Record<string, string>; type?: string } | null>);
   const streamhgExtractor = (extractors as any).streamhgExtractor as ((u: string, a: any, s?: AbortSignal) => Promise<{ link: string; headers?: Record<string, string>; type?: string } | null>);
+  const gdFlixExtracter = (extractors as any).gdFlixExtracter as (u: string, s?: AbortSignal) => Promise<Stream[]>;
+  const filepresExtractor = (extractors as any).filepresExtractor as (u: string, a: any, s?: AbortSignal) => Promise<{ link: string; headers?: Record<string, string>; type?: string } | null>;
+  const gofileExtracter = (extractors as any).gofileExtracter as (id: string) => Promise<{ link: string; token: string }>; 
   try {
     console.log("dotlink", link);
     let target = link;
@@ -45,6 +48,56 @@ export async function getStream({
         const id = (target.match(/hglink\.to\/([A-Za-z0-9_-]{4,})/i) || [])[1];
         if (id) target = `https://dumbalag.com/e/${id}`;
       } catch {}
+    }
+
+    // howblogs aggregator with multiple hosts
+    if (/howblogs\.xyz\//i.test(target)) {
+      const res = await axios.get(target, { signal });
+      const $ = cheerio.load(res.data || "");
+      const anchors = $("a[href]").toArray();
+      const out: Stream[] = [];
+      for (const a of anchors) {
+        const href = ($(a).attr("href") || "").trim();
+        if (!href) continue;
+        // skip media.cm, dgdrive, hubdrive, gdtot
+        if (/media\.cm|dgdrive|hubdrive|gdtot/i.test(href)) continue;
+        // gofile
+        if (/gofile\.io\/d\//i.test(href)) {
+          const id = href.split("/d/")[1]?.split("?")[0];
+          if (id) {
+            try {
+              const go = await gofileExtracter(id);
+              if (go?.link) out.push({ server: "GoFile", link: go.link, type: "mkv" });
+            } catch {}
+          }
+          continue;
+        }
+        // gdflix
+        if (/gdflix/i.test(href)) {
+          try {
+            const links = await gdFlixExtracter(href, signal);
+            out.push(...links.map((l: Stream) => ({ ...l, server: (l as any).server || "GDFLIX" })));
+          } catch {}
+          continue;
+        }
+        // hubcloud
+        if (/hubcloud/i.test(href)) {
+          try {
+            const links = await hubcloudExtracter(href, signal);
+            out.push(...links.map((l: Stream) => ({ ...l, server: (l as any).server || "HubCloud" })));
+          } catch {}
+          continue;
+        }
+        // filepress
+        if (/filepress\./i.test(href)) {
+          try {
+            const fp = await filepresExtractor(href, axios, signal);
+            if (fp?.link) out.push({ server: "FilePress", link: fp.link, type: fp.type || "m3u8", headers: fp.headers });
+          } catch {}
+          continue;
+        }
+      }
+      return out;
     }
 
     // Prefer StreamHG

@@ -1,4 +1,15 @@
 "use strict";
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -35,6 +46,42 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __values = (this && this.__values) || function(o) {
+    var s = typeof Symbol === "function" && Symbol.iterator, m = s && o[s], i = 0;
+    if (m) return m.call(o);
+    if (o && typeof o.length === "number") return {
+        next: function () {
+            if (o && i >= o.length) o = void 0;
+            return { value: o && o[i++], done: !o };
+        }
+    };
+    throw new TypeError(s ? "Object is not iterable." : "Symbol.iterator is not defined.");
+};
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getStream = getStream;
 var headers = {
@@ -55,18 +102,23 @@ var headers = {
 };
 function getStream(_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var axios, cheerio, extractors, hubcloudExtracter, streamtapeExtractor, streamhgExtractor, target, id, shg, arr, st, arr, error_1;
+        var axios, cheerio, extractors, hubcloudExtracter, streamtapeExtractor, streamhgExtractor, gdFlixExtracter, filepresExtractor, gofileExtracter, target, id, res, $, anchors, out, anchors_1, anchors_1_1, a, href, id, go, _c, links, _d, links, _e, fp, _f, e_1_1, shg, arr, st, arr, error_1;
+        var e_1, _g;
+        var _h;
         var link = _b.link, type = _b.type, signal = _b.signal, providerContext = _b.providerContext;
-        return __generator(this, function (_c) {
-            switch (_c.label) {
+        return __generator(this, function (_j) {
+            switch (_j.label) {
                 case 0:
                     axios = providerContext.axios, cheerio = providerContext.cheerio, extractors = providerContext.extractors;
                     hubcloudExtracter = extractors.hubcloudExtracter;
                     streamtapeExtractor = extractors.streamtapeExtractor;
                     streamhgExtractor = extractors.streamhgExtractor;
-                    _c.label = 1;
+                    gdFlixExtracter = extractors.gdFlixExtracter;
+                    filepresExtractor = extractors.filepresExtractor;
+                    gofileExtracter = extractors.gofileExtracter;
+                    _j.label = 1;
                 case 1:
-                    _c.trys.push([1, 7, , 8]);
+                    _j.trys.push([1, 35, , 36]);
                     console.log("dotlink", link);
                     target = link;
                     // Normalize StreamHG hglink -> dumbalag embed
@@ -76,44 +128,140 @@ function getStream(_a) {
                             if (id)
                                 target = "https://dumbalag.com/e/".concat(id);
                         }
-                        catch (_d) { }
+                        catch (_k) { }
                     }
-                    if (!(/dumbalag\.com\//i.test(target) && typeof streamhgExtractor === "function")) return [3 /*break*/, 3];
-                    return [4 /*yield*/, streamhgExtractor(target, axios, signal)];
+                    if (!/howblogs\.xyz\//i.test(target)) return [3 /*break*/, 29];
+                    return [4 /*yield*/, axios.get(target, { signal: signal })];
                 case 2:
-                    shg = _c.sent();
+                    res = _j.sent();
+                    $ = cheerio.load(res.data || "");
+                    anchors = $("a[href]").toArray();
+                    out = [];
+                    _j.label = 3;
+                case 3:
+                    _j.trys.push([3, 26, 27, 28]);
+                    anchors_1 = __values(anchors), anchors_1_1 = anchors_1.next();
+                    _j.label = 4;
+                case 4:
+                    if (!!anchors_1_1.done) return [3 /*break*/, 25];
+                    a = anchors_1_1.value;
+                    href = ($(a).attr("href") || "").trim();
+                    if (!href)
+                        return [3 /*break*/, 24];
+                    // skip media.cm, dgdrive, hubdrive, gdtot
+                    if (/media\.cm|dgdrive|hubdrive|gdtot/i.test(href))
+                        return [3 /*break*/, 24];
+                    if (!/gofile\.io\/d\//i.test(href)) return [3 /*break*/, 9];
+                    id = (_h = href.split("/d/")[1]) === null || _h === void 0 ? void 0 : _h.split("?")[0];
+                    if (!id) return [3 /*break*/, 8];
+                    _j.label = 5;
+                case 5:
+                    _j.trys.push([5, 7, , 8]);
+                    return [4 /*yield*/, gofileExtracter(id)];
+                case 6:
+                    go = _j.sent();
+                    if (go === null || go === void 0 ? void 0 : go.link)
+                        out.push({ server: "GoFile", link: go.link, type: "mkv" });
+                    return [3 /*break*/, 8];
+                case 7:
+                    _c = _j.sent();
+                    return [3 /*break*/, 8];
+                case 8: return [3 /*break*/, 24];
+                case 9:
+                    if (!/gdflix/i.test(href)) return [3 /*break*/, 14];
+                    _j.label = 10;
+                case 10:
+                    _j.trys.push([10, 12, , 13]);
+                    return [4 /*yield*/, gdFlixExtracter(href, signal)];
+                case 11:
+                    links = _j.sent();
+                    out.push.apply(out, __spreadArray([], __read(links.map(function (l) { return (__assign(__assign({}, l), { server: l.server || "GDFLIX" })); })), false));
+                    return [3 /*break*/, 13];
+                case 12:
+                    _d = _j.sent();
+                    return [3 /*break*/, 13];
+                case 13: return [3 /*break*/, 24];
+                case 14:
+                    if (!/hubcloud/i.test(href)) return [3 /*break*/, 19];
+                    _j.label = 15;
+                case 15:
+                    _j.trys.push([15, 17, , 18]);
+                    return [4 /*yield*/, hubcloudExtracter(href, signal)];
+                case 16:
+                    links = _j.sent();
+                    out.push.apply(out, __spreadArray([], __read(links.map(function (l) { return (__assign(__assign({}, l), { server: l.server || "HubCloud" })); })), false));
+                    return [3 /*break*/, 18];
+                case 17:
+                    _e = _j.sent();
+                    return [3 /*break*/, 18];
+                case 18: return [3 /*break*/, 24];
+                case 19:
+                    if (!/filepress\./i.test(href)) return [3 /*break*/, 24];
+                    _j.label = 20;
+                case 20:
+                    _j.trys.push([20, 22, , 23]);
+                    return [4 /*yield*/, filepresExtractor(href, axios, signal)];
+                case 21:
+                    fp = _j.sent();
+                    if (fp === null || fp === void 0 ? void 0 : fp.link)
+                        out.push({ server: "FilePress", link: fp.link, type: fp.type || "m3u8", headers: fp.headers });
+                    return [3 /*break*/, 23];
+                case 22:
+                    _f = _j.sent();
+                    return [3 /*break*/, 23];
+                case 23: return [3 /*break*/, 24];
+                case 24:
+                    anchors_1_1 = anchors_1.next();
+                    return [3 /*break*/, 4];
+                case 25: return [3 /*break*/, 28];
+                case 26:
+                    e_1_1 = _j.sent();
+                    e_1 = { error: e_1_1 };
+                    return [3 /*break*/, 28];
+                case 27:
+                    try {
+                        if (anchors_1_1 && !anchors_1_1.done && (_g = anchors_1.return)) _g.call(anchors_1);
+                    }
+                    finally { if (e_1) throw e_1.error; }
+                    return [7 /*endfinally*/];
+                case 28: return [2 /*return*/, out];
+                case 29:
+                    if (!(/dumbalag\.com\//i.test(target) && typeof streamhgExtractor === "function")) return [3 /*break*/, 31];
+                    return [4 /*yield*/, streamhgExtractor(target, axios, signal)];
+                case 30:
+                    shg = _j.sent();
                     if (shg) {
                         arr = [
                             { server: "StreamHG", link: shg.link, type: shg.type || "m3u8", headers: shg.headers },
                         ];
                         return [2 /*return*/, arr];
                     }
-                    _c.label = 3;
-                case 3:
-                    if (!(/streamtape|watchadsontape|tape/i.test(target) && typeof streamtapeExtractor === "function")) return [3 /*break*/, 5];
+                    _j.label = 31;
+                case 31:
+                    if (!(/streamtape|watchadsontape|tape/i.test(target) && typeof streamtapeExtractor === "function")) return [3 /*break*/, 33];
                     return [4 /*yield*/, streamtapeExtractor(target, axios, signal)];
-                case 4:
-                    st = _c.sent();
+                case 32:
+                    st = _j.sent();
                     if (st) {
                         arr = [
                             { server: "StreamTape", link: st.link, type: st.type || "mp4", headers: st.headers },
                         ];
                         return [2 /*return*/, arr];
                     }
-                    _c.label = 5;
-                case 5: return [4 /*yield*/, hubcloudExtracter(target, signal)];
-                case 6: 
+                    _j.label = 33;
+                case 33: return [4 /*yield*/, hubcloudExtracter(target, signal)];
+                case 34: 
                 // Fallback
-                return [2 /*return*/, _c.sent()];
-                case 7:
-                    error_1 = _c.sent();
+                return [2 /*return*/, _j.sent()];
+                case 35:
+                    error_1 = _j.sent();
                     console.log("getStream error: ", error_1);
                     if (error_1.message.includes("Aborted")) {
                     }
                     else {
                     }
                     return [2 /*return*/, []];
-                case 8: return [2 /*return*/];
+                case 36: return [2 /*return*/];
             }
         });
     });
