@@ -42,33 +42,109 @@ export const getStream = async ({
     const driveRes = await axios.get(driveLink, { headers });
     const driveHtml = driveRes.data;
     const $drive = cheerio.load(driveHtml);
+    // ResumeBot (some driveseed variants)
+    try {
+      const resumeBot = $drive(".btn.btn-light").attr("href") || "";
+      if (resumeBot) {
+        const resumeBotRes = await axios.get(resumeBot, { headers });
+        const resumeBotToken = resumeBotRes.data.match(
+          /formData\.append\('token', '([a-f0-9]+)'\)/
+        )?.[1];
+        const resumeBotBody = new FormData();
+        if (resumeBotToken) {
+          resumeBotBody.append("token", resumeBotToken);
+        }
+        const resumeBotPath = resumeBotRes.data.match(
+          /fetch\('\/download\?id=([a-zA-Z0-9\/+]+)'/
+        )?.[1];
+        const resumeBotBaseUrl = resumeBot.split("/download")[0];
+        if (resumeBotPath) {
+          const resumeBotDownload = await fetch(
+            resumeBotBaseUrl + "/download?id=" + resumeBotPath,
+            {
+              method: "POST",
+              body: resumeBotBody,
+              headers: {
+                Referer: resumeBot,
+                Cookie: "PHPSESSID=7e9658ce7c805dab5bbcea9046f7f308",
+              },
+            }
+          );
+          const resumeBotDownloadData = await resumeBotDownload.json();
+          if (resumeBotDownloadData?.url) {
+            ServerLinks.push({
+              server: "ResumeBot",
+              link: resumeBotDownloadData.url,
+              type: "mkv",
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.log("ResumeBot link not found", err);
+    }
+
     //instant link
     try {
-      const seed = $drive(".btn-danger").attr("href") || "";
-      const instantToken = seed.split("=")[1];
-      //   console.log('InstantToken', instantToken);
-      const InstantFromData = new FormData();
-      InstantFromData.append("keys", instantToken);
-      const videoSeedUrl = seed.split("/").slice(0, 3).join("/") + "/api";
-      //   console.log('videoSeedUrl', videoSeedUrl);
-      const instantLinkRes = await fetch(videoSeedUrl, {
-        method: "POST",
-        body: InstantFromData,
-        headers: {
-          "x-token": videoSeedUrl,
-        },
-      });
-      const instantLinkData = await instantLinkRes.json();
-      //   console.log('instantLinkData', instantLinkData);
-      if (instantLinkData.error === false) {
-        const instantLink = instantLinkData.url;
-        ServerLinks.push({
-          server: "Gdrive-Instant",
-          link: instantLink,
-          type: "mkv",
-        });
-      } else {
-        console.log("Instant link not found", instantLinkData);
+      // Broaden selector in case the button class differs on series pages
+      const seed =
+        $drive("a.btn-danger").attr("href") ||
+        $drive('a[href*="/instant"]').attr("href") ||
+        "";
+
+      if (seed) {
+        let instantToken = "";
+        try {
+          const urlObj = new URL(seed);
+          instantToken =
+            urlObj.searchParams.get("keys") ||
+            urlObj.searchParams.get("key") ||
+            urlObj.searchParams.get("token") ||
+            "";
+        } catch {
+          // Fallback to legacy split if URL constructor fails
+          instantToken = (seed.split("?")[1] || "").split("&").find(p => p.startsWith("keys=") || p.startsWith("key=") || p.startsWith("token="))?.split("=")[1] || seed.split("=")[1] || "";
+        }
+
+        // Derive additional token candidates
+        const driveId = (driveLink.match(/\/file\/([^/?#]+)/)?.[1] || "").trim();
+        const pepeCookie = (downloadLink as any)?.cookie || "";
+        const hexEncode = (s: string) => Array.from(s).map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('');
+        const candidates = Array.from(new Set([
+          instantToken,
+          driveId,
+          pepeCookie,
+          hexEncode(instantToken || ''),
+          hexEncode(driveId || ''),
+          hexEncode(pepeCookie || ''),
+        ].filter(Boolean)));
+
+        const origin = seed.split("/").slice(0, 3).join("/");
+        const videoSeedUrl = origin + "/api";
+
+        let instantOk = false;
+        for (const candidate of candidates) {
+          try {
+            const fd = new FormData();
+            fd.append("keys", candidate);
+            const res = await fetch(videoSeedUrl, {
+              method: "POST",
+              body: fd,
+              headers: { "x-token": videoSeedUrl, Referer: seed, Origin: origin },
+            });
+            const js = await res.json();
+            if (js && js.error === false && js.url) {
+              ServerLinks.push({ server: "Gdrive-Instant", link: js.url, type: "mkv" });
+              instantOk = true;
+              break;
+            }
+          } catch (_) {
+            // try next candidate
+          }
+        }
+        if (!instantOk) {
+          console.log("Instant link not found", { tried: candidates.length });
+        }
       }
     } catch (err) {
       console.log("Instant link not found", err);
@@ -141,6 +217,18 @@ export const getStream = async ({
       console.log("CF workers link not found", err);
     }
 
+    // Generic anchors on main drive page that may directly point to workers/download mirrors
+    try {
+      $drive('a[href*="workers.dev"], a[href*="/download"], a[href*="/wfile"], a[href*="/zfile"], a.btn-primary, a.btn-warning').each((i, el) => {
+        const link = (el as any).attribs?.href;
+        if (link && /^https?:\/\//.test(link)) {
+          ServerLinks.push({ server: "Drive Link " + i, link, type: "mkv" });
+        }
+      });
+    } catch (err) {
+      // ignore
+    }
+
     console.log("ServerLinks", ServerLinks);
     // If none found and ddl is a direct file (.mkv/.mp4), return it as fallback
     if (ServerLinks.length === 0 && /\.(mkv|mp4)(\?|$)/i.test(ddl)) {
@@ -211,6 +299,8 @@ async function modExtractor(url: string, providerContext: ProviderContext) {
         Cookie: `${cookie}=${wpHttp2}`,
       },
     });
+    // attach cookie for later token fallback attempts
+    (downloadLink as any).cookie = cookie;
     return downloadLink;
   } catch (err) {
     console.log("modGetStream error", err);

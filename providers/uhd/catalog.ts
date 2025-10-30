@@ -15,6 +15,22 @@ export const catalog = [
     title: "4K HDR",
     filter: "/4k-hdr",
   },
+  {
+    title: "English Movies",
+    filter: "/movies/english-movies",
+  },
+  {
+    title: "IMAX",
+    filter: "/imax",
+  },
+  {
+    title: "Collection",
+    filter: "/collection",
+  },
+  {
+    title: "Amazon Prime",
+    filter: "/amazon-prime",
+  },
 ];
 
 export const genres = [
