@@ -36,13 +36,13 @@ const UNSUPPORTED_SERVERS = /media\.cm|dgdrive|hubdrive|gdtot/i;
 
 const preferHostScore = (url: string) => {
   if (/googleusercontent\.com|googlevideo\.com|googleapis\.com/i.test(url)) {
-    return 120;
+    return 60;
   }
   if (/gofile\.io|gofilecdn\.com/i.test(url)) {
     return 110;
   }
   if (/filepress/i.test(url)) {
-    return 95;
+    return 90;
   }
   if (/hubcloud|hubcdn|cloudflarestorage/i.test(url)) {
     return 80;
@@ -63,7 +63,7 @@ const inferTypeFromUrl = (url: string): Stream["type"] => {
 
 const withDefaultHeaders = (stream: Stream): Stream => {
   const url = stream.link || "";
-  const headers = { ...(stream.headers || {}) };
+  const headers = { ...(stream.headers || {}) } as Record<string, string | undefined>;
 
   if (/googleusercontent\.com|googlevideo\.com|gofile\.io|gofilecdn\.com/i.test(url)) {
     headers.Range ??= DEFAULT_STREAM_HEADERS.Range;
@@ -75,11 +75,17 @@ const withDefaultHeaders = (stream: Stream): Stream => {
     headers["User-Agent"] ??= DEFAULT_STREAM_HEADERS["User-Agent"];
   }
 
+  Object.keys(headers).forEach((key) => {
+    if (headers[key] === undefined || headers[key] === null) {
+      delete headers[key];
+    }
+  });
+
   if (!Object.keys(headers).length) {
     return { ...stream, headers: undefined };
   }
 
-  return { ...stream, headers };
+  return { ...stream, headers: headers as Record<string, string> };
 };
 
 const normaliseStream = (
@@ -208,6 +214,9 @@ export async function getStream({
                 headers: {
                   ...DEFAULT_STREAM_HEADERS,
                   Referer: "https://gofile.io/",
+                  Authorization: gofile?.token
+                    ? `Bearer ${gofile.token}`
+                    : undefined,
                 },
               },
               "GoFile",
@@ -311,8 +320,45 @@ export async function getStream({
         }
       }
 
+      const validated: Stream[] = [];
+      for (const stream of collected) {
+        try {
+          const head = await axios.head(stream.link, {
+            headers: stream.headers,
+            signal,
+            timeout: 8000,
+            maxRedirects: 5,
+            validateStatus: (status) =>
+              (status >= 200 && status < 400) || status === 403,
+          });
+          const contentType = head.headers?.["content-type"] || "";
+          if (
+            (head.status === 200 || head.status === 206) &&
+            /video|octet-stream/i.test(contentType)
+          ) {
+            validated.push(stream);
+          } else if (head.status === 302 || head.status === 301) {
+            // allow redirect chains for hosts like gofile
+            validated.push(stream);
+          } else {
+            console.log(
+              "[skyMovieHD] ⚠️ Dropping non-video stream:",
+              stream.server,
+              head.status,
+              contentType,
+            );
+          }
+        } catch (error: any) {
+          console.log(
+            "[skyMovieHD] ⚠️ Stream validation failed:",
+            stream.server,
+            error?.message || error,
+          );
+        }
+      }
+
       const cleaned = dedupeStreams(
-        collected.map((stream) => ({
+        validated.map((stream) => ({
           ...stream,
           type: stream.type || inferTypeFromUrl(stream.link),
         })),
