@@ -228,7 +228,9 @@ function getStream(_a) {
                     filtered = out
                         .filter(function (s) { return s.link &&
                         !/fastcdn-dl\.|workers\.dev\//i.test(s.link) && // HTML wrappers
-                        !/\.zip($|\?|#)/i.test(s.link); }) // archives not playable
+                        !/\.zip($|\?|#)/i.test(s.link) && // archives not playable
+                        // drop known non-streamable CDNs
+                        !/pixeldrain\.|hubcdn\./i.test(s.link); })
                         .map(function (s) {
                         var link = s.link;
                         var type = s.type || "mp4";
@@ -244,7 +246,7 @@ function getStream(_a) {
                     filtered.sort(function (a, b) {
                         var score = function (x) { return (/googleusercontent\.com/i.test(x.link) ? 100 :
                             /gofile\.io/i.test(x.link) ? 90 :
-                                /hubcloud|hubcdn/i.test(x.link) ? 60 :
+                                /hubcloud/i.test(x.link) ? 60 :
                                     /gdflix/i.test(x.link) ? 50 : 10); };
                         return score(b) - score(a);
                     });

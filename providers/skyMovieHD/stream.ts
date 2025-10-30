@@ -101,7 +101,9 @@ export async function getStream({
       const filtered = out
         .filter((s) => s.link &&
           !/fastcdn-dl\.|workers\.dev\//i.test(s.link) && // HTML wrappers
-          !/\.zip($|\?|#)/i.test(s.link)) // archives not playable
+          !/\.zip($|\?|#)/i.test(s.link) && // archives not playable
+          // drop known non-streamable CDNs
+          !/pixeldrain\.|hubcdn\./i.test(s.link))
         .map((s) => {
           const link = s.link;
           let type: string = s.type || "mp4";
@@ -115,7 +117,7 @@ export async function getStream({
         const score = (x: Stream) => (
           /googleusercontent\.com/i.test(x.link) ? 100 :
           /gofile\.io/i.test(x.link) ? 90 :
-          /hubcloud|hubcdn/i.test(x.link) ? 60 :
+          /hubcloud/i.test(x.link) ? 60 :
           /gdflix/i.test(x.link) ? 50 : 10
         );
         return score(b) - score(a);
