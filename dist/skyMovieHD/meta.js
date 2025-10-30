@@ -73,7 +73,7 @@ function fetchEpisodesFromSelectedLink(url, providerContext) {
                                 link: href,
                                 title: btnText,
                                 quality: "AUTO",
-                                type: "episode",
+                                type: "series",
                             });
                         });
                         if (directLinks.length > 0) {
@@ -91,68 +91,72 @@ function fetchEpisodesFromSelectedLink(url, providerContext) {
 // --- Main getMeta function
 var getMeta = function (_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-    var axios, cheerio, res, $_1, title, type, image, synopsis_1, imdbId, tags_1, extra_1, episodeList, links_1, directLinks, err_1;
+        var axios, cheerio, res, $_1, title, type, image, synopsis, imdbId, tags, extra, episodeList, links, directLinks_1, err_1;
+        var _c;
         var link = _b.link, providerContext = _b.providerContext;
-        return __generator(this, function (_e) {
-            switch (_e.label) {
+        return __generator(this, function (_d) {
+            switch (_d.label) {
                 case 0:
                     axios = providerContext.axios, cheerio = providerContext.cheerio;
                     if (!link.startsWith("http"))
-                        link = new URL(link, "https://vgmlinks.click").href;
-                    _e.label = 1;
+                        link = new URL(link, "https://skymovieshd.mba").href;
+                    _d.label = 1;
                 case 1:
-                    _e.trys.push([1, 3, , 4]);
+                    _d.trys.push([1, 3, , 4]);
                     return [4 /*yield*/, axios.get(link, { headers: headers })];
                 case 2:
-                    res = _e.sent();
+                    res = _d.sent();
                     $_1 = cheerio.load(res.data);
                     title = ($_1("title").text() || "").trim() || "Unknown";
                     type = "movie";
                     image = "";
-                    synopsis_1 = "";
+                    synopsis = "";
                     imdbId = "";
-                    tags_1 = [];
-                    extra_1 = {};
+                    tags = [];
+                    extra = {};
                     episodeList = [];
-                    links_1 = [];
-                    directLinks = [];
+                    links = [];
+                    directLinks_1 = [];
                     $_1("a[href]")
                         .filter(function (_, a) {
-                        var text = (($_1(a).text() || "").trim().toLowerCase());
-                        return (text.includes("watch online") || text.includes("server") || text.includes("google drive") || text.includes("direct link"));
+                        var text = ($_1(a).text() || "").trim().toLowerCase();
+                        return (text.includes("watch online") ||
+                            text.includes("server") ||
+                            text.includes("google drive") ||
+                            text.includes("direct link"));
                     })
                         .each(function (_, a) {
-                        var href = (($_1(a).attr("href") || "").trim());
+                        var href = ($_1(a).attr("href") || "").trim();
                         if (!href)
                             return;
                         if (!href.startsWith("http"))
                             href = new URL(href, link).href;
-                        var text = (($_1(a).text() || "Link").trim());
-                        directLinks.push({ title: text, link: href, type: "movie" });
+                        var text = ($_1(a).text() || "Link").trim();
+                        directLinks_1.push({ link: href, title: text, quality: "AUTO", type: "movie" });
                     });
-                    if (directLinks.length) {
-                        links_1.push({
+                    if (directLinks_1.length) {
+                        links.push({
                             title: title,
-                            quality: (title.match(/\d+p/) || ["AUTO"])[0],
+                            quality: ((_c = title.match(/\d+p/)) === null || _c === void 0 ? void 0 : _c[0]) || "AUTO",
                             episodesLink: "",
-                            directLinks: directLinks,
+                            directLinks: directLinks_1,
                         });
                     }
                     return [2 /*return*/, {
                             title: title,
-                            synopsis: synopsis_1,
+                            synopsis: synopsis,
                             image: image,
                             imdbId: imdbId,
                             type: type,
-                            tags: tags_1,
+                            tags: tags,
                             cast: [],
                             rating: "",
-                            linkList: links_1,
-                            extraInfo: extra_1,
+                            linkList: links,
+                            extraInfo: extra,
                             episodeList: episodeList,
                         }];
                 case 3:
-                    err_1 = _e.sent();
+                    err_1 = _d.sent();
                     console.error("getMeta error:", err_1);
                     return [2 /*return*/, {
                             title: "",

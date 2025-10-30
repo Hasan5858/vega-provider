@@ -68,7 +68,7 @@ function getSearchPosts(_a) {
 // --- Core fetch function ---
 function fetchPosts(_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var baseUrl_1, url, params, axios, cheerio, res, $_1, resolveUrl_1, seen_1, catalog_1, err_1;
+        var baseUrl_1, url, params, normalized, axios, cheerio, res, $_1, resolveUrl_1, seen_1, catalog_1, err_1;
         var filter = _b.filter, query = _b.query, _c = _b.page, page = _c === void 0 ? 1 : _c, signal = _b.signal, providerContext = _b.providerContext;
         return __generator(this, function (_d) {
             switch (_d.label) {
@@ -83,7 +83,8 @@ function fetchPosts(_a) {
                         url = "".concat(baseUrl_1, "/search.php?").concat(params.toString());
                     }
                     else if (filter) {
-                        url = "".concat(baseUrl_1, "/").concat(filter.startsWith("/") ? filter.slice(1) : filter);
+                        normalized = filter.startsWith("/") ? filter.slice(1) : filter;
+                        url = "".concat(baseUrl_1, "/").concat(normalized);
                     }
                     else {
                         url = "".concat(baseUrl_1, "/");
@@ -93,20 +94,23 @@ function fetchPosts(_a) {
                 case 1:
                     res = _d.sent();
                     $_1 = cheerio.load(res.data || "");
-                    resolveUrl_1 = function (href) { return (href === null || href === void 0 ? void 0 : href.startsWith("http")) ? href : new URL(href, baseUrl_1).href; };
+                    resolveUrl_1 = function (href) {
+                        return (href === null || href === void 0 ? void 0 : href.startsWith("http")) ? href : new URL(href, baseUrl_1).href;
+                    };
                     seen_1 = new Set();
                     catalog_1 = [];
+                    // New site: links are simple anchors to /movie/*.html with text as title
                     $_1("a[href]")
                         .filter(function (_, a) {
-                        var href = (($_1(a).attr("href") || "").trim());
+                        var href = ($_1(a).attr("href") || "").trim();
                         return /(^|\/)movie\/.+\.html$/i.test(href);
                     })
                         .each(function (_, a) {
-                        var rawHref = (($_1(a).attr("href") || "").trim());
+                        var rawHref = ($_1(a).attr("href") || "").trim();
                         var link = resolveUrl_1(rawHref);
                         if (seen_1.has(link))
                             return;
-                        var title = (($_1(a).text() || "").trim());
+                        var title = ($_1(a).text() || "").trim();
                         if (!title)
                             return;
                         seen_1.add(link);

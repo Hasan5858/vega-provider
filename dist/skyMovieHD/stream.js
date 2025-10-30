@@ -55,40 +55,45 @@ var headers = {
 };
 function getStream(_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var axios, cheerio, extractors, streamtapeExtractor, streamhgExtractor, hubcloudExtracter, target, error_1;
+        var axios, cheerio, extractors, hubcloudExtracter, streamtapeExtractor, streamhgExtractor, target, id, shg, error_1;
         var link = _b.link, type = _b.type, signal = _b.signal, providerContext = _b.providerContext;
         return __generator(this, function (_c) {
             switch (_c.label) {
                 case 0:
                     axios = providerContext.axios, cheerio = providerContext.cheerio, extractors = providerContext.extractors;
+                    hubcloudExtracter = extractors.hubcloudExtracter;
                     streamtapeExtractor = extractors.streamtapeExtractor;
                     streamhgExtractor = extractors.streamhgExtractor;
-                    hubcloudExtracter = extractors.hubcloudExtracter;
                     _c.label = 1;
                 case 1:
-                    _c.trys.push([1, 3, , 4]);
+                    _c.trys.push([1, 7, , 8]);
                     console.log("dotlink", link);
                     target = link;
-                    if (/hglink\.to\//i.test(link)) {
+                    // Normalize StreamHG hglink -> dumbalag embed
+                    if (/hglink\.to\//i.test(target)) {
                         try {
-                            var id = (link.match(/hglink\.to\/([A-Za-z0-9_-]{4,})/i) || [])[1];
+                            id = (target.match(/hglink\.to\/([A-Za-z0-9_-]{4,})/i) || [])[1];
                             if (id)
-                                target = "https://dumbalag.com/e/" + id;
+                                target = "https://dumbalag.com/e/".concat(id);
                         }
-                        catch (_d) {}
+                        catch (_d) { }
                     }
-                    if (/dumbalag\.com\//i.test(target)) {
-                        return [4 /*yield*/, streamhgExtractor(target, axios, signal)];
-                    }
-                    _c.label = 2;
+                    if (!(/dumbalag\.com\//i.test(target) && typeof streamhgExtractor === "function")) return [3 /*break*/, 3];
+                    return [4 /*yield*/, streamhgExtractor(target, axios, signal)];
                 case 2:
-                    // If StreamHG extractor produced a stream, return it
-                    if (_c.sent()) return [2 /*return*/, _c.sent()];
-                    if (/streamtape|tape|watchadsontape/i.test(target)) {
-                        return [2 /*return*/, streamtapeExtractor(target, axios, signal)];
-                    }
-                    return [2 /*return*/, hubcloudExtracter(target, signal)];
+                    shg = _c.sent();
+                    if (shg)
+                        return [2 /*return*/, shg];
+                    _c.label = 3;
                 case 3:
+                    if (!(/streamtape|watchadsontape|tape/i.test(target) && typeof streamtapeExtractor === "function")) return [3 /*break*/, 5];
+                    return [4 /*yield*/, streamtapeExtractor(target, axios, signal)];
+                case 4: return [2 /*return*/, _c.sent()];
+                case 5: return [4 /*yield*/, hubcloudExtracter(target, signal)];
+                case 6: 
+                // Fallback
+                return [2 /*return*/, _c.sent()];
+                case 7:
                     error_1 = _c.sent();
                     console.log("getStream error: ", error_1);
                     if (error_1.message.includes("Aborted")) {
@@ -96,7 +101,7 @@ function getStream(_a) {
                     else {
                     }
                     return [2 /*return*/, []];
-                case 4: return [2 /*return*/];
+                case 8: return [2 /*return*/];
             }
         });
     });
