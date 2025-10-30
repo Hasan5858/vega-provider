@@ -3,11 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.catalog = void 0;
 exports.catalog = [
     {
-        title: "Trending",
+        title: "Latest Updated Movies",
         filter: "",
-    },
-    {
-        title: "JIo-Studios",
-        filter: "category/jio-studios/",
     },
 ];

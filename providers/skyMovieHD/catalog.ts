@@ -1,10 +1,6 @@
 export const catalog = [
   {
-    title: "Trending",
+    title: "Latest Updated Movies",
     filter: "",
-  },
-  {
-    title: "JIo-Studios",
-    filter: "category/jio-studios/",
   },
 ];
