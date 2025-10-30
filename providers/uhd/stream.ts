@@ -74,14 +74,19 @@ export const getStream = async ({
       console.log("Instant link not found", err);
     }
 
-    // resume link
+    // resume link (broaden selectors)
     try {
       const resumeDrive = driveLink.replace("/file", "/zfile");
       //   console.log('resumeDrive', resumeDrive);
       const resumeDriveRes = await axios.get(resumeDrive, { headers });
       const resumeDriveHtml = resumeDriveRes.data;
       const $resumeDrive = cheerio.load(resumeDriveHtml);
-      const resumeLink = $resumeDrive(".btn-success").attr("href");
+      let resumeLink = $resumeDrive(".btn-success").attr("href");
+      if (!resumeLink) {
+        resumeLink =
+          $resumeDrive('a[href*="workers.dev"]').attr('href') ||
+          $resumeDrive('a.btn').attr('href') || '';
+      }
       //   console.log('resumeLink', resumeLink);
       if (resumeLink) {
         ServerLinks.push({
@@ -94,13 +99,13 @@ export const getStream = async ({
       console.log("Resume link not found");
     }
 
-    // CF workers type 1
+    // CF workers type 1 (broaden selectors)
     try {
       const cfWorkersLink = driveLink.replace("/file", "/wfile") + "?type=1";
       const cfWorkersRes = await axios.get(cfWorkersLink, { headers });
       const cfWorkersHtml = cfWorkersRes.data;
       const $cfWorkers = cheerio.load(cfWorkersHtml);
-      const cfWorkersStream = $cfWorkers(".btn-success");
+      const cfWorkersStream = $cfWorkers("a.btn-success, a.btn, a[href*=\"workers.dev\"]");
       cfWorkersStream.each((i, el) => {
         const link = (el as any).attribs?.href;
         if (link) {
@@ -115,13 +120,13 @@ export const getStream = async ({
       console.log("CF workers link not found", err);
     }
 
-    // CF workers type 2
+    // CF workers type 2 (broaden selectors)
     try {
       const cfWorkersLink = driveLink.replace("/file", "/wfile") + "?type=2";
       const cfWorkersRes = await axios.get(cfWorkersLink, { headers });
       const cfWorkersHtml = cfWorkersRes.data;
       const $cfWorkers = cheerio.load(cfWorkersHtml);
-      const cfWorkersStream = $cfWorkers(".btn-success");
+      const cfWorkersStream = $cfWorkers("a.btn-success, a.btn, a[href*=\"workers.dev\"]");
       cfWorkersStream.each((i, el) => {
         const link = (el as any).attribs?.href;
         if (link) {
@@ -137,6 +142,10 @@ export const getStream = async ({
     }
 
     console.log("ServerLinks", ServerLinks);
+    // If none found and ddl is a direct file (.mkv/.mp4), return it as fallback
+    if (ServerLinks.length === 0 && /\.(mkv|mp4)(\?|$)/i.test(ddl)) {
+      ServerLinks.push({ server: "Direct", link: ddl, type: "mkv" });
+    }
     return ServerLinks;
   } catch (err) {
     console.log("getStream error", err);

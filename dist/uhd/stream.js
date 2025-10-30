@@ -121,6 +121,11 @@ var getStream = function (_a) { return __awaiter(void 0, [_a], void 0, function 
                 resumeDriveHtml = resumeDriveRes.data;
                 $resumeDrive = cheerio.load(resumeDriveHtml);
                 resumeLink = $resumeDrive(".btn-success").attr("href");
+                if (!resumeLink) {
+                    resumeLink =
+                        $resumeDrive('a[href*="workers.dev"]').attr('href') ||
+                            $resumeDrive('a.btn').attr('href') || '';
+                }
                 //   console.log('resumeLink', resumeLink);
                 if (resumeLink) {
                     ServerLinks_1.push({
@@ -142,7 +147,7 @@ var getStream = function (_a) { return __awaiter(void 0, [_a], void 0, function 
                 cfWorkersRes = _e.sent();
                 cfWorkersHtml = cfWorkersRes.data;
                 $cfWorkers = cheerio.load(cfWorkersHtml);
-                cfWorkersStream = $cfWorkers(".btn-success");
+                cfWorkersStream = $cfWorkers("a.btn-success, a.btn, a[href*=\"workers.dev\"]");
                 cfWorkersStream.each(function (i, el) {
                     var _a;
                     var link = (_a = el.attribs) === null || _a === void 0 ? void 0 : _a.href;
@@ -167,7 +172,7 @@ var getStream = function (_a) { return __awaiter(void 0, [_a], void 0, function 
                 cfWorkersRes = _e.sent();
                 cfWorkersHtml = cfWorkersRes.data;
                 $cfWorkers = cheerio.load(cfWorkersHtml);
-                cfWorkersStream = $cfWorkers(".btn-success");
+                cfWorkersStream = $cfWorkers("a.btn-success, a.btn, a[href*=\"workers.dev\"]");
                 cfWorkersStream.each(function (i, el) {
                     var _a;
                     var link = (_a = el.attribs) === null || _a === void 0 ? void 0 : _a.href;
@@ -186,6 +191,10 @@ var getStream = function (_a) { return __awaiter(void 0, [_a], void 0, function 
                 return [3 /*break*/, 17];
             case 17:
                 console.log("ServerLinks", ServerLinks_1);
+                // If none found and ddl is a direct file (.mkv/.mp4), return it as fallback
+                if (ServerLinks_1.length === 0 && /\.(mkv|mp4)(\?|$)/i.test(ddl)) {
+                    ServerLinks_1.push({ server: "Direct", link: ddl, type: "mkv" });
+                }
                 return [2 /*return*/, ServerLinks_1];
             case 18:
                 err_5 = _e.sent();
