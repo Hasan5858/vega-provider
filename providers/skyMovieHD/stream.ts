@@ -70,6 +70,11 @@ const withDefaultHeaders = (stream: Stream): Stream => {
     headers["User-Agent"] ??= DEFAULT_STREAM_HEADERS["User-Agent"];
   }
 
+  if (/hubcloud|hubcdn|resume|pixel/i.test(url)) {
+    headers.Range ??= DEFAULT_STREAM_HEADERS.Range;
+    headers["User-Agent"] ??= DEFAULT_STREAM_HEADERS["User-Agent"];
+  }
+
   if (!Object.keys(headers).length) {
     return { ...stream, headers: undefined };
   }
@@ -77,7 +82,11 @@ const withDefaultHeaders = (stream: Stream): Stream => {
   return { ...stream, headers };
 };
 
-const normaliseStream = (raw: Stream, fallbackServer: string): Stream | null => {
+const normaliseStream = (
+  raw: Stream,
+  fallbackServer: string,
+  referer?: string,
+): Stream | null => {
   if (!raw?.link) return null;
 
   const link = raw.link.trim();
@@ -86,12 +95,20 @@ const normaliseStream = (raw: Stream, fallbackServer: string): Stream | null => 
   const server = raw.server?.trim() || fallbackServer;
   const type = raw.type || inferTypeFromUrl(link);
 
-  return withDefaultHeaders({
+  const normalised = {
     ...raw,
     server,
     link,
     type,
-  });
+  };
+
+  if (referer) {
+    const headers = { ...(normalised.headers || {}) };
+    headers.Referer ??= referer;
+    normalised.headers = headers;
+  }
+
+  return withDefaultHeaders(normalised);
 };
 
 const dedupeStreams = (streams: Stream[]) => {
@@ -225,6 +242,7 @@ export async function getStream({
                     server: item.server || "GDFlix",
                   },
                   "GDFlix",
+                  href,
                 );
                 if (stream) {
                   collected.push(stream);
@@ -257,6 +275,7 @@ export async function getStream({
                     server: item.server || "HubCloud",
                   },
                   "HubCloud",
+                  href,
                 );
                 if (stream) {
                   collected.push(stream);
@@ -279,6 +298,7 @@ export async function getStream({
                   server: item.server || "FilePress",
                 },
                 "FilePress",
+                "https://new5.filepress.today/",
               );
               if (stream) {
                 collected.push(stream);
@@ -344,6 +364,7 @@ export async function getStream({
               server: stream.server || "HubCloud",
             },
             "HubCloud",
+            target,
           ),
         )
         .filter(Boolean) as Stream[],

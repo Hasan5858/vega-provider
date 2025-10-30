@@ -115,20 +115,24 @@ var inferTypeFromUrl = function (url) {
     return "mp4";
 };
 var withDefaultHeaders = function (stream) {
-    var _a, _b;
+    var _a, _b, _c, _d;
     var url = stream.link || "";
     var headers = __assign({}, (stream.headers || {}));
     if (/googleusercontent\.com|googlevideo\.com|gofile\.io|gofilecdn\.com/i.test(url)) {
         (_a = headers.Range) !== null && _a !== void 0 ? _a : (headers.Range = DEFAULT_STREAM_HEADERS.Range);
         (_b = headers["User-Agent"]) !== null && _b !== void 0 ? _b : (headers["User-Agent"] = DEFAULT_STREAM_HEADERS["User-Agent"]);
     }
+    if (/hubcloud|hubcdn|resume|pixel/i.test(url)) {
+        (_c = headers.Range) !== null && _c !== void 0 ? _c : (headers.Range = DEFAULT_STREAM_HEADERS.Range);
+        (_d = headers["User-Agent"]) !== null && _d !== void 0 ? _d : (headers["User-Agent"] = DEFAULT_STREAM_HEADERS["User-Agent"]);
+    }
     if (!Object.keys(headers).length) {
         return __assign(__assign({}, stream), { headers: undefined });
     }
     return __assign(__assign({}, stream), { headers: headers });
 };
-var normaliseStream = function (raw, fallbackServer) {
-    var _a;
+var normaliseStream = function (raw, fallbackServer, referer) {
+    var _a, _b;
     if (!(raw === null || raw === void 0 ? void 0 : raw.link))
         return null;
     var link = raw.link.trim();
@@ -136,7 +140,13 @@ var normaliseStream = function (raw, fallbackServer) {
         return null;
     var server = ((_a = raw.server) === null || _a === void 0 ? void 0 : _a.trim()) || fallbackServer;
     var type = raw.type || inferTypeFromUrl(link);
-    return withDefaultHeaders(__assign(__assign({}, raw), { server: server, link: link, type: type }));
+    var normalised = __assign(__assign({}, raw), { server: server, link: link, type: type });
+    if (referer) {
+        var headers = __assign({}, (normalised.headers || {}));
+        (_b = headers.Referer) !== null && _b !== void 0 ? _b : (headers.Referer = referer);
+        normalised.headers = headers;
+    }
+    return withDefaultHeaders(normalised);
 };
 var dedupeStreams = function (streams) {
     var seen = new Set();
@@ -150,7 +160,7 @@ var dedupeStreams = function (streams) {
 };
 function getStream(_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var axios, cheerio, extractors, hubcloudExtracter, streamtapeExtractor, streamhgExtractor, gdFlixExtracter, filepresExtractor, gofileExtracter, target, id, res, $, anchors, collected_1, _loop_1, anchors_1, anchors_1_1, anchor, e_1_1, cleaned, shg, arr, st, arr, fallbackStreams, cleanedFallback, error_1;
+        var axios, cheerio, extractors, hubcloudExtracter, streamtapeExtractor, streamhgExtractor, gdFlixExtracter, filepresExtractor, gofileExtracter, target_1, id, res, $, anchors, collected_1, _loop_1, anchors_1, anchors_1_1, anchor, e_1_1, cleaned, shg, arr, st, arr, fallbackStreams, cleanedFallback, error_1;
         var e_1, _c;
         var _d;
         var link = _b.link, type = _b.type, signal = _b.signal, providerContext = _b.providerContext;
@@ -170,19 +180,19 @@ function getStream(_a) {
                 case 1:
                     _e.trys.push([1, 17, , 18]);
                     console.log("[skyMovieHD] Incoming link:", link);
-                    target = link;
+                    target_1 = link;
                     // Normalize StreamHG hglink -> dumbalag embed
-                    if (/hglink\.to\//i.test(target)) {
+                    if (/hglink\.to\//i.test(target_1)) {
                         try {
-                            id = (target.match(/hglink\.to\/([A-Za-z0-9_-]{4,})/i) || [])[1];
+                            id = (target_1.match(/hglink\.to\/([A-Za-z0-9_-]{4,})/i) || [])[1];
                             if (id)
-                                target = "https://dumbalag.com/e/".concat(id);
+                                target_1 = "https://dumbalag.com/e/".concat(id);
                         }
                         catch (_f) { }
                     }
-                    if (!/howblogs\.xyz\//i.test(target)) return [3 /*break*/, 11];
-                    console.log("[skyMovieHD] Loading howblogs aggregator:", target);
-                    return [4 /*yield*/, axios.get(target, { signal: signal, headers: REQUEST_HEADERS })];
+                    if (!/howblogs\.xyz\//i.test(target_1)) return [3 /*break*/, 11];
+                    console.log("[skyMovieHD] Loading howblogs aggregator:", target_1);
+                    return [4 /*yield*/, axios.get(target_1, { signal: signal, headers: REQUEST_HEADERS })];
                 case 2:
                     res = _e.sent();
                     $ = cheerio.load(res.data || "");
@@ -253,7 +263,7 @@ function getStream(_a) {
                                         return true;
                                     })
                                         .forEach(function (item) {
-                                        var stream = normaliseStream(__assign(__assign({}, item), { server: item.server || "GDFlix" }), "GDFlix");
+                                        var stream = normaliseStream(__assign(__assign({}, item), { server: item.server || "GDFlix" }), "GDFlix", href);
                                         if (stream) {
                                             collected_1.push(stream);
                                         }
@@ -285,7 +295,7 @@ function getStream(_a) {
                                         return true;
                                     })
                                         .forEach(function (item) {
-                                        var stream = normaliseStream(__assign(__assign({}, item), { server: item.server || "HubCloud" }), "HubCloud");
+                                        var stream = normaliseStream(__assign(__assign({}, item), { server: item.server || "HubCloud" }), "HubCloud", href);
                                         if (stream) {
                                             collected_1.push(stream);
                                         }
@@ -306,7 +316,7 @@ function getStream(_a) {
                                 case 17:
                                     streams = _g.sent();
                                     streams.forEach(function (item) {
-                                        var stream = normaliseStream(__assign(__assign({}, item), { server: item.server || "FilePress" }), "FilePress");
+                                        var stream = normaliseStream(__assign(__assign({}, item), { server: item.server || "FilePress" }), "FilePress", "https://new5.filepress.today/");
                                         if (stream) {
                                             collected_1.push(stream);
                                         }
@@ -359,8 +369,8 @@ function getStream(_a) {
                     }));
                     return [2 /*return*/, cleaned];
                 case 11:
-                    if (!(/dumbalag\.com\//i.test(target) && typeof streamhgExtractor === "function")) return [3 /*break*/, 13];
-                    return [4 /*yield*/, streamhgExtractor(target, axios, signal)];
+                    if (!(/dumbalag\.com\//i.test(target_1) && typeof streamhgExtractor === "function")) return [3 /*break*/, 13];
+                    return [4 /*yield*/, streamhgExtractor(target_1, axios, signal)];
                 case 12:
                     shg = _e.sent();
                     if (shg) {
@@ -371,8 +381,8 @@ function getStream(_a) {
                     }
                     _e.label = 13;
                 case 13:
-                    if (!(/streamtape|watchadsontape|tape/i.test(target) && typeof streamtapeExtractor === "function")) return [3 /*break*/, 15];
-                    return [4 /*yield*/, streamtapeExtractor(target, axios, signal)];
+                    if (!(/streamtape|watchadsontape|tape/i.test(target_1) && typeof streamtapeExtractor === "function")) return [3 /*break*/, 15];
+                    return [4 /*yield*/, streamtapeExtractor(target_1, axios, signal)];
                 case 14:
                     st = _e.sent();
                     if (st) {
@@ -385,12 +395,12 @@ function getStream(_a) {
                 case 15:
                     // Fallback
                     console.log("[skyMovieHD] ⚠️ Falling back to HubCloud extractor");
-                    return [4 /*yield*/, hubcloudExtracter(target, signal)];
+                    return [4 /*yield*/, hubcloudExtracter(target_1, signal)];
                 case 16:
                     fallbackStreams = _e.sent();
                     cleanedFallback = dedupeStreams(fallbackStreams
                         .map(function (stream) {
-                        return normaliseStream(__assign(__assign({}, stream), { server: stream.server || "HubCloud" }), "HubCloud");
+                        return normaliseStream(__assign(__assign({}, stream), { server: stream.server || "HubCloud" }), "HubCloud", target_1);
                     })
                         .filter(Boolean));
                     console.log("[skyMovieHD] 🔄 Fallback streams:", cleanedFallback.map(function (item) {
