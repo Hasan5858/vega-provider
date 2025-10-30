@@ -39,7 +39,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getSearchPosts = exports.getPosts = void 0;
 var getPosts = function (_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var getBaseUrl, axios, cheerio, baseUrl, url;
+        var getBaseUrl, axios, cheerio, baseUrl, relativePath;
         var filter = _b.filter, page = _b.page, 
         // providerValue,
         signal = _b.signal, providerContext = _b.providerContext;
@@ -50,8 +50,8 @@ var getPosts = function (_a) {
                     return [4 /*yield*/, getBaseUrl("showbox")];
                 case 1:
                     baseUrl = _c.sent();
-                    url = "".concat(baseUrl + filter, "?page=").concat(page, "/");
-                    return [2 /*return*/, posts({ url: url, signal: signal, baseUrl: baseUrl, axios: axios, cheerio: cheerio })];
+                    relativePath = "".concat(filter, "?page=").concat(page, "/");
+                    return [2 /*return*/, posts({ url: relativePath, signal: signal, baseUrl: baseUrl, axios: axios, cheerio: cheerio })];
             }
         });
     });
@@ -59,7 +59,7 @@ var getPosts = function (_a) {
 exports.getPosts = getPosts;
 var getSearchPosts = function (_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var getBaseUrl, axios, cheerio, baseUrl, url;
+        var getBaseUrl, axios, cheerio, baseUrl, relativePath;
         var searchQuery = _b.searchQuery, page = _b.page, 
         // providerValue,
         signal = _b.signal, providerContext = _b.providerContext;
@@ -70,8 +70,8 @@ var getSearchPosts = function (_a) {
                     return [4 /*yield*/, getBaseUrl("showbox")];
                 case 1:
                     baseUrl = _c.sent();
-                    url = "".concat(baseUrl, "/search?keyword=").concat(searchQuery, "&page=").concat(page);
-                    return [2 /*return*/, posts({ url: url, signal: signal, baseUrl: baseUrl, axios: axios, cheerio: cheerio })];
+                    relativePath = "/search?keyword=".concat(encodeURIComponent(searchQuery), "&page=").concat(page);
+                    return [2 /*return*/, posts({ url: relativePath, signal: signal, baseUrl: baseUrl, axios: axios, cheerio: cheerio })];
             }
         });
     });
@@ -79,18 +79,71 @@ var getSearchPosts = function (_a) {
 exports.getSearchPosts = getSearchPosts;
 function posts(_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var res, data, $_1, catalog_1, err_1;
-        var url = _b.url, signal = _b.signal, 
-        // baseUrl,
-        axios = _b.axios, cheerio = _b.cheerio;
-        return __generator(this, function (_c) {
-            switch (_c.label) {
+        var workerUrl, res, retryCount, maxRetries, _loop_1, state_1, responseData, data, $_1, catalog_1, err_1;
+        var _c, _d, _e;
+        var url = _b.url, signal = _b.signal, baseUrl = _b.baseUrl, axios = _b.axios, cheerio = _b.cheerio;
+        return __generator(this, function (_f) {
+            switch (_f.label) {
                 case 0:
-                    _c.trys.push([0, 2, , 3]);
-                    return [4 /*yield*/, axios.get(url, { signal: signal })];
+                    _f.trys.push([0, 5, , 6]);
+                    // Add delay to prevent rate limiting (Cloudflare Worker may enforce rate limits)
+                    return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, 800); })];
                 case 1:
-                    res = _c.sent();
-                    data = res.data;
+                    // Add delay to prevent rate limiting (Cloudflare Worker may enforce rate limits)
+                    _f.sent();
+                    workerUrl = "".concat(baseUrl, "/api?url=").concat(encodeURIComponent(url));
+                    res = void 0;
+                    retryCount = 0;
+                    maxRetries = 3;
+                    _loop_1 = function () {
+                        var error_1, retryDelay_1;
+                        return __generator(this, function (_g) {
+                            switch (_g.label) {
+                                case 0:
+                                    _g.trys.push([0, 2, , 6]);
+                                    return [4 /*yield*/, axios.get(workerUrl, {
+                                            signal: signal,
+                                            timeout: 30000, // 30 second timeout
+                                        })];
+                                case 1:
+                                    res = _g.sent();
+                                    return [2 /*return*/, "break"];
+                                case 2:
+                                    error_1 = _g.sent();
+                                    if (!((((_c = error_1 === null || error_1 === void 0 ? void 0 : error_1.response) === null || _c === void 0 ? void 0 : _c.status) === 429 || ((_d = error_1 === null || error_1 === void 0 ? void 0 : error_1.response) === null || _d === void 0 ? void 0 : _d.status) === 403) && retryCount < maxRetries - 1)) return [3 /*break*/, 4];
+                                    retryDelay_1 = (retryCount + 1) * 2000;
+                                    console.log("Showbox worker rate limited (".concat((_e = error_1 === null || error_1 === void 0 ? void 0 : error_1.response) === null || _e === void 0 ? void 0 : _e.status, "), retrying in ").concat(retryDelay_1, "ms..."));
+                                    return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, retryDelay_1); })];
+                                case 3:
+                                    _g.sent();
+                                    retryCount++;
+                                    return [3 /*break*/, 5];
+                                case 4: throw error_1; // Re-throw if not rate limit or max retries reached
+                                case 5: return [3 /*break*/, 6];
+                                case 6: return [2 /*return*/];
+                            }
+                        });
+                    };
+                    _f.label = 2;
+                case 2:
+                    if (!(retryCount < maxRetries)) return [3 /*break*/, 4];
+                    return [5 /*yield**/, _loop_1()];
+                case 3:
+                    state_1 = _f.sent();
+                    if (state_1 === "break")
+                        return [3 /*break*/, 4];
+                    return [3 /*break*/, 2];
+                case 4:
+                    if (!res || !res.data) {
+                        console.error('Showbox worker: No data received', workerUrl);
+                        return [2 /*return*/, []];
+                    }
+                    responseData = res.data;
+                    if (!responseData.html) {
+                        console.error('Showbox worker: Missing HTML in response', responseData);
+                        return [2 /*return*/, []];
+                    }
+                    data = responseData.html;
                     $_1 = cheerio.load(data);
                     catalog_1 = [];
                     $_1(".movie-item,.flw-item").map(function (i, element) {
@@ -106,10 +159,11 @@ function posts(_a) {
                         }
                     });
                     return [2 /*return*/, catalog_1];
-                case 2:
-                    err_1 = _c.sent();
+                case 5:
+                    err_1 = _f.sent();
+                    console.error('Showbox posts error:', err_1);
                     return [2 /*return*/, []];
-                case 3: return [2 /*return*/];
+                case 6: return [2 /*return*/];
             }
         });
     });

@@ -94,7 +94,7 @@ const modflixData = {
     },
     "showbox": {
         "name": "showbox",
-        "url": "https://www.showbox.media"
+        "url": "https://showbox.steep-bread-3c84.workers.dev"
     },
     "animerulz": {
         "name": "animerulz",
