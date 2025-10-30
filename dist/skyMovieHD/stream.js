@@ -102,7 +102,7 @@ var headers = {
 };
 function getStream(_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var axios, cheerio, extractors, hubcloudExtracter, streamtapeExtractor, streamhgExtractor, gdFlixExtracter, filepresExtractor, gofileExtracter, target, id, res, $, anchors, out, anchors_1, anchors_1_1, a, href, id, go, _c, links, _d, links, _e, fp, _f, e_1_1, shg, arr, st, arr, error_1;
+        var axios, cheerio, extractors, hubcloudExtracter, streamtapeExtractor, streamhgExtractor, gdFlixExtracter, filepresExtractor, gofileExtracter, target, id, res, $, anchors, out, anchors_1, anchors_1_1, a, href, id, go, _c, links, _d, links, _e, fp, _f, e_1_1, filtered, shg, arr, st, arr, error_1;
         var e_1, _g;
         var _h;
         var link = _b.link, type = _b.type, signal = _b.signal, providerContext = _b.providerContext;
@@ -224,7 +224,31 @@ function getStream(_a) {
                     }
                     finally { if (e_1) throw e_1.error; }
                     return [7 /*endfinally*/];
-                case 28: return [2 /*return*/, out];
+                case 28:
+                    filtered = out
+                        .filter(function (s) { return s.link &&
+                        !/fastcdn-dl\.|workers\.dev\//i.test(s.link) && // HTML wrappers
+                        !/\.zip($|\?|#)/i.test(s.link); }) // archives not playable
+                        .map(function (s) {
+                        var link = s.link;
+                        var type = s.type || "mp4";
+                        if (/googleusercontent\.com/i.test(link) || /\.mp4($|\?|#)/i.test(link))
+                            type = "mp4";
+                        else if (/\.m3u8($|\?|#)/i.test(link))
+                            type = "m3u8";
+                        else if (/\.mkv($|\?|#)/i.test(link))
+                            type = "mkv";
+                        return __assign(__assign({}, s), { type: type });
+                    });
+                    // Sort: prefer Google (mp4), then GoFile, then HubCloud/others
+                    filtered.sort(function (a, b) {
+                        var score = function (x) { return (/googleusercontent\.com/i.test(x.link) ? 100 :
+                            /gofile\.io/i.test(x.link) ? 90 :
+                                /hubcloud|hubcdn/i.test(x.link) ? 60 :
+                                    /gdflix/i.test(x.link) ? 50 : 10); };
+                        return score(b) - score(a);
+                    });
+                    return [2 /*return*/, filtered];
                 case 29:
                     if (!(/dumbalag\.com\//i.test(target) && typeof streamhgExtractor === "function")) return [3 /*break*/, 31];
                     return [4 /*yield*/, streamhgExtractor(target, axios, signal)];

@@ -97,7 +97,30 @@ export async function getStream({
           continue;
         }
       }
-      return out;
+      // Post-filter: drop known non-playable wrappers and archives; normalize types and priority
+      const filtered = out
+        .filter((s) => s.link &&
+          !/fastcdn-dl\.|workers\.dev\//i.test(s.link) && // HTML wrappers
+          !/\.zip($|\?|#)/i.test(s.link)) // archives not playable
+        .map((s) => {
+          const link = s.link;
+          let type: string = s.type || "mp4";
+          if (/googleusercontent\.com/i.test(link) || /\.mp4($|\?|#)/i.test(link)) type = "mp4";
+          else if (/\.m3u8($|\?|#)/i.test(link)) type = "m3u8";
+          else if (/\.mkv($|\?|#)/i.test(link)) type = "mkv";
+          return { ...s, type } as Stream;
+        });
+      // Sort: prefer Google (mp4), then GoFile, then HubCloud/others
+      filtered.sort((a, b) => {
+        const score = (x: Stream) => (
+          /googleusercontent\.com/i.test(x.link) ? 100 :
+          /gofile\.io/i.test(x.link) ? 90 :
+          /hubcloud|hubcdn/i.test(x.link) ? 60 :
+          /gdflix/i.test(x.link) ? 50 : 10
+        );
+        return score(b) - score(a);
+      });
+      return filtered;
     }
 
     // Prefer StreamHG
