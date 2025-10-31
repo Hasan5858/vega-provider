@@ -119,89 +119,93 @@ export async function uptomegaExtractor(
       .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
       .join("&");
 
-    // Step 4: POST final request with aggressive timeout
-    // Use Promise.race to ensure we timeout even if axios doesn't respect it
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("Request timeout after 30 seconds")), 30000);
-    });
-
-    // React Native doesn't handle maxRedirects: 0 well, so we intercept the redirect
-    let finalResponse;
+    // Step 4: POST final request
+    // React Native axios doesn't handle maxRedirects: 0 properly for 302 responses
+    // We need to intercept the redirect manually
+    let directLink: string | undefined;
+    
     try {
-      const response = await axios.post(url, finalData, {
+      // Use a custom axios config to handle redirects manually
+      const step3Response = await axios.post(url, finalData, {
         headers: {
           "User-Agent": USER_AGENT,
           "Content-Type": "application/x-www-form-urlencoded",
           Referer: url,
           Origin: "https://uptomega.net",
         },
-        maxRedirects: 0, // Don't follow redirect
-        validateStatus: (status) => status >= 200 && status < 400,
-        timeout: 30000, // Increased to 30 seconds for slow networks
+        maxRedirects: 0, // Don't follow redirects
+        validateStatus: (status) => status >= 200 && status < 400, // Accept 3xx as success
+        timeout: 30000,
         signal,
-      });
-      finalResponse = response;
-    } catch (error: any) {
-      // React Native axios throws on 302/301 even with validateStatus
-      console.log("[Uptomega] ⚠️ Request threw error, checking for redirect...");
-      if (error?.response) {
-        console.log("[Uptomega] 📊 Error response status:", error.response.status);
-        if (error.response.status === 302 || error.response.status === 301) {
-          console.log("[Uptomega] 📍 Caught redirect in error handler");
-          finalResponse = error.response;
-        } else {
-          throw error;
+      }).catch((error) => {
+        // Axios throws error for 3xx when maxRedirects: 0
+        // But we can access the response from the error
+        if (error.response && (error.response.status === 301 || error.response.status === 302)) {
+          return error.response;
         }
-      } else {
-        // Network error without response
-        console.log("[Uptomega] ❌ Network error without response");
         throw error;
-      }
-    }
+      });
 
-    const requestPromise = Promise.resolve(finalResponse);
-
-    const step3Response = await Promise.race([requestPromise, timeoutPromise]);
-
-    console.log("[Uptomega] 📊 Final response status:", step3Response.status);
-    
-    // Extract the direct download link from Location header
-    let directLink = step3Response.headers.location;
-
-    // If no redirect, check for link in page (status 200)
-    if (!directLink && step3Response.status === 200) {
-      console.log("[Uptomega] ℹ️ Status 200 - checking page for download link");
-      const $final = cheerio.load(step3Response.data);
-      // Look for download link in the page
-      const downloadBtn = $final('a.btn:contains("Download")').attr("href");
-      const directLinkInPage = $final('a[href*="uptodown"]').attr("href");
-      directLink = downloadBtn || directLinkInPage;
+      console.log("[Uptomega] 📊 Final response status:", step3Response.status);
       
+      // Check for redirect location header (should be present for 301/302)
+      if (step3Response.headers.location) {
+        directLink = step3Response.headers.location;
+        console.log("[Uptomega] 🔀 Got redirect to:", directLink?.substring(0, 100) || directLink);
+      }
+      
+      // Also check responseURL as backup
+      if (!directLink && step3Response.request?.responseURL && step3Response.request.responseURL !== url) {
+        directLink = step3Response.request.responseURL;
+        console.log("[Uptomega] 📍 Got URL from request:", directLink?.substring(0, 100) || directLink);
+      }
+      
+      // 3. Parse the HTML response for download link
+      if (!directLink && step3Response.status === 200 && step3Response.data) {
+        console.log("[Uptomega] ℹ️ Status 200 - checking page for download link");
+        const $final = cheerio.load(step3Response.data);
+        // Look for download link in the page
+        const downloadBtn = $final('a.btn:contains("Download")').attr("href");
+        const directLinkInPage = $final('a[href*="uptodown"]').attr("href");
+        directLink = downloadBtn || directLinkInPage;
+        
+        if (directLink) {
+          console.log("[Uptomega] 📄 Found link in page");
+        }
+      }
+
       if (directLink) {
-        console.log("[Uptomega] 📄 Found link in page");
+        console.log("[Uptomega] ✅ Successfully extracted direct link");
+        // Determine file type from URL
+        const fileType = directLink.match(/\.(mkv|mp4|avi|webm)(\?|$)/i)?.[1] || "mkv";
+        
+        return {
+          link: directLink,
+          type: fileType.toLowerCase(),
+        };
       }
-    } else if (directLink) {
-      console.log("[Uptomega] 🔀 Got redirect to:", directLink.slice(0, 100));
-    }
 
-    if (directLink) {
-      console.log("[Uptomega] ✅ Successfully extracted direct link");
-      // Determine file type from URL
-      const fileType = directLink.match(/\.(mkv|mp4|avi|webm)(\?|$)/i)?.[1] || "mkv";
+      console.log("[Uptomega] ❌ Could not find download link in response");
+      return null;
+    } catch (innerError: any) {
+      // Inner catch for the final POST request
+      const errorMsg = innerError?.message || innerError?.code || "Unknown error";
+      console.log("[Uptomega] ❌ Final request failed:", errorMsg);
       
-      return {
-        link: directLink,
-        type: fileType.toLowerCase(),
-      };
+      if (innerError?.config?.url) {
+        console.log("[Uptomega] Failed URL:", innerError.config.url);
+      }
+      if (innerError?.response) {
+        console.log("[Uptomega] Response status:", innerError.response.status);
+      }
+      
+      return null;
     }
-
-    console.log("[Uptomega] ❌ Could not find download link in response (status:", step3Response.status, ")");
-    return null;
   } catch (error: any) {
+    // Outer catch for the entire extraction process
     const errorMsg = error?.message || error?.code || "Unknown error";
     console.log("[Uptomega] ❌ Extraction failed:", errorMsg);
     
-    // Log more details for debugging
     if (error?.config?.url) {
       console.log("[Uptomega] Failed URL:", error.config.url);
     }

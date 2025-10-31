@@ -99,12 +99,12 @@ var cheerio = __importStar(require("cheerio"));
 var USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 function uptomegaExtractor(url, axios, signal) {
     return __awaiter(this, void 0, void 0, function () {
-        var step1Response, $initial_1, formData_1, form, submitBtn, urlEncodedData, step2Response, $countdown_1, finalForm, anyForms, finalFormData_1, finalData, timeoutPromise, finalResponse, response, error_1, requestPromise, step3Response, directLink, $final, downloadBtn, directLinkInPage, fileType, error_2, errorMsg;
-        var _a, _b;
-        return __generator(this, function (_c) {
-            switch (_c.label) {
+        var step1Response, $initial_1, formData_1, form, submitBtn, urlEncodedData, step2Response, $countdown_1, finalForm, anyForms, finalFormData_1, finalData, directLink, step3Response, $final, downloadBtn, directLinkInPage, fileType, innerError_1, errorMsg, error_1, errorMsg;
+        var _a, _b, _c, _d;
+        return __generator(this, function (_e) {
+            switch (_e.label) {
                 case 0:
-                    _c.trys.push([0, 8, , 9]);
+                    _e.trys.push([0, 7, , 8]);
                     console.log("[Uptomega] 🔍 Starting extraction from:", url);
                     return [4 /*yield*/, axios.get(url, {
                             headers: {
@@ -115,7 +115,7 @@ function uptomegaExtractor(url, axios, signal) {
                             timeout: 30000, // 30 second timeout for slow networks
                         })];
                 case 1:
-                    step1Response = _c.sent();
+                    step1Response = _e.sent();
                     $initial_1 = cheerio.load(step1Response.data);
                     formData_1 = {};
                     form = $initial_1('form[method="POST"][action=""]').first();
@@ -159,7 +159,7 @@ function uptomegaExtractor(url, axios, signal) {
                             signal: signal,
                         })];
                 case 2:
-                    step2Response = _c.sent();
+                    step2Response = _e.sent();
                     $countdown_1 = cheerio.load(step2Response.data);
                     finalForm = $countdown_1('form[name="F1"]').first();
                     if (finalForm.length === 0) {
@@ -190,13 +190,10 @@ function uptomegaExtractor(url, axios, signal) {
                         return "".concat(encodeURIComponent(key), "=").concat(encodeURIComponent(value));
                     })
                         .join("&");
-                    timeoutPromise = new Promise(function (_, reject) {
-                        setTimeout(function () { return reject(new Error("Request timeout after 30 seconds")); }, 30000);
-                    });
-                    finalResponse = void 0;
-                    _c.label = 3;
+                    directLink = void 0;
+                    _e.label = 3;
                 case 3:
-                    _c.trys.push([3, 5, , 6]);
+                    _e.trys.push([3, 5, , 6]);
                     return [4 /*yield*/, axios.post(url, finalData, {
                             headers: {
                                 "User-Agent": USER_AGENT,
@@ -204,44 +201,33 @@ function uptomegaExtractor(url, axios, signal) {
                                 Referer: url,
                                 Origin: "https://uptomega.net",
                             },
-                            maxRedirects: 0, // Don't follow redirect
-                            validateStatus: function (status) { return status >= 200 && status < 400; },
-                            timeout: 30000, // Increased to 30 seconds for slow networks
+                            maxRedirects: 0, // Don't follow redirects
+                            validateStatus: function (status) { return status >= 200 && status < 400; }, // Accept 3xx as success
+                            timeout: 30000,
                             signal: signal,
+                        }).catch(function (error) {
+                            // Axios throws error for 3xx when maxRedirects: 0
+                            // But we can access the response from the error
+                            if (error.response && (error.response.status === 301 || error.response.status === 302)) {
+                                return error.response;
+                            }
+                            throw error;
                         })];
                 case 4:
-                    response = _c.sent();
-                    finalResponse = response;
-                    return [3 /*break*/, 6];
-                case 5:
-                    error_1 = _c.sent();
-                    // React Native axios throws on 302/301 even with validateStatus
-                    console.log("[Uptomega] ⚠️ Request threw error, checking for redirect...");
-                    if (error_1 === null || error_1 === void 0 ? void 0 : error_1.response) {
-                        console.log("[Uptomega] 📊 Error response status:", error_1.response.status);
-                        if (error_1.response.status === 302 || error_1.response.status === 301) {
-                            console.log("[Uptomega] 📍 Caught redirect in error handler");
-                            finalResponse = error_1.response;
-                        }
-                        else {
-                            throw error_1;
-                        }
-                    }
-                    else {
-                        // Network error without response
-                        console.log("[Uptomega] ❌ Network error without response");
-                        throw error_1;
-                    }
-                    return [3 /*break*/, 6];
-                case 6:
-                    requestPromise = Promise.resolve(finalResponse);
-                    return [4 /*yield*/, Promise.race([requestPromise, timeoutPromise])];
-                case 7:
-                    step3Response = _c.sent();
+                    step3Response = _e.sent();
                     console.log("[Uptomega] 📊 Final response status:", step3Response.status);
-                    directLink = step3Response.headers.location;
-                    // If no redirect, check for link in page (status 200)
-                    if (!directLink && step3Response.status === 200) {
+                    // Check for redirect location header (should be present for 301/302)
+                    if (step3Response.headers.location) {
+                        directLink = step3Response.headers.location;
+                        console.log("[Uptomega] 🔀 Got redirect to:", (directLink === null || directLink === void 0 ? void 0 : directLink.substring(0, 100)) || directLink);
+                    }
+                    // Also check responseURL as backup
+                    if (!directLink && ((_a = step3Response.request) === null || _a === void 0 ? void 0 : _a.responseURL) && step3Response.request.responseURL !== url) {
+                        directLink = step3Response.request.responseURL;
+                        console.log("[Uptomega] 📍 Got URL from request:", (directLink === null || directLink === void 0 ? void 0 : directLink.substring(0, 100)) || directLink);
+                    }
+                    // 3. Parse the HTML response for download link
+                    if (!directLink && step3Response.status === 200 && step3Response.data) {
                         console.log("[Uptomega] ℹ️ Status 200 - checking page for download link");
                         $final = cheerio.load(step3Response.data);
                         downloadBtn = $final('a.btn:contains("Download")').attr("href");
@@ -251,32 +237,40 @@ function uptomegaExtractor(url, axios, signal) {
                             console.log("[Uptomega] 📄 Found link in page");
                         }
                     }
-                    else if (directLink) {
-                        console.log("[Uptomega] 🔀 Got redirect to:", directLink.slice(0, 100));
-                    }
                     if (directLink) {
                         console.log("[Uptomega] ✅ Successfully extracted direct link");
-                        fileType = ((_a = directLink.match(/\.(mkv|mp4|avi|webm)(\?|$)/i)) === null || _a === void 0 ? void 0 : _a[1]) || "mkv";
+                        fileType = ((_b = directLink.match(/\.(mkv|mp4|avi|webm)(\?|$)/i)) === null || _b === void 0 ? void 0 : _b[1]) || "mkv";
                         return [2 /*return*/, {
                                 link: directLink,
                                 type: fileType.toLowerCase(),
                             }];
                     }
-                    console.log("[Uptomega] ❌ Could not find download link in response (status:", step3Response.status, ")");
+                    console.log("[Uptomega] ❌ Could not find download link in response");
                     return [2 /*return*/, null];
-                case 8:
-                    error_2 = _c.sent();
-                    errorMsg = (error_2 === null || error_2 === void 0 ? void 0 : error_2.message) || (error_2 === null || error_2 === void 0 ? void 0 : error_2.code) || "Unknown error";
+                case 5:
+                    innerError_1 = _e.sent();
+                    errorMsg = (innerError_1 === null || innerError_1 === void 0 ? void 0 : innerError_1.message) || (innerError_1 === null || innerError_1 === void 0 ? void 0 : innerError_1.code) || "Unknown error";
+                    console.log("[Uptomega] ❌ Final request failed:", errorMsg);
+                    if ((_c = innerError_1 === null || innerError_1 === void 0 ? void 0 : innerError_1.config) === null || _c === void 0 ? void 0 : _c.url) {
+                        console.log("[Uptomega] Failed URL:", innerError_1.config.url);
+                    }
+                    if (innerError_1 === null || innerError_1 === void 0 ? void 0 : innerError_1.response) {
+                        console.log("[Uptomega] Response status:", innerError_1.response.status);
+                    }
+                    return [2 /*return*/, null];
+                case 6: return [3 /*break*/, 8];
+                case 7:
+                    error_1 = _e.sent();
+                    errorMsg = (error_1 === null || error_1 === void 0 ? void 0 : error_1.message) || (error_1 === null || error_1 === void 0 ? void 0 : error_1.code) || "Unknown error";
                     console.log("[Uptomega] ❌ Extraction failed:", errorMsg);
-                    // Log more details for debugging
-                    if ((_b = error_2 === null || error_2 === void 0 ? void 0 : error_2.config) === null || _b === void 0 ? void 0 : _b.url) {
-                        console.log("[Uptomega] Failed URL:", error_2.config.url);
+                    if ((_d = error_1 === null || error_1 === void 0 ? void 0 : error_1.config) === null || _d === void 0 ? void 0 : _d.url) {
+                        console.log("[Uptomega] Failed URL:", error_1.config.url);
                     }
-                    if (error_2 === null || error_2 === void 0 ? void 0 : error_2.response) {
-                        console.log("[Uptomega] Response status:", error_2.response.status);
+                    if (error_1 === null || error_1 === void 0 ? void 0 : error_1.response) {
+                        console.log("[Uptomega] Response status:", error_1.response.status);
                     }
                     return [2 /*return*/, null];
-                case 9: return [2 /*return*/];
+                case 8: return [2 /*return*/];
             }
         });
     });
