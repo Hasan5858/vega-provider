@@ -360,9 +360,14 @@ export async function getStream({
         // Fetch and process all aggregator pages
         for (const aggUrl of aggregatorUrls) {
           try {
+            console.log(`[skyMovieHD] 🌐 Fetching aggregator page: ${aggUrl}`);
             const res = await axios.get(aggUrl, { signal, headers: REQUEST_HEADERS });
             const $ = cheerio.load(res.data || "");
             const anchors = $("a[href]").toArray();
+            console.log(`[skyMovieHD] 📊 Found ${anchors.length} total links on page`);
+            
+            let linksWithExtractor = 0;
+            let linksProcessed = 0;
             
             for (const anchor of anchors) {
               const hrefRaw = ($(anchor).attr("href") || "").trim();
@@ -375,12 +380,19 @@ export async function getStream({
               if (/gofile\.io/i.test(href)) continue;
               
               // Check if host has extractor
-              if (!hasExtractor(href)) continue;
+              if (!hasExtractor(href)) {
+                linksProcessed++;
+                continue;
+              }
               
+              linksWithExtractor++;
               const serverName = getServerName(href);
               
               // Skip if we've already seen this server
-              if (seenServers.has(serverName)) continue;
+              if (seenServers.has(serverName)) {
+                console.log(`[skyMovieHD] ⏭️ Skipping duplicate ${serverName}`);
+                continue;
+              }
               seenServers.add(serverName);
               
               // Attempt first MAX_EAGER_EXTRACTIONS servers immediately
@@ -457,6 +469,8 @@ export async function getStream({
                 });
               }
             }
+            
+            console.log(`[skyMovieHD] 📊 Aggregator stats: ${linksProcessed} links processed, ${linksWithExtractor} with extractors, ${seenServers.size} unique servers found so far`);
           } catch (error) {
             console.log(`[skyMovieHD] ⚠️ Failed to fetch aggregator ${aggUrl}:`, error);
           }

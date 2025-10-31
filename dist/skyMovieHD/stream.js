@@ -298,7 +298,7 @@ var extractLazyServer = function (_a) {
 exports.extractLazyServer = extractLazyServer;
 function getStream(_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var axios, cheerio, extractors, hubcloudExtracter, streamtapeExtractor, streamhgExtractor, gdFlixExtracter, filepresExtractor, gofileExtracter, parsed, _c, target_1, aggregatorUrls, parsed, pageType, collected, attemptedCount, successCount, MAX_EAGER_EXTRACTIONS, seenServers, aggregatorUrls_1, aggregatorUrls_1_1, aggUrl, res, $, anchors, anchors_1, anchors_1_1, anchor, hrefRaw, href, serverName, extracted, stream, error_3, e_1_1, error_4, e_2_1, lazyCount, error_5, id, shg, arr, st, arr, fallbackStreams, cleanedFallback, error_6;
+        var axios, cheerio, extractors, hubcloudExtracter, streamtapeExtractor, streamhgExtractor, gdFlixExtracter, filepresExtractor, gofileExtracter, parsed, _c, target_1, aggregatorUrls, parsed, pageType, collected, attemptedCount, successCount, MAX_EAGER_EXTRACTIONS, seenServers, aggregatorUrls_1, aggregatorUrls_1_1, aggUrl, res, $, anchors, linksWithExtractor, linksProcessed, anchors_1, anchors_1_1, anchor, hrefRaw, href, serverName, extracted, stream, error_3, e_1_1, error_4, e_2_1, lazyCount, error_5, id, shg, arr, st, arr, fallbackStreams, cleanedFallback, error_6;
         var e_2, _d, e_1, _e;
         var link = _b.link, type = _b.type, signal = _b.signal, providerContext = _b.providerContext;
         return __generator(this, function (_f) {
@@ -367,11 +367,15 @@ function getStream(_a) {
                     _f.label = 10;
                 case 10:
                     _f.trys.push([10, 24, , 25]);
+                    console.log("[skyMovieHD] \uD83C\uDF10 Fetching aggregator page: ".concat(aggUrl));
                     return [4 /*yield*/, axios.get(aggUrl, { signal: signal, headers: REQUEST_HEADERS })];
                 case 11:
                     res = _f.sent();
                     $ = cheerio.load(res.data || "");
                     anchors = $("a[href]").toArray();
+                    console.log("[skyMovieHD] \uD83D\uDCCA Found ".concat(anchors.length, " total links on page"));
+                    linksWithExtractor = 0;
+                    linksProcessed = 0;
                     _f.label = 12;
                 case 12:
                     _f.trys.push([12, 21, 22, 23]);
@@ -390,12 +394,17 @@ function getStream(_a) {
                     if (/gofile\.io/i.test(href))
                         return [3 /*break*/, 19];
                     // Check if host has extractor
-                    if (!hasExtractor(href))
+                    if (!hasExtractor(href)) {
+                        linksProcessed++;
                         return [3 /*break*/, 19];
+                    }
+                    linksWithExtractor++;
                     serverName = getServerName(href);
                     // Skip if we've already seen this server
-                    if (seenServers.has(serverName))
+                    if (seenServers.has(serverName)) {
+                        console.log("[skyMovieHD] \u23ED\uFE0F Skipping duplicate ".concat(serverName));
                         return [3 /*break*/, 19];
+                    }
                     seenServers.add(serverName);
                     if (!(attemptedCount < MAX_EAGER_EXTRACTIONS)) return [3 /*break*/, 18];
                     attemptedCount++; // Increment regardless of success
@@ -488,7 +497,9 @@ function getStream(_a) {
                     }
                     finally { if (e_1) throw e_1.error; }
                     return [7 /*endfinally*/];
-                case 23: return [3 /*break*/, 25];
+                case 23:
+                    console.log("[skyMovieHD] \uD83D\uDCCA Aggregator stats: ".concat(linksProcessed, " links processed, ").concat(linksWithExtractor, " with extractors, ").concat(seenServers.size, " unique servers found so far"));
+                    return [3 /*break*/, 25];
                 case 24:
                     error_4 = _f.sent();
                     console.log("[skyMovieHD] \u26A0\uFE0F Failed to fetch aggregator ".concat(aggUrl, ":"), error_4);
