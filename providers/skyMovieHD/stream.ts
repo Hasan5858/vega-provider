@@ -26,13 +26,13 @@ const DEFAULT_STREAM_HEADERS = {
 };
 
 const SUPPORTED_AGGREGATE_SERVERS = [
-  /gofile\.io\/d\//i,
+  /gofile\.io/i,
   /gdflix/i,
   /hubcloud/i,
   /filepress\./i,
 ];
 
-const UNSUPPORTED_SERVERS = /media\.cm|dgdrive|hubdrive|gdtot/i;
+const UNSUPPORTED_SERVERS = /media\.cm|dgdrive|hubdrive|gdtot|new28\.gdtot|new6\.filepress/i;
 
 const preferHostScore = (url: string) => {
   if (/googleusercontent\.com|googlevideo\.com|googleapis\.com/i.test(url)) {
@@ -176,10 +176,17 @@ export async function getStream({
 
     // howblogs aggregator with multiple hosts
     if (/howblogs\.xyz\//i.test(target)) {
-      console.log("[skyMovieHD] Loading howblogs aggregator:", target);
+      console.log("[skyMovieHD] 📥 Loading howblogs aggregator:", target);
       const res = await axios.get(target, { signal, headers: REQUEST_HEADERS });
       const $ = cheerio.load(res.data || "");
       const anchors = $("a[href]").toArray();
+      
+      // Log all detected server links for debugging
+      const allLinks = anchors
+        .map(a => ($(a).attr("href") || "").trim())
+        .filter(href => href && /^https?:\/\//i.test(href.startsWith("//") ? `https:${href}` : href));
+      console.log("[skyMovieHD] 📋 Detected server links:", allLinks.length, "total");
+      
       const collected: Stream[] = [];
 
       for (const anchor of anchors) {
@@ -187,18 +194,26 @@ export async function getStream({
         if (!hrefRaw) continue;
 
         const href = hrefRaw.startsWith("//") ? `https:${hrefRaw}` : hrefRaw;
+        
+        // Skip if not a valid URL
+        if (!/^https?:\/\//i.test(href)) continue;
 
+        // Skip known unsupported servers first
         if (UNSUPPORTED_SERVERS.test(href)) {
           console.log("[skyMovieHD] ⏭️ Skipping unsupported server:", href);
           continue;
         }
 
+        // Only process servers we have extractors for
         if (!SUPPORTED_AGGREGATE_SERVERS.some((regex) => regex.test(href))) {
+          console.log("[skyMovieHD] ⏭️ Skipping server (no extractor):", href);
           continue;
         }
 
-        if (/gofile\.io\/d\//i.test(href)) {
-          const id = href.split("/d/")[1]?.split(/[?#]/)[0];
+        if (/gofile\.io/i.test(href)) {
+          // Extract ID from gofile.io/d/XXXXX format
+          const idMatch = href.match(/gofile\.io\/d\/([A-Za-z0-9_-]+)/i);
+          const id = idMatch?.[1];
           if (!id) {
             console.log("[skyMovieHD] ⚠️ Unable to extract GoFile id from:", href);
             continue;
