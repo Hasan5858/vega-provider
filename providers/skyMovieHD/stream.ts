@@ -245,16 +245,20 @@ export async function getStream({
               
               if (typeof voeExtractor === "function") {
                 const voe = await voeExtractor(href, signal);
-                if (voe) {
+                if (voe?.link) {
                   const stream = normaliseStream(
                     {
                       server: "VOE",
                       link: voe.link,
-                      type: voe.type || "m3u8",
+                      type: voe.type || inferTypeFromUrl(voe.link),
                     },
                     "VOE",
+                    href,
                   );
-                  if (stream) collected.push(stream);
+                  if (stream) {
+                    collected.push(stream);
+                    console.log("[skyMovieHD] ✅ VOE stream added:", stream.link.slice(0, 100));
+                  }
                 }
               }
             } catch (error) {
@@ -265,7 +269,8 @@ export async function getStream({
         }
         
         const cleaned = dedupeStreams(collected);
-        console.log("[skyMovieHD] ✅ Extracted streams:", cleaned.map(s => s.server));
+        console.log("[skyMovieHD] ✅ Total streams extracted:", collected.length);
+        console.log("[skyMovieHD] 📋 Servers:", cleaned.map(s => `${s.server} (${s.type})`).join(", "));
         return cleaned;
       } catch (error) {
         console.log("[skyMovieHD] ❌ Howblogs aggregator failed:", error);

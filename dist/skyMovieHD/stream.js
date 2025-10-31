@@ -274,14 +274,16 @@ function getStream(_a) {
                     return [4 /*yield*/, voeExtractor(href, signal)];
                 case 17:
                     voe = _d.sent();
-                    if (voe) {
+                    if (voe === null || voe === void 0 ? void 0 : voe.link) {
                         stream = normaliseStream({
                             server: "VOE",
                             link: voe.link,
-                            type: voe.type || "m3u8",
-                        }, "VOE");
-                        if (stream)
+                            type: voe.type || inferTypeFromUrl(voe.link),
+                        }, "VOE", href);
+                        if (stream) {
                             collected.push(stream);
+                            console.log("[skyMovieHD] ✅ VOE stream added:", stream.link.slice(0, 100));
+                        }
                     }
                     _d.label = 18;
                 case 18: return [3 /*break*/, 20];
@@ -306,7 +308,8 @@ function getStream(_a) {
                     return [7 /*endfinally*/];
                 case 25:
                     cleaned = dedupeStreams(collected);
-                    console.log("[skyMovieHD] ✅ Extracted streams:", cleaned.map(function (s) { return s.server; }));
+                    console.log("[skyMovieHD] ✅ Total streams extracted:", collected.length);
+                    console.log("[skyMovieHD] 📋 Servers:", cleaned.map(function (s) { return "".concat(s.server, " (").concat(s.type, ")"); }).join(", "));
                     return [2 /*return*/, cleaned];
                 case 26:
                     error_4 = _d.sent();
