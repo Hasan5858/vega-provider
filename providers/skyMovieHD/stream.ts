@@ -245,6 +245,35 @@ export async function getStream({
             }
             continue;
           }
+          
+          // Indishare extraction
+          if (/indishare\.info|indi-share\.com|indi-down/i.test(href)) {
+            try {
+              console.log("[skyMovieHD] 🔗 Resolving Indishare:", href);
+              const indishareExtractor = (extractors as any).indishareExtractor as (
+                u: string,
+              ) => Promise<{ link: string; type?: string } | null>;
+              
+              if (typeof indishareExtractor === "function") {
+                const indishareResult = await indishareExtractor(href);
+                if (indishareResult && indishareResult.link) {
+                  const stream: Stream = {
+                    server: "Indishare",
+                    link: indishareResult.link,
+                    type: indishareResult.type || inferTypeFromUrl(indishareResult.link) || "mkv",
+                    headers: DEFAULT_STREAM_HEADERS,
+                  };
+                  collected.push(stream);
+                  console.log("[skyMovieHD] ✅ Indishare stream added:", stream.link.slice(0, 100));
+                } else {
+                  console.log("[skyMovieHD] ⚠️ Indishare returned no stream");
+                }
+              }
+            } catch (error) {
+              console.log("[skyMovieHD] ❌ Indishare extraction failed:", error);
+            }
+            continue;
+          }
         }
         
         const cleaned = dedupeStreams(collected);
