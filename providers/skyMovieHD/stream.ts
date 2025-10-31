@@ -218,22 +218,26 @@ export async function getStream({
               const voeExtractor = (extractors as any).voeExtractor as (
                 u: string,
                 s?: AbortSignal,
-              ) => Promise<{ link: string; type?: string } | null>;
+              ) => Promise<Stream[]>;
               
               if (typeof voeExtractor === "function") {
-                const voe = await voeExtractor(href, signal);
-                console.log("[skyMovieHD] VOE result:", voe ? "Link found" : "No link");
-                if (voe?.link) {
-                  const voeStream: Stream = {
-                    server: "VOE",
-                    link: voe.link,
-                    type: voe.type || inferTypeFromUrl(voe.link) || "mp4",
-                    headers: DEFAULT_STREAM_HEADERS,
-                  };
-                  collected.push(voeStream);
-                  console.log("[skyMovieHD] ✅ VOE stream added:", voeStream.link.slice(0, 100));
+                const voeStreams = await voeExtractor(href, signal);
+                console.log("[skyMovieHD] VOE result:", voeStreams?.length || 0, "streams");
+                if (voeStreams && voeStreams.length > 0) {
+                  voeStreams.forEach((voeStream) => {
+                    if (voeStream?.link) {
+                      const stream: Stream = {
+                        server: "VOE",
+                        link: voeStream.link,
+                        type: voeStream.type || inferTypeFromUrl(voeStream.link) || "mp4",
+                        headers: voeStream.headers || DEFAULT_STREAM_HEADERS,
+                      };
+                      collected.push(stream);
+                      console.log("[skyMovieHD] ✅ VOE stream added:", stream.link.slice(0, 100));
+                    }
+                  });
                 } else {
-                  console.log("[skyMovieHD] ⚠️ VOE returned no link");
+                  console.log("[skyMovieHD] ⚠️ VOE returned no streams");
                 }
               }
             } catch (error) {

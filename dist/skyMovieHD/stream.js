@@ -158,7 +158,7 @@ var dedupeStreams = function (streams) {
 };
 function getStream(_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var axios, cheerio, extractors, hubcloudExtracter, streamtapeExtractor, streamhgExtractor, gdFlixExtracter, filepresExtractor, gofileExtracter, target_1, id, res, $, anchors, collected, anchors_1, anchors_1_1, anchor, hrefRaw, href, st, stream, error_1, voeExtractor, voe, voeStream, error_2, e_1_1, cleaned, error_3, shg, arr, st, arr, fallbackStreams, cleanedFallback, error_4;
+        var axios, cheerio, extractors, hubcloudExtracter, streamtapeExtractor, streamhgExtractor, gdFlixExtracter, filepresExtractor, gofileExtracter, target_1, id, res, $, anchors, collected_1, anchors_1, anchors_1_1, anchor, hrefRaw, href, st, stream, error_1, voeExtractor, voeStreams, error_2, e_1_1, cleaned, error_3, shg, arr, st, arr, fallbackStreams, cleanedFallback, error_4;
         var e_1, _c;
         var link = _b.link, type = _b.type, signal = _b.signal, providerContext = _b.providerContext;
         return __generator(this, function (_d) {
@@ -197,7 +197,7 @@ function getStream(_a) {
                     res = _d.sent();
                     $ = cheerio.load(res.data || "");
                     anchors = $("a[href]").toArray();
-                    collected = [];
+                    collected_1 = [];
                     _d.label = 4;
                 case 4:
                     _d.trys.push([4, 18, 19, 20]);
@@ -233,7 +233,7 @@ function getStream(_a) {
                             headers: st.headers,
                         }, "StreamTape");
                         if (stream)
-                            collected.push(stream);
+                            collected_1.push(stream);
                     }
                     return [3 /*break*/, 9];
                 case 8:
@@ -251,20 +251,24 @@ function getStream(_a) {
                     if (!(typeof voeExtractor === "function")) return [3 /*break*/, 13];
                     return [4 /*yield*/, voeExtractor(href, signal)];
                 case 12:
-                    voe = _d.sent();
-                    console.log("[skyMovieHD] VOE result:", voe ? "Link found" : "No link");
-                    if (voe === null || voe === void 0 ? void 0 : voe.link) {
-                        voeStream = {
-                            server: "VOE",
-                            link: voe.link,
-                            type: voe.type || inferTypeFromUrl(voe.link) || "mp4",
-                            headers: DEFAULT_STREAM_HEADERS,
-                        };
-                        collected.push(voeStream);
-                        console.log("[skyMovieHD] ✅ VOE stream added:", voeStream.link.slice(0, 100));
+                    voeStreams = _d.sent();
+                    console.log("[skyMovieHD] VOE result:", (voeStreams === null || voeStreams === void 0 ? void 0 : voeStreams.length) || 0, "streams");
+                    if (voeStreams && voeStreams.length > 0) {
+                        voeStreams.forEach(function (voeStream) {
+                            if (voeStream === null || voeStream === void 0 ? void 0 : voeStream.link) {
+                                var stream = {
+                                    server: "VOE",
+                                    link: voeStream.link,
+                                    type: voeStream.type || inferTypeFromUrl(voeStream.link) || "mp4",
+                                    headers: voeStream.headers || DEFAULT_STREAM_HEADERS,
+                                };
+                                collected_1.push(stream);
+                                console.log("[skyMovieHD] ✅ VOE stream added:", stream.link.slice(0, 100));
+                            }
+                        });
                     }
                     else {
-                        console.log("[skyMovieHD] ⚠️ VOE returned no link");
+                        console.log("[skyMovieHD] ⚠️ VOE returned no streams");
                     }
                     _d.label = 13;
                 case 13: return [3 /*break*/, 15];
@@ -288,8 +292,8 @@ function getStream(_a) {
                     finally { if (e_1) throw e_1.error; }
                     return [7 /*endfinally*/];
                 case 20:
-                    cleaned = dedupeStreams(collected);
-                    console.log("[skyMovieHD] ✅ Total streams extracted:", collected.length);
+                    cleaned = dedupeStreams(collected_1);
+                    console.log("[skyMovieHD] ✅ Total streams extracted:", collected_1.length);
                     console.log("[skyMovieHD] 📋 Servers:", cleaned.map(function (s) { return "".concat(s.server, " (").concat(s.type, ")"); }).join(", "));
                     return [2 /*return*/, cleaned];
                 case 21:
