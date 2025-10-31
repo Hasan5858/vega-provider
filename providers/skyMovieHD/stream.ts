@@ -177,10 +177,11 @@ const extractStreamForHost = async (
     if (/uptomega\.net/i.test(href)) {
       const uptomegaExtractor = (extractors as any).uptomegaExtractor as (
         url: string,
-        axios: any
+        axios: any,
+        signal?: AbortSignal
       ) => Promise<ExtractedStream | null>;
       if (typeof uptomegaExtractor === "function") {
-        return await uptomegaExtractor(href, axios);
+        return await uptomegaExtractor(href, axios, signal);
       }
     }
     

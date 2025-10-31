@@ -213,7 +213,7 @@ var extractStreamForHost = function (href, axios, providerContext, signal) { ret
                 if (!/uptomega\.net/i.test(href)) return [3 /*break*/, 5];
                 uptomegaExtractor = extractors.uptomegaExtractor;
                 if (!(typeof uptomegaExtractor === "function")) return [3 /*break*/, 5];
-                return [4 /*yield*/, uptomegaExtractor(href, axios)];
+                return [4 /*yield*/, uptomegaExtractor(href, axios, signal)];
             case 4: return [2 /*return*/, _a.sent()];
             case 5:
                 if (!/uploadhub\.dad/i.test(href)) return [3 /*break*/, 7];

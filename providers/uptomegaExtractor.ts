@@ -16,7 +16,8 @@ const USER_AGENT =
 
 export async function uptomegaExtractor(
   url: string,
-  axios: AxiosStatic
+  axios: AxiosStatic,
+  signal?: AbortSignal
 ): Promise<{ link: string; type?: string } | null> {
   try {
     console.log("[Uptomega] 🔍 Starting extraction from:", url);
@@ -28,6 +29,8 @@ export async function uptomegaExtractor(
         Referer: "https://howblogs.xyz/",
       },
       maxRedirects: 5,
+      timeout: 10000,
+      signal,
     });
 
     const $initial = cheerio.load(step1Response.data);
@@ -78,6 +81,8 @@ export async function uptomegaExtractor(
         Origin: "https://uptomega.net",
       },
       maxRedirects: 5,
+      timeout: 10000,
+      signal,
     });
 
     // Step 3: Parse countdown page and extract form data for final download
@@ -115,8 +120,13 @@ export async function uptomegaExtractor(
       .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
       .join("&");
 
-    // Step 4: POST final request - this will 302 redirect to direct download
-    const step3Response = await axios.post(url, finalData, {
+    // Step 4: POST final request with aggressive timeout
+    // Use Promise.race to ensure we timeout even if axios doesn't respect it
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("Request timeout after 10 seconds")), 10000);
+    });
+
+    const requestPromise = axios.post(url, finalData, {
       headers: {
         "User-Agent": USER_AGENT,
         "Content-Type": "application/x-www-form-urlencoded",
@@ -125,8 +135,11 @@ export async function uptomegaExtractor(
       },
       maxRedirects: 0, // Don't follow redirect, we want the Location header
       validateStatus: (status) => status === 302 || status === 301 || status === 200,
-      timeout: 15000, // 15 second timeout
+      timeout: 10000,
+      signal,
     });
+
+    const step3Response = await Promise.race([requestPromise, timeoutPromise]);
 
     // Extract the direct download link from Location header
     let directLink = step3Response.headers.location;

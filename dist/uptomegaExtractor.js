@@ -97,9 +97,9 @@ var cheerio = __importStar(require("cheerio"));
  * 4. Extract location header: http://down1.uptodown1.com:8080/d/[hash]/[filename]
  */
 var USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
-function uptomegaExtractor(url, axios) {
+function uptomegaExtractor(url, axios, signal) {
     return __awaiter(this, void 0, void 0, function () {
-        var step1Response, $initial_1, formData_1, form, submitBtn, urlEncodedData, step2Response, $countdown_1, finalForm, anyForms, finalFormData_1, finalData, step3Response, directLink, $final, downloadBtn, directLinkInPage, fileType, error_1;
+        var step1Response, $initial_1, formData_1, form, submitBtn, urlEncodedData, step2Response, $countdown_1, finalForm, anyForms, finalFormData_1, finalData, timeoutPromise, requestPromise, step3Response, directLink, $final, downloadBtn, directLinkInPage, fileType, error_1;
         var _a;
         return __generator(this, function (_b) {
             switch (_b.label) {
@@ -112,6 +112,8 @@ function uptomegaExtractor(url, axios) {
                                 Referer: "https://howblogs.xyz/",
                             },
                             maxRedirects: 5,
+                            timeout: 10000,
+                            signal: signal,
                         })];
                 case 1:
                     step1Response = _b.sent();
@@ -154,6 +156,8 @@ function uptomegaExtractor(url, axios) {
                                 Origin: "https://uptomega.net",
                             },
                             maxRedirects: 5,
+                            timeout: 10000,
+                            signal: signal,
                         })];
                 case 2:
                     step2Response = _b.sent();
@@ -187,17 +191,22 @@ function uptomegaExtractor(url, axios) {
                         return "".concat(encodeURIComponent(key), "=").concat(encodeURIComponent(value));
                     })
                         .join("&");
-                    return [4 /*yield*/, axios.post(url, finalData, {
-                            headers: {
-                                "User-Agent": USER_AGENT,
-                                "Content-Type": "application/x-www-form-urlencoded",
-                                Referer: url,
-                                Origin: "https://uptomega.net",
-                            },
-                            maxRedirects: 0, // Don't follow redirect, we want the Location header
-                            validateStatus: function (status) { return status === 302 || status === 301 || status === 200; },
-                            timeout: 15000, // 15 second timeout
-                        })];
+                    timeoutPromise = new Promise(function (_, reject) {
+                        setTimeout(function () { return reject(new Error("Request timeout after 10 seconds")); }, 10000);
+                    });
+                    requestPromise = axios.post(url, finalData, {
+                        headers: {
+                            "User-Agent": USER_AGENT,
+                            "Content-Type": "application/x-www-form-urlencoded",
+                            Referer: url,
+                            Origin: "https://uptomega.net",
+                        },
+                        maxRedirects: 0, // Don't follow redirect, we want the Location header
+                        validateStatus: function (status) { return status === 302 || status === 301 || status === 200; },
+                        timeout: 10000,
+                        signal: signal,
+                    });
+                    return [4 /*yield*/, Promise.race([requestPromise, timeoutPromise])];
                 case 3:
                     step3Response = _b.sent();
                     directLink = step3Response.headers.location;
