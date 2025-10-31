@@ -119,45 +119,61 @@ export async function uptomegaExtractor(
       .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
       .join("&");
 
-    // Step 4: POST final request
-    // React Native axios doesn't handle maxRedirects: 0 properly for 302 responses
-    // We need to intercept the redirect manually
+    // Step 4: POST final request and follow redirect
+    // React Native axios doesn't handle maxRedirects: 0 properly - it throws "Network Error"
+    // Solution: Let axios follow redirects, then extract the final URL from the response
     let directLink: string | undefined;
     
     try {
-      // Use a custom axios config to handle redirects manually
+      console.log("[Uptomega] 📤 Posting final form...");
+      
+      // React Native axios: Follow redirects normally and extract final URL from response
+      // This avoids the "Network Error" issue with maxRedirects: 0
+      console.log("[Uptomega] 📨 Posting final form with redirect following...");
+      
       const step3Response = await axios.post(url, finalData, {
         headers: {
           "User-Agent": USER_AGENT,
           "Content-Type": "application/x-www-form-urlencoded",
           Referer: url,
           Origin: "https://uptomega.net",
+          // Don't download the entire file - request just the first few bytes
+          "Range": "bytes=0-1023",
         },
-        maxRedirects: 0, // Don't follow redirects
-        validateStatus: (status) => status >= 200 && status < 400, // Accept 3xx as success
+        maxRedirects: 5, // Follow redirects normally
         timeout: 30000,
         signal,
-      }).catch((error) => {
-        // Axios throws error for 3xx when maxRedirects: 0
-        // But we can access the response from the error
-        if (error.response && (error.response.status === 301 || error.response.status === 302)) {
-          return error.response;
-        }
-        throw error;
+        // Accept partial content responses
+        validateStatus: (status) => status >= 200 && status < 500,
       });
 
-      console.log("[Uptomega] 📊 Final response status:", step3Response.status);
+      console.log("[Uptomega] 📊 POST response status:", step3Response.status);
       
-      // Check for redirect location header (should be present for 301/302)
-      if (step3Response.headers.location) {
-        directLink = step3Response.headers.location;
-        console.log("[Uptomega] 🔀 Got redirect to:", directLink?.substring(0, 100) || directLink);
+      // In Node.js axios, we need to check the request.res.responseUrl
+      // In React Native, we check request.responseURL
+      const responseUrl = step3Response.request?.res?.responseUrl || 
+                         step3Response.request?.responseURL ||
+                         step3Response.request?._response?.url;
+      
+      console.log("[Uptomega] 🔍 Original URL:", url.substring(0, 60));
+      console.log("[Uptomega] 🔍 Response URL:", responseUrl?.substring(0, 100) || "not found");
+      
+      // 1. Check if we were redirected (responseURL different from original)
+      if (responseUrl && responseUrl !== url && !responseUrl.includes('uptomega.net')) {
+        directLink = responseUrl;
+        console.log("[Uptomega] 🔀 Followed redirect to download server!");
       }
       
-      // Also check responseURL as backup
-      if (!directLink && step3Response.request?.responseURL && step3Response.request.responseURL !== url) {
-        directLink = step3Response.request.responseURL;
-        console.log("[Uptomega] 📍 Got URL from request:", directLink?.substring(0, 100) || directLink);
+      // 2. Check location header
+      if (!directLink && step3Response.headers.location) {
+        directLink = step3Response.headers.location;
+        console.log("[Uptomega] � Got location header:", directLink?.substring(0, 100) || directLink);
+      }
+      
+      // 3. Check content-location header (sometimes used instead of location)
+      if (!directLink && step3Response.headers['content-location']) {
+        directLink = step3Response.headers['content-location'];
+        console.log("[Uptomega] 📍 Got content-location header:", directLink?.substring(0, 100) || directLink);
       }
       
       // 3. Parse the HTML response for download link
@@ -197,6 +213,7 @@ export async function uptomegaExtractor(
       }
       if (innerError?.response) {
         console.log("[Uptomega] Response status:", innerError.response.status);
+        console.log("[Uptomega] Response headers:", JSON.stringify(innerError.response.headers));
       }
       
       return null;
