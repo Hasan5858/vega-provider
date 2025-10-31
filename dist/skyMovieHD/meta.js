@@ -91,7 +91,7 @@ function fetchEpisodesFromSelectedLink(url, providerContext) {
 // --- Main getMeta function
 var getMeta = function (_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var axios, cheerio, res, $_1, title, type, image, synopsis, imdbId, tags, extra, episodeList, links, directLinks_1, err_1;
+        var axios, cheerio, res, $_1, title, type, image, synopsis, imdbId, tags, extra, episodeList, links, directLinks, watchOnlineLink_1, server01Link_1, linkData, err_1;
         var _c;
         var link = _b.link, providerContext = _b.providerContext;
         return __generator(this, function (_d) {
@@ -116,13 +116,13 @@ var getMeta = function (_a) {
                     extra = {};
                     episodeList = [];
                     links = [];
-                    directLinks_1 = [];
+                    directLinks = [];
+                    watchOnlineLink_1 = "";
+                    server01Link_1 = "";
                     $_1("a[href]")
                         .filter(function (_, a) {
                         var text = ($_1(a).text() || "").trim().toLowerCase();
-                        // Only extract WATCH ONLINE and SERVER 01
-                        return (text.includes("watch online") ||
-                            text === "server 01");
+                        return text.includes("watch online") || text === "server 01";
                     })
                         .each(function (_, a) {
                         var href = ($_1(a).attr("href") || "").trim();
@@ -130,15 +130,33 @@ var getMeta = function (_a) {
                             return;
                         if (!href.startsWith("http"))
                             href = new URL(href, link).href;
-                        var text = ($_1(a).text() || "Link").trim();
-                        directLinks_1.push({ link: href, title: text, quality: "AUTO", type: "movie" });
+                        var text = ($_1(a).text() || "").trim().toLowerCase();
+                        if (text.includes("watch online")) {
+                            watchOnlineLink_1 = href;
+                        }
+                        else if (text === "server 01") {
+                            server01Link_1 = href;
+                        }
                     });
-                    if (directLinks_1.length) {
+                    // Only add SERVER 01 button, but embed WATCH ONLINE link in the data
+                    // stream.ts will extract servers from both aggregator pages
+                    if (server01Link_1) {
+                        linkData = watchOnlineLink_1
+                            ? JSON.stringify({ server01: server01Link_1, watchOnline: watchOnlineLink_1 })
+                            : server01Link_1;
+                        directLinks.push({
+                            link: linkData,
+                            title: "SERVER 01",
+                            quality: "AUTO",
+                            type: "movie"
+                        });
+                    }
+                    if (directLinks.length) {
                         links.push({
                             title: title,
                             quality: ((_c = title.match(/\d+p/)) === null || _c === void 0 ? void 0 : _c[0]) || "AUTO",
                             episodesLink: "",
-                            directLinks: directLinks_1,
+                            directLinks: directLinks,
                         });
                     }
                     return [2 /*return*/, {
