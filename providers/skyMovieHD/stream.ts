@@ -316,6 +316,18 @@ export async function getStream({
   ) => Promise<{ link: string; token: string }>;
   try {
     console.log("[skyMovieHD] Incoming link:", link);
+    
+    // Check if this is a lazy-load request (app should call extractLazyServer but might call getStream)
+    try {
+      const parsed = JSON.parse(link);
+      if (parsed.type === "skymovie-lazy") {
+        console.log("[skyMovieHD] 🔄 Detected lazy-load metadata, delegating to extractLazyServer");
+        return await extractLazyServer({ link, signal, providerContext });
+      }
+    } catch {
+      // Not JSON or not lazy metadata, continue with normal flow
+    }
+    
     let target = link;
     // Normalize StreamHG hglink -> dumbalag embed
     if (/hglink\.to\//i.test(target)) {
