@@ -178,7 +178,7 @@ var hasExtractor = function (href) {
     if (/mixdrop/i.test(href))
         return true; // Mixdrop
     if (/gofile\.io/i.test(href))
-        return false; // Skip GoFile
+        return true; // GoFile
     return false;
 };
 /**
@@ -200,6 +200,8 @@ var getServerName = function (href) {
         return "Dood";
     if (/mixdrop/i.test(href))
         return "Mixdrop";
+    if (/gofile\.io/i.test(href))
+        return "GoFile";
     return "Unknown";
 };
 /**
@@ -207,14 +209,14 @@ var getServerName = function (href) {
  * On-demand extraction routing
  */
 var extractStreamForHost = function (href, axios, providerContext, signal) { return __awaiter(void 0, void 0, void 0, function () {
-    var extractors, indishareExtractor, uploadhubExtractor, streamtapeExtractor, voeExtractor, streams, streamhgExtractor, doodExtractor, streams, mixdropExtractor, streams, error_1;
+    var extractors, indishareExtractor, uploadhubExtractor, streamtapeExtractor, voeExtractor, streams, streamhgExtractor, doodExtractor, streams, mixdropExtractor, streams, gofileExtracter, idMatch, result, error_1;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
                 extractors = providerContext.extractors;
                 _a.label = 1;
             case 1:
-                _a.trys.push([1, 16, , 17]);
+                _a.trys.push([1, 18, , 19]);
                 if (!/indishare\.info/i.test(href)) return [3 /*break*/, 3];
                 indishareExtractor = extractors.indishareExtractor;
                 if (!(typeof indishareExtractor === "function")) return [3 /*break*/, 3];
@@ -283,12 +285,32 @@ var extractStreamForHost = function (href, axios, providerContext, signal) { ret
                         }];
                 }
                 _a.label = 15;
-            case 15: return [2 /*return*/, null];
+            case 15:
+                if (!/gofile\.io/i.test(href)) return [3 /*break*/, 17];
+                gofileExtracter = extractors.gofileExtracter;
+                if (!(typeof gofileExtracter === "function")) return [3 /*break*/, 17];
+                idMatch = href.match(/gofile\.io\/d\/([a-zA-Z0-9]+)/);
+                if (!(idMatch && idMatch[1])) return [3 /*break*/, 17];
+                return [4 /*yield*/, gofileExtracter(idMatch[1])];
             case 16:
+                result = _a.sent();
+                if (result && result.link) {
+                    return [2 /*return*/, {
+                            link: result.link,
+                            type: "mkv",
+                            headers: {
+                                "Cookie": "accountToken=".concat(result.token),
+                                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                            },
+                        }];
+                }
+                _a.label = 17;
+            case 17: return [2 /*return*/, null];
+            case 18:
                 error_1 = _a.sent();
                 console.error("[skyMovieHD] Extraction error for ".concat(getServerName(href), ":"), error_1);
                 return [2 /*return*/, null];
-            case 17: return [2 /*return*/];
+            case 19: return [2 /*return*/];
         }
     });
 }); };
@@ -449,9 +471,6 @@ function getStream(_a) {
                         return [3 /*break*/, 19];
                     href = hrefRaw.startsWith("//") ? "https:".concat(hrefRaw) : hrefRaw;
                     if (!/^https?:\/\//i.test(href))
-                        return [3 /*break*/, 19];
-                    // Skip GoFile - causes parsing errors with MKV files
-                    if (/gofile\.io/i.test(href))
                         return [3 /*break*/, 19];
                     // Check if host has extractor
                     if (!hasExtractor(href)) {

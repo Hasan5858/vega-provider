@@ -137,7 +137,7 @@ const hasExtractor = (href: string): boolean => {
   if (/dumbalag\.com|hglink\.to/i.test(href)) return true; // StreamHG
   if (/dood/i.test(href)) return true; // Dood
   if (/mixdrop/i.test(href)) return true; // Mixdrop
-  if (/gofile\.io/i.test(href)) return false; // Skip GoFile
+  if (/gofile\.io/i.test(href)) return true; // GoFile
   return false;
 };
 
@@ -153,6 +153,7 @@ const getServerName = (href: string): string => {
   if (/dumbalag\.com|hglink\.to/i.test(href)) return "StreamHG";
   if (/dood/i.test(href)) return "Dood";
   if (/mixdrop/i.test(href)) return "Mixdrop";
+  if (/gofile\.io/i.test(href)) return "GoFile";
   return "Unknown";
 };
 
@@ -277,6 +278,30 @@ const extractStreamForHost = async (
             type: streams[0].type,
             headers: streams[0].headers,
           };
+        }
+      }
+    }
+    
+    // GoFile
+    if (/gofile\.io/i.test(href)) {
+      const gofileExtracter = (extractors as any).gofileExtracter as (
+        id: string
+      ) => Promise<{ link: string; token: string }>;
+      if (typeof gofileExtracter === "function") {
+        // Extract GoFile ID from URL (e.g., https://gofile.io/d/abc123 -> abc123)
+        const idMatch = href.match(/gofile\.io\/d\/([a-zA-Z0-9]+)/);
+        if (idMatch && idMatch[1]) {
+          const result = await gofileExtracter(idMatch[1]);
+          if (result && result.link) {
+            return {
+              link: result.link,
+              type: "mkv",
+              headers: {
+                "Cookie": `accountToken=${result.token}`,
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+              },
+            };
+          }
         }
       }
     }
@@ -453,9 +478,6 @@ export async function getStream({
               
               const href = hrefRaw.startsWith("//") ? `https:${hrefRaw}` : hrefRaw;
               if (!/^https?:\/\//i.test(href)) continue;
-              
-              // Skip GoFile - causes parsing errors with MKV files
-              if (/gofile\.io/i.test(href)) continue;
               
               // Check if host has extractor
               if (!hasExtractor(href)) {
