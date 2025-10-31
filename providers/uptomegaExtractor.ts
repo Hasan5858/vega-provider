@@ -126,26 +126,41 @@ export async function uptomegaExtractor(
       setTimeout(() => reject(new Error("Request timeout after 10 seconds")), 10000);
     });
 
-    const requestPromise = axios.post(url, finalData, {
-      headers: {
-        "User-Agent": USER_AGENT,
-        "Content-Type": "application/x-www-form-urlencoded",
-        Referer: url,
-        Origin: "https://uptomega.net",
-      },
-      maxRedirects: 0, // Don't follow redirect, we want the Location header
-      validateStatus: (status) => status >= 200 && status < 400, // Accept all success codes including redirects
-      timeout: 10000,
-      signal,
-    }).catch(error => {
-      // In React Native, axios throws on redirects even with maxRedirects: 0
-      // Check if this is a redirect "error" and extract the location
-      if (error?.response?.status === 302 || error?.response?.status === 301) {
-        console.log("[Uptomega] 📍 Caught redirect in error handler");
-        return error.response;
+    // React Native doesn't handle maxRedirects: 0 well, so we intercept the redirect
+    let finalResponse;
+    try {
+      const response = await axios.post(url, finalData, {
+        headers: {
+          "User-Agent": USER_AGENT,
+          "Content-Type": "application/x-www-form-urlencoded",
+          Referer: url,
+          Origin: "https://uptomega.net",
+        },
+        maxRedirects: 0, // Don't follow redirect
+        validateStatus: (status) => status >= 200 && status < 400,
+        timeout: 10000,
+        signal,
+      });
+      finalResponse = response;
+    } catch (error: any) {
+      // React Native axios throws on 302/301 even with validateStatus
+      console.log("[Uptomega] ⚠️ Request threw error, checking for redirect...");
+      if (error?.response) {
+        console.log("[Uptomega] 📊 Error response status:", error.response.status);
+        if (error.response.status === 302 || error.response.status === 301) {
+          console.log("[Uptomega] 📍 Caught redirect in error handler");
+          finalResponse = error.response;
+        } else {
+          throw error;
+        }
+      } else {
+        // Network error without response
+        console.log("[Uptomega] ❌ Network error without response");
+        throw error;
       }
-      throw error;
-    });
+    }
+
+    const requestPromise = Promise.resolve(finalResponse);
 
     const step3Response = await Promise.race([requestPromise, timeoutPromise]);
 

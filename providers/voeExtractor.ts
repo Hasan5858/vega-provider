@@ -123,10 +123,16 @@ export async function voeExtractor(
             server: 'VOE',
             quality: quality,
             link: videoUrl,
-            type: 'mkv',
+            type: 'mp4', // Use mp4 instead of mkv for better compatibility
             headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-              'Referer': finalDownloadUrl,
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Referer': 'https://voe.sx/',
+              'Origin': 'https://voe.sx',
+              'Accept': '*/*',
+              'Accept-Language': 'en-US,en;q=0.9',
+              'Sec-Fetch-Dest': 'video',
+              'Sec-Fetch-Mode': 'no-cors',
+              'Sec-Fetch-Site': 'cross-site',
             },
           },
         ];
