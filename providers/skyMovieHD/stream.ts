@@ -252,10 +252,11 @@ export async function getStream({
               console.log("[skyMovieHD] 🔗 Resolving Indishare:", href);
               const indishareExtractor = (extractors as any).indishareExtractor as (
                 u: string,
+                a: any,
               ) => Promise<{ link: string; type?: string } | null>;
               
               if (typeof indishareExtractor === "function") {
-                const indishareResult = await indishareExtractor(href);
+                const indishareResult = await indishareExtractor(href, axios);
                 if (indishareResult && indishareResult.link) {
                   const stream: Stream = {
                     server: "Indishare",

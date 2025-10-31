@@ -1,4 +1,4 @@
-import axios from "axios";
+import { AxiosStatic } from "axios";
 import * as cheerio from "cheerio";
 
 /**
@@ -18,7 +18,8 @@ const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
 export async function indishareExtractor(
-  url: string
+  url: string,
+  axios: AxiosStatic
 ): Promise<{ link: string; type?: string } | null> {
   try {
     console.log("[Indishare] 🔍 Starting extraction from:", url);

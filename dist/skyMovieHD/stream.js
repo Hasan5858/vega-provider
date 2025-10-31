@@ -285,7 +285,7 @@ function getStream(_a) {
                     console.log("[skyMovieHD] 🔗 Resolving Indishare:", href);
                     indishareExtractor = extractors.indishareExtractor;
                     if (!(typeof indishareExtractor === "function")) return [3 /*break*/, 19];
-                    return [4 /*yield*/, indishareExtractor(href)];
+                    return [4 /*yield*/, indishareExtractor(href, axios)];
                 case 18:
                     indishareResult = _d.sent();
                     if (indishareResult && indishareResult.link) {

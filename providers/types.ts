@@ -195,7 +195,7 @@ export type ProviderContext = {
       type?: string;
     } | null>;
     voeExtractor: (url: string) => Promise<Stream[]>;
-    indishareExtractor: (url: string) => Promise<{
+    indishareExtractor: (url: string, axios: AxiosStatic) => Promise<{
       link: string;
       type?: string;
     } | null>;

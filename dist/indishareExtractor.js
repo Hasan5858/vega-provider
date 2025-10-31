@@ -68,12 +68,8 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.indishareExtractor = indishareExtractor;
-var axios_1 = __importDefault(require("axios"));
 var cheerio = __importStar(require("cheerio"));
 /**
  * Indishare Extractor
@@ -88,7 +84,7 @@ var cheerio = __importStar(require("cheerio"));
  * 7. Extract link: https://uyh4ghd4gh4uy.indiworlds.com:183/d/[hash]/filename.mkv
  */
 var USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
-function indishareExtractor(url) {
+function indishareExtractor(url, axios) {
     return __awaiter(this, void 0, void 0, function () {
         var step1Response, downPageUrl, fileCodeMatch, fileCode, serverCookies, cookieString, $down, downloadButton, blogUrl, step2Response, newCookies, additionalCookies, $blog_1, form, formData_1, formAction, formUrl, step3Response, $final, directLink, error_1;
         var _a, _b;
@@ -97,7 +93,7 @@ function indishareExtractor(url) {
                 case 0:
                     _c.trys.push([0, 4, , 5]);
                     console.log("[Indishare] 🔍 Starting extraction from:", url);
-                    return [4 /*yield*/, axios_1.default.get(url, {
+                    return [4 /*yield*/, axios.get(url, {
                             headers: {
                                 "User-Agent": USER_AGENT,
                                 Referer: "https://skymovieshd.mba/",
@@ -135,7 +131,7 @@ function indishareExtractor(url) {
                         return [2 /*return*/, null];
                     }
                     console.log("[Indishare] 🔗 Found blog URL:", blogUrl);
-                    return [4 /*yield*/, axios_1.default.get(blogUrl, {
+                    return [4 /*yield*/, axios.get(blogUrl, {
                             headers: {
                                 "User-Agent": USER_AGENT,
                                 Referer: downPageUrl,
@@ -184,7 +180,7 @@ function indishareExtractor(url) {
                     });
                     console.log("[Indishare] 📝 Form action:", formUrl);
                     console.log("[Indishare] 📝 Form data:", formData_1);
-                    return [4 /*yield*/, axios_1.default.post(formUrl, formData_1, {
+                    return [4 /*yield*/, axios.post(formUrl, formData_1, {
                             headers: {
                                 "User-Agent": USER_AGENT,
                                 Referer: blogUrl,
