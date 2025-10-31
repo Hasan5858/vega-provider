@@ -124,11 +124,21 @@ export async function uptomegaExtractor(
         Origin: "https://uptomega.net",
       },
       maxRedirects: 0, // Don't follow redirect, we want the Location header
-      validateStatus: (status) => status === 302 || status === 301,
+      validateStatus: (status) => status === 302 || status === 301 || status === 200,
+      timeout: 15000, // 15 second timeout
     });
 
     // Extract the direct download link from Location header
-    const directLink = step3Response.headers.location;
+    let directLink = step3Response.headers.location;
+
+    // If no redirect, check for link in page (status 200)
+    if (!directLink && step3Response.status === 200) {
+      const $final = cheerio.load(step3Response.data);
+      // Look for download link in the page
+      const downloadBtn = $final('a.btn:contains("Download")').attr("href");
+      const directLinkInPage = $final('a[href*="uptodown"]').attr("href");
+      directLink = downloadBtn || directLinkInPage;
+    }
 
     if (directLink) {
       console.log("[Uptomega] ✅ Successfully extracted direct link");

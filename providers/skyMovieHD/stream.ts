@@ -344,8 +344,9 @@ export async function getStream({
     if (aggregatorUrls.length > 0) {
       try {
         const collected: Stream[] = [];
-        let extractedCount = 0;
-        const MAX_EAGER_EXTRACTIONS = 2; // Extract first 2 servers immediately
+        let attemptedCount = 0; // Count of extraction attempts, not successes
+        let successCount = 0; // Count of successful extractions
+        const MAX_EAGER_EXTRACTIONS = 2; // Attempt first 2 servers immediately
         const seenServers = new Set<string>(); // Dedupe across both pages
         
         // Fetch and process all aggregator pages
@@ -374,8 +375,9 @@ export async function getStream({
               if (seenServers.has(serverName)) continue;
               seenServers.add(serverName);
               
-              // Extract first MAX_EAGER_EXTRACTIONS servers immediately
-              if (extractedCount < MAX_EAGER_EXTRACTIONS) {
+              // Attempt first MAX_EAGER_EXTRACTIONS servers immediately
+              if (attemptedCount < MAX_EAGER_EXTRACTIONS) {
+                attemptedCount++; // Increment regardless of success
                 try {
                   console.log(`[skyMovieHD] 🔗 Resolving ${serverName}:`, href);
                   const extracted = await extractStreamForHost(href, axios, providerContext, signal);
@@ -393,7 +395,7 @@ export async function getStream({
                     if (stream) {
                       collected.push(stream);
                       console.log(`[skyMovieHD] ✅ ${serverName} stream added:`, stream.link.slice(0, 100));
-                      extractedCount++;
+                      successCount++;
                     }
                   }
                 } catch (error) {
@@ -419,7 +421,8 @@ export async function getStream({
         }
         
         if (collected.length > 0) {
-          console.log(`[skyMovieHD] ✅ Total streams: ${collected.length} (${extractedCount} eager, ${collected.length - extractedCount} lazy)`);
+          const lazyCount = collected.filter(s => s.type === "lazy").length;
+          console.log(`[skyMovieHD] ✅ Total streams: ${collected.length} (${successCount} eager, ${lazyCount} lazy)`);
           return dedupeStreams(collected);
         }
         

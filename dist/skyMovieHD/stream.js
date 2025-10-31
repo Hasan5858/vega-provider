@@ -298,7 +298,7 @@ var extractLazyServer = function (_a) {
 exports.extractLazyServer = extractLazyServer;
 function getStream(_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var axios, cheerio, extractors, hubcloudExtracter, streamtapeExtractor, streamhgExtractor, gdFlixExtracter, filepresExtractor, gofileExtracter, target_1, id, aggregatorUrls, parsed, pageType, collected, extractedCount, MAX_EAGER_EXTRACTIONS, seenServers, aggregatorUrls_1, aggregatorUrls_1_1, aggUrl, res, $, anchors, anchors_1, anchors_1_1, anchor, hrefRaw, href, serverName, extracted, stream, error_3, e_1_1, error_4, e_2_1, error_5, shg, arr, st, arr, fallbackStreams, cleanedFallback, error_6;
+        var axios, cheerio, extractors, hubcloudExtracter, streamtapeExtractor, streamhgExtractor, gdFlixExtracter, filepresExtractor, gofileExtracter, target_1, id, aggregatorUrls, parsed, pageType, collected, attemptedCount, successCount, MAX_EAGER_EXTRACTIONS, seenServers, aggregatorUrls_1, aggregatorUrls_1_1, aggUrl, res, $, anchors, anchors_1, anchors_1_1, anchor, hrefRaw, href, serverName, extracted, stream, error_3, e_1_1, error_4, e_2_1, lazyCount, error_5, shg, arr, st, arr, fallbackStreams, cleanedFallback, error_6;
         var e_2, _c, e_1, _d;
         var link = _b.link, type = _b.type, signal = _b.signal, providerContext = _b.providerContext;
         return __generator(this, function (_e) {
@@ -348,7 +348,8 @@ function getStream(_a) {
                 case 2:
                     _e.trys.push([2, 25, , 26]);
                     collected = [];
-                    extractedCount = 0;
+                    attemptedCount = 0;
+                    successCount = 0;
                     MAX_EAGER_EXTRACTIONS = 2;
                     seenServers = new Set();
                     _e.label = 3;
@@ -392,7 +393,8 @@ function getStream(_a) {
                     if (seenServers.has(serverName))
                         return [3 /*break*/, 14];
                     seenServers.add(serverName);
-                    if (!(extractedCount < MAX_EAGER_EXTRACTIONS)) return [3 /*break*/, 13];
+                    if (!(attemptedCount < MAX_EAGER_EXTRACTIONS)) return [3 /*break*/, 13];
+                    attemptedCount++; // Increment regardless of success
                     _e.label = 9;
                 case 9:
                     _e.trys.push([9, 11, , 12]);
@@ -410,7 +412,7 @@ function getStream(_a) {
                         if (stream) {
                             collected.push(stream);
                             console.log("[skyMovieHD] \u2705 ".concat(serverName, " stream added:"), stream.link.slice(0, 100));
-                            extractedCount++;
+                            successCount++;
                         }
                     }
                     return [3 /*break*/, 12];
@@ -467,7 +469,8 @@ function getStream(_a) {
                     return [7 /*endfinally*/];
                 case 24:
                     if (collected.length > 0) {
-                        console.log("[skyMovieHD] \u2705 Total streams: ".concat(collected.length, " (").concat(extractedCount, " eager, ").concat(collected.length - extractedCount, " lazy)"));
+                        lazyCount = collected.filter(function (s) { return s.type === "lazy"; }).length;
+                        console.log("[skyMovieHD] \u2705 Total streams: ".concat(collected.length, " (").concat(successCount, " eager, ").concat(lazyCount, " lazy)"));
                         return [2 /*return*/, dedupeStreams(collected)];
                     }
                     console.log("[skyMovieHD] ⚠️ No streams extracted from aggregators");
