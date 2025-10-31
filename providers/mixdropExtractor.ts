@@ -43,6 +43,7 @@ export async function mixdropExtractor(
         "Cache-Control": "no-cache",
         Pragma: "no-cache",
       },
+      timeout: 30000,
       signal,
     });
 

@@ -323,9 +323,9 @@ var extractLazyServer = function (_a) {
                     extractionPromise = extractStreamForHost(metadata_1.href, axios, providerContext, signal);
                     timeoutPromise = new Promise(function (resolve) {
                         setTimeout(function () {
-                            console.log("[skyMovieHD] \u23F1\uFE0F Extraction timeout for ".concat(metadata_1.serverName, " after 15 seconds"));
+                            console.log("[skyMovieHD] \u23F1\uFE0F Extraction timeout for ".concat(metadata_1.serverName, " after 45 seconds"));
                             resolve(null);
-                        }, 15000);
+                        }, 45000);
                     });
                     return [4 /*yield*/, Promise.race([extractionPromise, timeoutPromise])];
                 case 2:

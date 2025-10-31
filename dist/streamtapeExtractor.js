@@ -75,6 +75,7 @@ function streamtapeExtractor(url_1) {
                                 "Cache-Control": "no-cache",
                                 Pragma: "no-cache",
                             },
+                            timeout: 30000,
                             signal: signal,
                         })];
                 case 1:

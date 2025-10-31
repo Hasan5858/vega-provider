@@ -62,6 +62,7 @@ function streamhgExtractor(url, axios, signal) {
                     return [4 /*yield*/, axios.get(embedUrl, {
                             headers: { "User-Agent": USER_AGENT, Referer: url },
                             responseType: "text",
+                            timeout: 30000, // 30 second timeout for slow networks
                             signal: signal,
                         })];
                 case 1:
@@ -83,7 +84,7 @@ function streamhgExtractor(url, axios, signal) {
                     _a.label = 2;
                 case 2:
                     _a.trys.push([2, 4, , 5]);
-                    return [4 /*yield*/, axios.post("https://js-deobfuscator-api.replit.app/api/deobfuscate", { code: evalCode }, { headers: { "Content-Type": "application/json" }, timeout: 15000 })];
+                    return [4 /*yield*/, axios.post("https://js-deobfuscator-api.replit.app/api/deobfuscate", { code: evalCode }, { headers: { "Content-Type": "application/json" }, timeout: 30000 })];
                 case 3:
                     apiResp = _a.sent();
                     data = apiResp.data || {};

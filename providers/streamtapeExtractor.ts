@@ -39,6 +39,7 @@ export async function streamtapeExtractor(
         "Cache-Control": "no-cache",
         Pragma: "no-cache",
       },
+      timeout: 30000,
       signal,
     });
 

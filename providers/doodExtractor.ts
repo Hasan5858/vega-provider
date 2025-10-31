@@ -79,6 +79,7 @@ export async function doodExtractor(
             "Cache-Control": "no-cache",
             Pragma: "no-cache",
           },
+          timeout: 30000,
           signal,
         });
         embedHtml = data;
@@ -116,6 +117,7 @@ export async function doodExtractor(
         "Cache-Control": "no-cache",
         Pragma: "no-cache",
       },
+      timeout: 30000,
       signal,
     });
 

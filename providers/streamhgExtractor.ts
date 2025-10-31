@@ -27,6 +27,7 @@ export async function streamhgExtractor(
     const res = await axios.get(embedUrl, {
       headers: { "User-Agent": USER_AGENT, Referer: url },
       responseType: "text",
+      timeout: 30000, // 30 second timeout for slow networks
       signal,
     });
 
@@ -54,7 +55,7 @@ export async function streamhgExtractor(
         const apiResp = await axios.post(
           "https://js-deobfuscator-api.replit.app/api/deobfuscate",
           { code: evalCode },
-          { headers: { "Content-Type": "application/json" }, timeout: 15000 }
+          { headers: { "Content-Type": "application/json" }, timeout: 30000 }
         );
         const data = apiResp.data || {};
         if (data.success && data.result) deob = String(data.result);

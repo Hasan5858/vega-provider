@@ -25,6 +25,7 @@ export async function voeExtractor(
         'Referer': url,
       },
       maxRedirects: 5,
+      timeout: 30000,
     });
 
     // Check for JavaScript redirect in HTML
@@ -54,6 +55,7 @@ export async function voeExtractor(
       },
       maxRedirects: 0, // Don't follow HTTP redirects, handle JS redirects
       validateStatus: (status) => status < 400, // Accept all non-error responses
+      timeout: 30000,
     });
 
     let downloadPageHtml = downloadPageResponse.data;
@@ -74,6 +76,7 @@ export async function voeExtractor(
           'Referer': downloadUrl,
         },
         maxRedirects: 5,
+        timeout: 30000,
       });
       
       downloadPageHtml = finalPageResponse.data;

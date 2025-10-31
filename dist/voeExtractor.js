@@ -77,6 +77,7 @@ function voeExtractor(url) {
                                 'Referer': url,
                             },
                             maxRedirects: 5,
+                            timeout: 30000,
                         })];
                 case 1:
                     redirectResponse = _b.sent();
@@ -101,6 +102,7 @@ function voeExtractor(url) {
                             },
                             maxRedirects: 0, // Don't follow HTTP redirects, handle JS redirects
                             validateStatus: function (status) { return status < 400; }, // Accept all non-error responses
+                            timeout: 30000,
                         })];
                 case 2:
                     downloadPageResponse = _b.sent();
@@ -116,6 +118,7 @@ function voeExtractor(url) {
                                 'Referer': downloadUrl,
                             },
                             maxRedirects: 5,
+                            timeout: 30000,
                         })];
                 case 3:
                     finalPageResponse = _b.sent();

@@ -22,15 +22,14 @@ export async function uptomegaExtractor(
   try {
     console.log("[Uptomega] 🔍 Starting extraction from:", url);
 
-    // Step 1: GET initial page to parse form
+    // Step 1: GET initial page and extract form data
     const step1Response = await axios.get(url, {
       headers: {
         "User-Agent": USER_AGENT,
         Referer: "https://howblogs.xyz/",
       },
       maxRedirects: 5,
-      timeout: 10000,
-      signal,
+      timeout: 30000, // 30 second timeout for slow networks
     });
 
     const $initial = cheerio.load(step1Response.data);
@@ -81,7 +80,7 @@ export async function uptomegaExtractor(
         Origin: "https://uptomega.net",
       },
       maxRedirects: 5,
-      timeout: 10000,
+      timeout: 30000, // Increased to 30 seconds for slow networks
       signal,
     });
 
@@ -123,7 +122,7 @@ export async function uptomegaExtractor(
     // Step 4: POST final request with aggressive timeout
     // Use Promise.race to ensure we timeout even if axios doesn't respect it
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("Request timeout after 10 seconds")), 10000);
+      setTimeout(() => reject(new Error("Request timeout after 30 seconds")), 30000);
     });
 
     // React Native doesn't handle maxRedirects: 0 well, so we intercept the redirect
@@ -138,7 +137,7 @@ export async function uptomegaExtractor(
         },
         maxRedirects: 0, // Don't follow redirect
         validateStatus: (status) => status >= 200 && status < 400,
-        timeout: 10000,
+        timeout: 30000, // Increased to 30 seconds for slow networks
         signal,
       });
       finalResponse = response;

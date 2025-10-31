@@ -112,8 +112,7 @@ function uptomegaExtractor(url, axios, signal) {
                                 Referer: "https://howblogs.xyz/",
                             },
                             maxRedirects: 5,
-                            timeout: 10000,
-                            signal: signal,
+                            timeout: 30000, // 30 second timeout for slow networks
                         })];
                 case 1:
                     step1Response = _c.sent();
@@ -156,7 +155,7 @@ function uptomegaExtractor(url, axios, signal) {
                                 Origin: "https://uptomega.net",
                             },
                             maxRedirects: 5,
-                            timeout: 10000,
+                            timeout: 30000, // Increased to 30 seconds for slow networks
                             signal: signal,
                         })];
                 case 2:
@@ -192,7 +191,7 @@ function uptomegaExtractor(url, axios, signal) {
                     })
                         .join("&");
                     timeoutPromise = new Promise(function (_, reject) {
-                        setTimeout(function () { return reject(new Error("Request timeout after 10 seconds")); }, 10000);
+                        setTimeout(function () { return reject(new Error("Request timeout after 30 seconds")); }, 30000);
                     });
                     finalResponse = void 0;
                     _c.label = 3;
@@ -207,7 +206,7 @@ function uptomegaExtractor(url, axios, signal) {
                             },
                             maxRedirects: 0, // Don't follow redirect
                             validateStatus: function (status) { return status >= 200 && status < 400; },
-                            timeout: 10000,
+                            timeout: 30000, // Increased to 30 seconds for slow networks
                             signal: signal,
                         })];
                 case 4:

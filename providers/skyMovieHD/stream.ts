@@ -312,13 +312,13 @@ export const extractLazyServer = async function ({
 
     console.log(`[skyMovieHD] 🔄 On-demand extraction for ${metadata.serverName}: ${metadata.href}`);
     
-    // Add timeout wrapper for extraction (15 seconds max)
+    // Add timeout wrapper for extraction (45 seconds max to account for slow networks)
     const extractionPromise = extractStreamForHost(metadata.href, axios, providerContext, signal);
     const timeoutPromise = new Promise<null>((resolve) => {
       setTimeout(() => {
-        console.log(`[skyMovieHD] ⏱️ Extraction timeout for ${metadata.serverName} after 15 seconds`);
+        console.log(`[skyMovieHD] ⏱️ Extraction timeout for ${metadata.serverName} after 45 seconds`);
         resolve(null);
-      }, 15000);
+      }, 45000);
     });
     
     const extracted = await Promise.race([extractionPromise, timeoutPromise]);
