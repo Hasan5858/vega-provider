@@ -322,86 +322,110 @@ export async function getStream({
       } catch {}
     }
 
-    // howblogs aggregator - lazy load servers for on-demand extraction
-    if (/howblogs\.xyz\//i.test(target)) {
-      console.log("[skyMovieHD] 📥 Loading howblogs aggregator (SERVER 01):", target);
+    // Check if target contains both SERVER 01 and WATCH ONLINE URLs (merged format)
+    let aggregatorUrls: string[] = [];
+    
+    try {
+      const parsed = JSON.parse(target);
+      if (parsed.server01 && parsed.watchOnline) {
+        aggregatorUrls = [parsed.server01, parsed.watchOnline];
+        console.log("[skyMovieHD] 📥 Loading merged aggregators (SERVER 01 + WATCH ONLINE)");
+      }
+    } catch {
+      // Not JSON, check if it's a direct aggregator URL
+      if (/howblogs\.xyz\//i.test(target) || /skymovieshd\.(live|mba|bond|rest|red)\//i.test(target)) {
+        aggregatorUrls = [target];
+        const pageType = /howblogs\.xyz\//i.test(target) ? "SERVER 01" : "WATCH ONLINE";
+        console.log(`[skyMovieHD] 📥 Loading ${pageType} aggregator`);
+      }
+    }
+    
+    // Process aggregator URLs (SERVER 01 and/or WATCH ONLINE)
+    if (aggregatorUrls.length > 0) {
       try {
-        const res = await axios.get(target, { signal, headers: REQUEST_HEADERS });
-        const $ = cheerio.load(res.data || "");
-        const anchors = $("a[href]").toArray();
-        
         const collected: Stream[] = [];
         let extractedCount = 0;
         const MAX_EAGER_EXTRACTIONS = 2; // Extract first 2 servers immediately
+        const seenServers = new Set<string>(); // Dedupe across both pages
         
-        for (const anchor of anchors) {
-          const hrefRaw = ($(anchor).attr("href") || "").trim();
-          if (!hrefRaw) continue;
-          
-          const href = hrefRaw.startsWith("//") ? `https:${hrefRaw}` : hrefRaw;
-          if (!/^https?:\/\//i.test(href)) continue;
-          
-          // Skip GoFile - causes parsing errors with MKV files
-          if (/gofile\.io/i.test(href)) {
-            console.log("[skyMovieHD] ⏭️ Skipping GoFile (causes parsing issues)");
-            continue;
-          }
-          
-          // Check if host has extractor
-          if (!hasExtractor(href)) {
-            continue;
-          }
-          
-          const serverName = getServerName(href);
-          
-          // Extract first MAX_EAGER_EXTRACTIONS servers immediately
-          if (extractedCount < MAX_EAGER_EXTRACTIONS) {
-            try {
-              console.log(`[skyMovieHD] 🔗 Resolving ${serverName}:`, href);
-              const extracted = await extractStreamForHost(href, axios, providerContext, signal);
+        // Fetch and process all aggregator pages
+        for (const aggUrl of aggregatorUrls) {
+          try {
+            const res = await axios.get(aggUrl, { signal, headers: REQUEST_HEADERS });
+            const $ = cheerio.load(res.data || "");
+            const anchors = $("a[href]").toArray();
+            
+            for (const anchor of anchors) {
+              const hrefRaw = ($(anchor).attr("href") || "").trim();
+              if (!hrefRaw) continue;
               
-              if (extracted) {
-                const stream = normaliseStream(
-                  {
-                    server: serverName,
-                    link: extracted.link,
-                    type: extracted.type || "mkv",
-                    headers: extracted.headers,
-                  },
-                  serverName,
-                );
-                if (stream) {
-                  collected.push(stream);
-                  console.log(`[skyMovieHD] ✅ ${serverName} stream added:`, stream.link.slice(0, 100));
-                  extractedCount++;
+              const href = hrefRaw.startsWith("//") ? `https:${hrefRaw}` : hrefRaw;
+              if (!/^https?:\/\//i.test(href)) continue;
+              
+              // Skip GoFile - causes parsing errors with MKV files
+              if (/gofile\.io/i.test(href)) continue;
+              
+              // Check if host has extractor
+              if (!hasExtractor(href)) continue;
+              
+              const serverName = getServerName(href);
+              
+              // Skip if we've already seen this server
+              if (seenServers.has(serverName)) continue;
+              seenServers.add(serverName);
+              
+              // Extract first MAX_EAGER_EXTRACTIONS servers immediately
+              if (extractedCount < MAX_EAGER_EXTRACTIONS) {
+                try {
+                  console.log(`[skyMovieHD] 🔗 Resolving ${serverName}:`, href);
+                  const extracted = await extractStreamForHost(href, axios, providerContext, signal);
+                  
+                  if (extracted) {
+                    const stream = normaliseStream(
+                      {
+                        server: serverName,
+                        link: extracted.link,
+                        type: extracted.type || "mkv",
+                        headers: extracted.headers,
+                      },
+                      serverName,
+                    );
+                    if (stream) {
+                      collected.push(stream);
+                      console.log(`[skyMovieHD] ✅ ${serverName} stream added:`, stream.link.slice(0, 100));
+                      extractedCount++;
+                    }
+                  }
+                } catch (error) {
+                  console.log(`[skyMovieHD] ❌ ${serverName} extraction failed:`, error);
                 }
+              } else {
+                // Add remaining servers as lazy-load
+                console.log(`[skyMovieHD] 💤 Adding ${serverName} as lazy-load`);
+                collected.push({
+                  server: serverName,
+                  link: JSON.stringify({
+                    type: "skymovie-lazy",
+                    serverName: serverName,
+                    href: href,
+                  }),
+                  type: "lazy",
+                });
               }
-            } catch (error) {
-              console.log(`[skyMovieHD] ❌ ${serverName} extraction failed:`, error);
             }
-          } else {
-            // Add remaining servers as lazy-load
-            console.log(`[skyMovieHD] 💤 Adding ${serverName} as lazy-load`);
-            collected.push({
-              server: serverName,
-              link: JSON.stringify({
-                type: "skymovie-lazy",
-                serverName: serverName,
-                href: href,
-              }),
-              type: "lazy",
-            });
+          } catch (error) {
+            console.log(`[skyMovieHD] ⚠️ Failed to fetch aggregator ${aggUrl}:`, error);
           }
         }
         
         if (collected.length > 0) {
-          console.log(`[skyMovieHD] ✅ Total streams extracted: ${collected.length} (${extractedCount} eager, ${collected.length - extractedCount} lazy)`);
+          console.log(`[skyMovieHD] ✅ Total streams: ${collected.length} (${extractedCount} eager, ${collected.length - extractedCount} lazy)`);
           return dedupeStreams(collected);
         }
         
-        console.log("[skyMovieHD] ⚠️ No streams extracted from howblogs");
+        console.log("[skyMovieHD] ⚠️ No streams extracted from aggregators");
       } catch (error) {
-        console.log("[skyMovieHD] ❌ Howblogs aggregator failed:", error);
+        console.log("[skyMovieHD] ❌ Aggregator processing failed:", error);
         return [];
       }
     }

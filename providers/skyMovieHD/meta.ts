@@ -90,24 +90,44 @@ export const getMeta = async function ({
     const episodeList: Episode[] = [];
     const links: Link[] = [];
 
-    // New site: Extract only WATCH ONLINE and SERVER 01 (others are duplicates)
+    // New site: Extract WATCH ONLINE and SERVER 01
+    // Store both links but return only SERVER 01 with WATCH ONLINE embedded in link data
     const directLinks: DirectLink[] = [];
+    let watchOnlineLink = "";
+    let server01Link = "";
+    
     $("a[href]")
       .filter((_, a) => {
         const text = ($(a).text() || "").trim().toLowerCase();
-        // Only extract WATCH ONLINE and SERVER 01
-        return (
-          text.includes("watch online") ||
-          text === "server 01"
-        );
+        return text.includes("watch online") || text === "server 01";
       })
       .each((_, a) => {
         let href = ($(a).attr("href") || "").trim();
         if (!href) return;
         if (!href.startsWith("http")) href = new URL(href, link).href;
-        const text = ($(a).text() || "Link").trim();
-        directLinks.push({ link: href, title: text, quality: "AUTO", type: "movie" });
+        const text = ($(a).text() || "").trim().toLowerCase();
+        
+        if (text.includes("watch online")) {
+          watchOnlineLink = href;
+        } else if (text === "server 01") {
+          server01Link = href;
+        }
       });
+
+    // Only add SERVER 01 button, but embed WATCH ONLINE link in the data
+    // stream.ts will extract servers from both aggregator pages
+    if (server01Link) {
+      const linkData = watchOnlineLink 
+        ? JSON.stringify({ server01: server01Link, watchOnline: watchOnlineLink })
+        : server01Link;
+      
+      directLinks.push({ 
+        link: linkData, 
+        title: "SERVER 01", 
+        quality: "AUTO", 
+        type: "movie" 
+      });
+    }
 
     if (directLinks.length) {
       links.push({
