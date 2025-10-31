@@ -163,8 +163,8 @@ var dedupeStreams = function (streams) {
 var hasExtractor = function (href) {
     if (/indishare\.info/i.test(href))
         return true;
-    if (/uptomega\.net/i.test(href))
-        return true;
+    // DISABLED: React Native axios doesn't support Range header in POST redirects
+    // if (/uptomega\.net/i.test(href)) return true;
     if (/uploadhub\.dad/i.test(href))
         return true;
     if (/streamtape/i.test(href))
@@ -187,8 +187,7 @@ var hasExtractor = function (href) {
 var getServerName = function (href) {
     if (/indishare\.info/i.test(href))
         return "Indishare";
-    if (/uptomega\.net/i.test(href))
-        return "Uptomega";
+    // DISABLED: if (/uptomega\.net/i.test(href)) return "Uptomega";
     if (/uploadhub\.dad/i.test(href))
         return "Uploadhub";
     if (/streamtape/i.test(href))
@@ -208,43 +207,37 @@ var getServerName = function (href) {
  * On-demand extraction routing
  */
 var extractStreamForHost = function (href, axios, providerContext, signal) { return __awaiter(void 0, void 0, void 0, function () {
-    var extractors, indishareExtractor, uptomegaExtractor, uploadhubExtractor, streamtapeExtractor, voeExtractor, streams, streamhgExtractor, doodExtractor, streams, mixdropExtractor, streams, error_1;
+    var extractors, indishareExtractor, uploadhubExtractor, streamtapeExtractor, voeExtractor, streams, streamhgExtractor, doodExtractor, streams, mixdropExtractor, streams, error_1;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
                 extractors = providerContext.extractors;
                 _a.label = 1;
             case 1:
-                _a.trys.push([1, 18, , 19]);
+                _a.trys.push([1, 16, , 17]);
                 if (!/indishare\.info/i.test(href)) return [3 /*break*/, 3];
                 indishareExtractor = extractors.indishareExtractor;
                 if (!(typeof indishareExtractor === "function")) return [3 /*break*/, 3];
                 return [4 /*yield*/, indishareExtractor(href, axios)];
             case 2: return [2 /*return*/, _a.sent()];
             case 3:
-                if (!/uptomega\.net/i.test(href)) return [3 /*break*/, 5];
-                uptomegaExtractor = extractors.uptomegaExtractor;
-                if (!(typeof uptomegaExtractor === "function")) return [3 /*break*/, 5];
-                return [4 /*yield*/, uptomegaExtractor(href, axios, signal)];
+                if (!/uploadhub\.dad/i.test(href)) return [3 /*break*/, 5];
+                uploadhubExtractor = extractors.uploadhubExtractor;
+                if (!(typeof uploadhubExtractor === "function")) return [3 /*break*/, 5];
+                return [4 /*yield*/, uploadhubExtractor(href, axios)];
             case 4: return [2 /*return*/, _a.sent()];
             case 5:
-                if (!/uploadhub\.dad/i.test(href)) return [3 /*break*/, 7];
-                uploadhubExtractor = extractors.uploadhubExtractor;
-                if (!(typeof uploadhubExtractor === "function")) return [3 /*break*/, 7];
-                return [4 /*yield*/, uploadhubExtractor(href, axios)];
+                if (!/streamtape/i.test(href)) return [3 /*break*/, 7];
+                streamtapeExtractor = extractors.streamtapeExtractor;
+                if (!(typeof streamtapeExtractor === "function")) return [3 /*break*/, 7];
+                return [4 /*yield*/, streamtapeExtractor(href, axios, signal)];
             case 6: return [2 /*return*/, _a.sent()];
             case 7:
-                if (!/streamtape/i.test(href)) return [3 /*break*/, 9];
-                streamtapeExtractor = extractors.streamtapeExtractor;
-                if (!(typeof streamtapeExtractor === "function")) return [3 /*break*/, 9];
-                return [4 /*yield*/, streamtapeExtractor(href, axios, signal)];
-            case 8: return [2 /*return*/, _a.sent()];
-            case 9:
-                if (!/voe\.sx/i.test(href)) return [3 /*break*/, 11];
+                if (!/voe\.sx/i.test(href)) return [3 /*break*/, 9];
                 voeExtractor = extractors.voeExtractor;
-                if (!(typeof voeExtractor === "function")) return [3 /*break*/, 11];
+                if (!(typeof voeExtractor === "function")) return [3 /*break*/, 9];
                 return [4 /*yield*/, voeExtractor(href)];
-            case 10:
+            case 8:
                 streams = _a.sent();
                 if (streams && streams.length > 0) {
                     return [2 /*return*/, {
@@ -253,18 +246,33 @@ var extractStreamForHost = function (href, axios, providerContext, signal) { ret
                             headers: streams[0].headers,
                         }];
                 }
-                _a.label = 11;
-            case 11:
-                if (!/dumbalag\.com|hglink\.to/i.test(href)) return [3 /*break*/, 13];
+                _a.label = 9;
+            case 9:
+                if (!/dumbalag\.com|hglink\.to/i.test(href)) return [3 /*break*/, 11];
                 streamhgExtractor = extractors.streamhgExtractor;
-                if (!(typeof streamhgExtractor === "function")) return [3 /*break*/, 13];
+                if (!(typeof streamhgExtractor === "function")) return [3 /*break*/, 11];
                 return [4 /*yield*/, streamhgExtractor(href, axios, signal)];
-            case 12: return [2 /*return*/, _a.sent()];
-            case 13:
-                if (!/dood/i.test(href)) return [3 /*break*/, 15];
+            case 10: return [2 /*return*/, _a.sent()];
+            case 11:
+                if (!/dood/i.test(href)) return [3 /*break*/, 13];
                 doodExtractor = extractors.doodExtractor;
-                if (!(typeof doodExtractor === "function")) return [3 /*break*/, 15];
+                if (!(typeof doodExtractor === "function")) return [3 /*break*/, 13];
                 return [4 /*yield*/, doodExtractor(href, axios)];
+            case 12:
+                streams = _a.sent();
+                if (streams && streams.length > 0) {
+                    return [2 /*return*/, {
+                            link: streams[0].link,
+                            type: streams[0].type,
+                            headers: streams[0].headers,
+                        }];
+                }
+                _a.label = 13;
+            case 13:
+                if (!/mixdrop/i.test(href)) return [3 /*break*/, 15];
+                mixdropExtractor = extractors.mixdropExtractor;
+                if (!(typeof mixdropExtractor === "function")) return [3 /*break*/, 15];
+                return [4 /*yield*/, mixdropExtractor(href, axios)];
             case 14:
                 streams = _a.sent();
                 if (streams && streams.length > 0) {
@@ -275,27 +283,12 @@ var extractStreamForHost = function (href, axios, providerContext, signal) { ret
                         }];
                 }
                 _a.label = 15;
-            case 15:
-                if (!/mixdrop/i.test(href)) return [3 /*break*/, 17];
-                mixdropExtractor = extractors.mixdropExtractor;
-                if (!(typeof mixdropExtractor === "function")) return [3 /*break*/, 17];
-                return [4 /*yield*/, mixdropExtractor(href, axios)];
+            case 15: return [2 /*return*/, null];
             case 16:
-                streams = _a.sent();
-                if (streams && streams.length > 0) {
-                    return [2 /*return*/, {
-                            link: streams[0].link,
-                            type: streams[0].type,
-                            headers: streams[0].headers,
-                        }];
-                }
-                _a.label = 17;
-            case 17: return [2 /*return*/, null];
-            case 18:
                 error_1 = _a.sent();
                 console.error("[skyMovieHD] Extraction error for ".concat(getServerName(href), ":"), error_1);
                 return [2 /*return*/, null];
-            case 19: return [2 /*return*/];
+            case 17: return [2 /*return*/];
         }
     });
 }); };

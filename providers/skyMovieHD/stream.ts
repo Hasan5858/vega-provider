@@ -129,7 +129,8 @@ const dedupeStreams = (streams: Stream[]) => {
  */
 const hasExtractor = (href: string): boolean => {
   if (/indishare\.info/i.test(href)) return true;
-  if (/uptomega\.net/i.test(href)) return true;
+  // DISABLED: React Native axios doesn't support Range header in POST redirects
+  // if (/uptomega\.net/i.test(href)) return true;
   if (/uploadhub\.dad/i.test(href)) return true;
   if (/streamtape/i.test(href)) return true;
   if (/voe\.sx/i.test(href)) return true;
@@ -145,7 +146,7 @@ const hasExtractor = (href: string): boolean => {
  */
 const getServerName = (href: string): string => {
   if (/indishare\.info/i.test(href)) return "Indishare";
-  if (/uptomega\.net/i.test(href)) return "Uptomega";
+  // DISABLED: if (/uptomega\.net/i.test(href)) return "Uptomega";
   if (/uploadhub\.dad/i.test(href)) return "Uploadhub";
   if (/streamtape/i.test(href)) return "StreamTape";
   if (/voe\.sx/i.test(href)) return "VOE";
@@ -179,17 +180,18 @@ const extractStreamForHost = async (
       }
     }
     
-    // Uptomega
-    if (/uptomega\.net/i.test(href)) {
-      const uptomegaExtractor = (extractors as any).uptomegaExtractor as (
-        url: string,
-        axios: any,
-        signal?: AbortSignal
-      ) => Promise<ExtractedStream | null>;
-      if (typeof uptomegaExtractor === "function") {
-        return await uptomegaExtractor(href, axios, signal);
-      }
-    }
+    // DISABLED: Uptomega - React Native axios doesn't support Range header in POST redirects
+    // This causes "Network Error" that cannot be caught properly in RN environment
+    // if (/uptomega\.net/i.test(href)) {
+    //   const uptomegaExtractor = (extractors as any).uptomegaExtractor as (
+    //     url: string,
+    //     axios: any,
+    //     signal?: AbortSignal
+    //   ) => Promise<ExtractedStream | null>;
+    //   if (typeof uptomegaExtractor === "function") {
+    //     return await uptomegaExtractor(href, axios, signal);
+    //   }
+    // }
     
     // Uploadhub
     if (/uploadhub\.dad/i.test(href)) {
