@@ -182,32 +182,9 @@ export async function getStream({
           const href = hrefRaw.startsWith("//") ? `https:${hrefRaw}` : hrefRaw;
           if (!/^https?:\/\//i.test(href)) continue;
           
-          // GoFile extraction
+          // Skip GoFile - causes parsing errors with MKV files
           if (/gofile\.io/i.test(href)) {
-            const idMatch = href.match(/gofile\.io\/d\/([A-Za-z0-9_-]+)/i);
-            const id = idMatch?.[1];
-            if (!id) continue;
-            
-            try {
-              console.log("[skyMovieHD] 🔗 Resolving GoFile:", id);
-              const gofile = await gofileExtracter(id);
-              const stream = normaliseStream(
-                {
-                  server: "GoFile",
-                  link: gofile?.link,
-                  type: inferTypeFromUrl(gofile?.link || ""),
-                  headers: {
-                    ...DEFAULT_STREAM_HEADERS,
-                    Referer: "https://gofile.io/",
-                    Authorization: gofile?.token ? `Bearer ${gofile.token}` : undefined,
-                  },
-                },
-                "GoFile",
-              );
-              if (stream) collected.push(stream);
-            } catch (error) {
-              console.log("[skyMovieHD] ❌ GoFile extraction failed:", error);
-            }
+            console.log("[skyMovieHD] ⏭️ Skipping GoFile (causes parsing issues)");
             continue;
           }
           
@@ -245,20 +222,18 @@ export async function getStream({
               
               if (typeof voeExtractor === "function") {
                 const voe = await voeExtractor(href, signal);
+                console.log("[skyMovieHD] VOE result:", voe ? "Link found" : "No link");
                 if (voe?.link) {
-                  const stream = normaliseStream(
-                    {
-                      server: "VOE",
-                      link: voe.link,
-                      type: voe.type || inferTypeFromUrl(voe.link),
-                    },
-                    "VOE",
-                    href,
-                  );
-                  if (stream) {
-                    collected.push(stream);
-                    console.log("[skyMovieHD] ✅ VOE stream added:", stream.link.slice(0, 100));
-                  }
+                  const voeStream: Stream = {
+                    server: "VOE",
+                    link: voe.link,
+                    type: voe.type || inferTypeFromUrl(voe.link) || "mp4",
+                    headers: DEFAULT_STREAM_HEADERS,
+                  };
+                  collected.push(voeStream);
+                  console.log("[skyMovieHD] ✅ VOE stream added:", voeStream.link.slice(0, 100));
+                } else {
+                  console.log("[skyMovieHD] ⚠️ VOE returned no link");
                 }
               }
             } catch (error) {

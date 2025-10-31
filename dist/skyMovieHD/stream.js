@@ -158,7 +158,7 @@ var dedupeStreams = function (streams) {
 };
 function getStream(_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var axios, cheerio, extractors, hubcloudExtracter, streamtapeExtractor, streamhgExtractor, gdFlixExtracter, filepresExtractor, gofileExtracter, target_1, id, res, $, anchors, collected, anchors_1, anchors_1_1, anchor, hrefRaw, href, idMatch, id, gofile, stream, error_1, st, stream, error_2, voeExtractor, voe, stream, error_3, e_1_1, cleaned, error_4, shg, arr, st, arr, fallbackStreams, cleanedFallback, error_5;
+        var axios, cheerio, extractors, hubcloudExtracter, streamtapeExtractor, streamhgExtractor, gdFlixExtracter, filepresExtractor, gofileExtracter, target_1, id, res, $, anchors, collected, anchors_1, anchors_1_1, anchor, hrefRaw, href, st, stream, error_1, voeExtractor, voe, voeStream, error_2, e_1_1, cleaned, error_3, shg, arr, st, arr, fallbackStreams, cleanedFallback, error_4;
         var e_1, _c;
         var link = _b.link, type = _b.type, signal = _b.signal, providerContext = _b.providerContext;
         return __generator(this, function (_d) {
@@ -175,7 +175,7 @@ function getStream(_a) {
                     gofileExtracter = extractors.gofileExtracter;
                     _d.label = 1;
                 case 1:
-                    _d.trys.push([1, 33, , 34]);
+                    _d.trys.push([1, 28, , 29]);
                     console.log("[skyMovieHD] Incoming link:", link);
                     target_1 = link;
                     // Normalize StreamHG hglink -> dumbalag embed
@@ -187,11 +187,11 @@ function getStream(_a) {
                         }
                         catch (_e) { }
                     }
-                    if (!/howblogs\.xyz\//i.test(target_1)) return [3 /*break*/, 27];
+                    if (!/howblogs\.xyz\//i.test(target_1)) return [3 /*break*/, 22];
                     console.log("[skyMovieHD] 📥 Loading howblogs aggregator (SERVER 01):", target_1);
                     _d.label = 2;
                 case 2:
-                    _d.trys.push([2, 26, , 27]);
+                    _d.trys.push([2, 21, , 22]);
                     return [4 /*yield*/, axios.get(target_1, { signal: signal, headers: REQUEST_HEADERS })];
                 case 3:
                     res = _d.sent();
@@ -200,52 +200,30 @@ function getStream(_a) {
                     collected = [];
                     _d.label = 4;
                 case 4:
-                    _d.trys.push([4, 23, 24, 25]);
+                    _d.trys.push([4, 18, 19, 20]);
                     anchors_1 = __values(anchors), anchors_1_1 = anchors_1.next();
                     _d.label = 5;
                 case 5:
-                    if (!!anchors_1_1.done) return [3 /*break*/, 22];
+                    if (!!anchors_1_1.done) return [3 /*break*/, 17];
                     anchor = anchors_1_1.value;
                     hrefRaw = ($(anchor).attr("href") || "").trim();
                     if (!hrefRaw)
-                        return [3 /*break*/, 21];
+                        return [3 /*break*/, 16];
                     href = hrefRaw.startsWith("//") ? "https:".concat(hrefRaw) : hrefRaw;
                     if (!/^https?:\/\//i.test(href))
-                        return [3 /*break*/, 21];
-                    if (!/gofile\.io/i.test(href)) return [3 /*break*/, 10];
-                    idMatch = href.match(/gofile\.io\/d\/([A-Za-z0-9_-]+)/i);
-                    id = idMatch === null || idMatch === void 0 ? void 0 : idMatch[1];
-                    if (!id)
-                        return [3 /*break*/, 21];
+                        return [3 /*break*/, 16];
+                    // Skip GoFile - causes parsing errors with MKV files
+                    if (/gofile\.io/i.test(href)) {
+                        console.log("[skyMovieHD] ⏭️ Skipping GoFile (causes parsing issues)");
+                        return [3 /*break*/, 16];
+                    }
+                    if (!/streamtape/i.test(href)) return [3 /*break*/, 10];
                     _d.label = 6;
                 case 6:
                     _d.trys.push([6, 8, , 9]);
-                    console.log("[skyMovieHD] 🔗 Resolving GoFile:", id);
-                    return [4 /*yield*/, gofileExtracter(id)];
-                case 7:
-                    gofile = _d.sent();
-                    stream = normaliseStream({
-                        server: "GoFile",
-                        link: gofile === null || gofile === void 0 ? void 0 : gofile.link,
-                        type: inferTypeFromUrl((gofile === null || gofile === void 0 ? void 0 : gofile.link) || ""),
-                        headers: __assign(__assign({}, DEFAULT_STREAM_HEADERS), { Referer: "https://gofile.io/", Authorization: (gofile === null || gofile === void 0 ? void 0 : gofile.token) ? "Bearer ".concat(gofile.token) : undefined }),
-                    }, "GoFile");
-                    if (stream)
-                        collected.push(stream);
-                    return [3 /*break*/, 9];
-                case 8:
-                    error_1 = _d.sent();
-                    console.log("[skyMovieHD] ❌ GoFile extraction failed:", error_1);
-                    return [3 /*break*/, 9];
-                case 9: return [3 /*break*/, 21];
-                case 10:
-                    if (!/streamtape/i.test(href)) return [3 /*break*/, 15];
-                    _d.label = 11;
-                case 11:
-                    _d.trys.push([11, 13, , 14]);
                     console.log("[skyMovieHD] 🔗 Resolving StreamTape:", href);
                     return [4 /*yield*/, streamtapeExtractor(href, axios, signal)];
-                case 12:
+                case 7:
                     st = _d.sent();
                     if (st) {
                         stream = normaliseStream({
@@ -257,68 +235,71 @@ function getStream(_a) {
                         if (stream)
                             collected.push(stream);
                     }
-                    return [3 /*break*/, 14];
-                case 13:
-                    error_2 = _d.sent();
-                    console.log("[skyMovieHD] ❌ StreamTape extraction failed:", error_2);
-                    return [3 /*break*/, 14];
-                case 14: return [3 /*break*/, 21];
-                case 15:
-                    if (!/voe\.sx|voe\./i.test(href)) return [3 /*break*/, 21];
-                    _d.label = 16;
-                case 16:
-                    _d.trys.push([16, 19, , 20]);
+                    return [3 /*break*/, 9];
+                case 8:
+                    error_1 = _d.sent();
+                    console.log("[skyMovieHD] ❌ StreamTape extraction failed:", error_1);
+                    return [3 /*break*/, 9];
+                case 9: return [3 /*break*/, 16];
+                case 10:
+                    if (!/voe\.sx|voe\./i.test(href)) return [3 /*break*/, 16];
+                    _d.label = 11;
+                case 11:
+                    _d.trys.push([11, 14, , 15]);
                     console.log("[skyMovieHD] 🔗 Resolving VOE:", href);
                     voeExtractor = extractors.voeExtractor;
-                    if (!(typeof voeExtractor === "function")) return [3 /*break*/, 18];
+                    if (!(typeof voeExtractor === "function")) return [3 /*break*/, 13];
                     return [4 /*yield*/, voeExtractor(href, signal)];
-                case 17:
+                case 12:
                     voe = _d.sent();
+                    console.log("[skyMovieHD] VOE result:", voe ? "Link found" : "No link");
                     if (voe === null || voe === void 0 ? void 0 : voe.link) {
-                        stream = normaliseStream({
+                        voeStream = {
                             server: "VOE",
                             link: voe.link,
-                            type: voe.type || inferTypeFromUrl(voe.link),
-                        }, "VOE", href);
-                        if (stream) {
-                            collected.push(stream);
-                            console.log("[skyMovieHD] ✅ VOE stream added:", stream.link.slice(0, 100));
-                        }
+                            type: voe.type || inferTypeFromUrl(voe.link) || "mp4",
+                            headers: DEFAULT_STREAM_HEADERS,
+                        };
+                        collected.push(voeStream);
+                        console.log("[skyMovieHD] ✅ VOE stream added:", voeStream.link.slice(0, 100));
                     }
-                    _d.label = 18;
-                case 18: return [3 /*break*/, 20];
-                case 19:
-                    error_3 = _d.sent();
-                    console.log("[skyMovieHD] ❌ VOE extraction failed:", error_3);
-                    return [3 /*break*/, 20];
-                case 20: return [3 /*break*/, 21];
-                case 21:
+                    else {
+                        console.log("[skyMovieHD] ⚠️ VOE returned no link");
+                    }
+                    _d.label = 13;
+                case 13: return [3 /*break*/, 15];
+                case 14:
+                    error_2 = _d.sent();
+                    console.log("[skyMovieHD] ❌ VOE extraction failed:", error_2);
+                    return [3 /*break*/, 15];
+                case 15: return [3 /*break*/, 16];
+                case 16:
                     anchors_1_1 = anchors_1.next();
                     return [3 /*break*/, 5];
-                case 22: return [3 /*break*/, 25];
-                case 23:
+                case 17: return [3 /*break*/, 20];
+                case 18:
                     e_1_1 = _d.sent();
                     e_1 = { error: e_1_1 };
-                    return [3 /*break*/, 25];
-                case 24:
+                    return [3 /*break*/, 20];
+                case 19:
                     try {
                         if (anchors_1_1 && !anchors_1_1.done && (_c = anchors_1.return)) _c.call(anchors_1);
                     }
                     finally { if (e_1) throw e_1.error; }
                     return [7 /*endfinally*/];
-                case 25:
+                case 20:
                     cleaned = dedupeStreams(collected);
                     console.log("[skyMovieHD] ✅ Total streams extracted:", collected.length);
                     console.log("[skyMovieHD] 📋 Servers:", cleaned.map(function (s) { return "".concat(s.server, " (").concat(s.type, ")"); }).join(", "));
                     return [2 /*return*/, cleaned];
-                case 26:
-                    error_4 = _d.sent();
-                    console.log("[skyMovieHD] ❌ Howblogs aggregator failed:", error_4);
+                case 21:
+                    error_3 = _d.sent();
+                    console.log("[skyMovieHD] ❌ Howblogs aggregator failed:", error_3);
                     return [2 /*return*/, []];
-                case 27:
-                    if (!(/dumbalag\.com\//i.test(target_1) && typeof streamhgExtractor === "function")) return [3 /*break*/, 29];
+                case 22:
+                    if (!(/dumbalag\.com\//i.test(target_1) && typeof streamhgExtractor === "function")) return [3 /*break*/, 24];
                     return [4 /*yield*/, streamhgExtractor(target_1, axios, signal)];
-                case 28:
+                case 23:
                     shg = _d.sent();
                     if (shg) {
                         arr = [
@@ -326,11 +307,11 @@ function getStream(_a) {
                         ];
                         return [2 /*return*/, arr];
                     }
-                    _d.label = 29;
-                case 29:
-                    if (!(/streamtape|watchadsontape|tape/i.test(target_1) && typeof streamtapeExtractor === "function")) return [3 /*break*/, 31];
+                    _d.label = 24;
+                case 24:
+                    if (!(/streamtape|watchadsontape|tape/i.test(target_1) && typeof streamtapeExtractor === "function")) return [3 /*break*/, 26];
                     return [4 /*yield*/, streamtapeExtractor(target_1, axios, signal)];
-                case 30:
+                case 25:
                     st = _d.sent();
                     if (st) {
                         arr = [
@@ -338,12 +319,12 @@ function getStream(_a) {
                         ];
                         return [2 /*return*/, arr];
                     }
-                    _d.label = 31;
-                case 31:
+                    _d.label = 26;
+                case 26:
                     // Fallback
                     console.log("[skyMovieHD] ⚠️ Falling back to HubCloud extractor");
                     return [4 /*yield*/, hubcloudExtracter(target_1, signal)];
-                case 32:
+                case 27:
                     fallbackStreams = _d.sent();
                     cleanedFallback = dedupeStreams(fallbackStreams
                         .map(function (stream) {
@@ -359,11 +340,11 @@ function getStream(_a) {
                         });
                     }));
                     return [2 /*return*/, cleanedFallback];
-                case 33:
-                    error_5 = _d.sent();
-                    console.log("[skyMovieHD] ❌ getStream error:", (error_5 === null || error_5 === void 0 ? void 0 : error_5.message) || error_5);
+                case 28:
+                    error_4 = _d.sent();
+                    console.log("[skyMovieHD] ❌ getStream error:", (error_4 === null || error_4 === void 0 ? void 0 : error_4.message) || error_4);
                     return [2 /*return*/, []];
-                case 34: return [2 /*return*/];
+                case 29: return [2 /*return*/];
             }
         });
     });
