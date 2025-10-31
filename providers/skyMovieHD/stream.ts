@@ -312,10 +312,26 @@ export const extractLazyServer = async function ({
 
     console.log(`[skyMovieHD] 🔄 On-demand extraction for ${metadata.serverName}: ${metadata.href}`);
     
-    const extracted = await extractStreamForHost(metadata.href, axios, providerContext, signal);
+    // Add timeout wrapper for extraction (15 seconds max)
+    const extractionPromise = extractStreamForHost(metadata.href, axios, providerContext, signal);
+    const timeoutPromise = new Promise<null>((resolve) => {
+      setTimeout(() => {
+        console.log(`[skyMovieHD] ⏱️ Extraction timeout for ${metadata.serverName} after 15 seconds`);
+        resolve(null);
+      }, 15000);
+    });
+    
+    const extracted = await Promise.race([extractionPromise, timeoutPromise]);
     
     if (extracted) {
       console.log(`[skyMovieHD] ✅ Successfully extracted ${metadata.serverName}`);
+      
+      // Verify the link is valid before returning
+      if (!extracted.link || extracted.link.trim().length === 0) {
+        console.error(`[skyMovieHD] ❌ ${metadata.serverName} returned empty link`);
+        return [];
+      }
+      
       return [{
         server: metadata.serverName,
         link: extracted.link,
@@ -324,10 +340,17 @@ export const extractLazyServer = async function ({
       }];
     }
     
-    console.error(`[skyMovieHD] ❌ Extraction failed for ${metadata.serverName} - No stream returned`);
+    console.error(`[skyMovieHD] ❌ Extraction failed for ${metadata.serverName} - No stream returned or timeout`);
     return [];
   } catch (error: any) {
-    console.error(`[skyMovieHD] ❌ Lazy-load extraction error for ${JSON.parse(link).serverName}:`, error?.message || error);
+    const serverName = (() => {
+      try {
+        return JSON.parse(link).serverName;
+      } catch {
+        return "Unknown";
+      }
+    })();
+    console.error(`[skyMovieHD] ❌ Lazy-load extraction error for ${serverName}:`, error?.message || error);
     return [];
   }
 };

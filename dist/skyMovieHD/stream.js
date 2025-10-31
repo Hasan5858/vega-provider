@@ -305,7 +305,7 @@ var extractStreamForHost = function (href, axios, providerContext, signal) { ret
  */
 var extractLazyServer = function (_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var axios, metadata, extracted, error_2;
+        var axios, metadata_1, extractionPromise, timeoutPromise, extracted, error_2, serverName;
         var link = _b.link, signal = _b.signal, providerContext = _b.providerContext;
         return __generator(this, function (_c) {
             switch (_c.label) {
@@ -314,29 +314,49 @@ var extractLazyServer = function (_a) {
                     _c.label = 1;
                 case 1:
                     _c.trys.push([1, 3, , 4]);
-                    metadata = JSON.parse(link);
-                    if (metadata.type !== "skymovie-lazy") {
+                    metadata_1 = JSON.parse(link);
+                    if (metadata_1.type !== "skymovie-lazy") {
                         console.error("[skyMovieHD] ❌ Invalid lazy-load metadata, expected type 'skymovie-lazy'");
                         return [2 /*return*/, []];
                     }
-                    console.log("[skyMovieHD] \uD83D\uDD04 On-demand extraction for ".concat(metadata.serverName, ": ").concat(metadata.href));
-                    return [4 /*yield*/, extractStreamForHost(metadata.href, axios, providerContext, signal)];
+                    console.log("[skyMovieHD] \uD83D\uDD04 On-demand extraction for ".concat(metadata_1.serverName, ": ").concat(metadata_1.href));
+                    extractionPromise = extractStreamForHost(metadata_1.href, axios, providerContext, signal);
+                    timeoutPromise = new Promise(function (resolve) {
+                        setTimeout(function () {
+                            console.log("[skyMovieHD] \u23F1\uFE0F Extraction timeout for ".concat(metadata_1.serverName, " after 15 seconds"));
+                            resolve(null);
+                        }, 15000);
+                    });
+                    return [4 /*yield*/, Promise.race([extractionPromise, timeoutPromise])];
                 case 2:
                     extracted = _c.sent();
                     if (extracted) {
-                        console.log("[skyMovieHD] \u2705 Successfully extracted ".concat(metadata.serverName));
+                        console.log("[skyMovieHD] \u2705 Successfully extracted ".concat(metadata_1.serverName));
+                        // Verify the link is valid before returning
+                        if (!extracted.link || extracted.link.trim().length === 0) {
+                            console.error("[skyMovieHD] \u274C ".concat(metadata_1.serverName, " returned empty link"));
+                            return [2 /*return*/, []];
+                        }
                         return [2 /*return*/, [{
-                                    server: metadata.serverName,
+                                    server: metadata_1.serverName,
                                     link: extracted.link,
                                     type: extracted.type || "mkv",
                                     headers: extracted.headers,
                                 }]];
                     }
-                    console.error("[skyMovieHD] \u274C Extraction failed for ".concat(metadata.serverName, " - No stream returned"));
+                    console.error("[skyMovieHD] \u274C Extraction failed for ".concat(metadata_1.serverName, " - No stream returned or timeout"));
                     return [2 /*return*/, []];
                 case 3:
                     error_2 = _c.sent();
-                    console.error("[skyMovieHD] \u274C Lazy-load extraction error for ".concat(JSON.parse(link).serverName, ":"), (error_2 === null || error_2 === void 0 ? void 0 : error_2.message) || error_2);
+                    serverName = (function () {
+                        try {
+                            return JSON.parse(link).serverName;
+                        }
+                        catch (_a) {
+                            return "Unknown";
+                        }
+                    })();
+                    console.error("[skyMovieHD] \u274C Lazy-load extraction error for ".concat(serverName, ":"), (error_2 === null || error_2 === void 0 ? void 0 : error_2.message) || error_2);
                     return [2 /*return*/, []];
                 case 4: return [2 /*return*/];
             }
