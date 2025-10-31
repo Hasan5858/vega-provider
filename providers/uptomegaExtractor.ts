@@ -85,7 +85,10 @@ export async function uptomegaExtractor(
     const finalForm = $countdown('form[name="F1"]').first();
 
     if (finalForm.length === 0) {
-      console.log("[Uptomega] ❌ Could not find final form");
+      console.log("[Uptomega] ❌ Could not find final form (name=F1)");
+      console.log("[Uptomega] Checking for any forms...");
+      const anyForms = $countdown('form');
+      console.log("[Uptomega] Found", anyForms.length, "forms on countdown page");
       return null;
     }
 
@@ -98,8 +101,13 @@ export async function uptomegaExtractor(
       }
     });
 
-    // Set op=download2 for final download
-    finalFormData.op = "download2";
+    console.log("[Uptomega] 📋 Final form data:", finalFormData);
+
+    // Verify we have the required fields
+    if (!finalFormData.id || !finalFormData.op) {
+      console.log("[Uptomega] ❌ Missing required fields in final form");
+      return null;
+    }
 
     console.log("[Uptomega] 🔗 Submitting final download request");
 

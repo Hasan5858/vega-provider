@@ -99,7 +99,7 @@ var cheerio = __importStar(require("cheerio"));
 var USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 function uptomegaExtractor(url, axios) {
     return __awaiter(this, void 0, void 0, function () {
-        var step1Response, $initial_1, formData_1, form, submitBtn, urlEncodedData, step2Response, $countdown_1, finalForm, finalFormData_1, finalData, step3Response, directLink, fileType, error_1;
+        var step1Response, $initial_1, formData_1, form, submitBtn, urlEncodedData, step2Response, $countdown_1, finalForm, anyForms, finalFormData_1, finalData, step3Response, directLink, fileType, error_1;
         var _a;
         return __generator(this, function (_b) {
             switch (_b.label) {
@@ -160,7 +160,10 @@ function uptomegaExtractor(url, axios) {
                     $countdown_1 = cheerio.load(step2Response.data);
                     finalForm = $countdown_1('form[name="F1"]').first();
                     if (finalForm.length === 0) {
-                        console.log("[Uptomega] ❌ Could not find final form");
+                        console.log("[Uptomega] ❌ Could not find final form (name=F1)");
+                        console.log("[Uptomega] Checking for any forms...");
+                        anyForms = $countdown_1('form');
+                        console.log("[Uptomega] Found", anyForms.length, "forms on countdown page");
                         return [2 /*return*/, null];
                     }
                     finalFormData_1 = {};
@@ -171,8 +174,12 @@ function uptomegaExtractor(url, axios) {
                             finalFormData_1[name] = value;
                         }
                     });
-                    // Set op=download2 for final download
-                    finalFormData_1.op = "download2";
+                    console.log("[Uptomega] 📋 Final form data:", finalFormData_1);
+                    // Verify we have the required fields
+                    if (!finalFormData_1.id || !finalFormData_1.op) {
+                        console.log("[Uptomega] ❌ Missing required fields in final form");
+                        return [2 /*return*/, null];
+                    }
                     console.log("[Uptomega] 🔗 Submitting final download request");
                     finalData = Object.entries(finalFormData_1)
                         .map(function (_a) {
