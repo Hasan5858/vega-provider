@@ -91,10 +91,11 @@ var USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (
 function indishareExtractor(url) {
     return __awaiter(this, void 0, void 0, function () {
         var step1Response, downPageUrl, fileCodeMatch, fileCode, serverCookies, cookieString, $down, downloadButton, blogUrl, step2Response, newCookies, additionalCookies, $blog_1, form, formData_1, formAction, formUrl, step3Response, $final, directLink, error_1;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
+        var _a, _b;
+        return __generator(this, function (_c) {
+            switch (_c.label) {
                 case 0:
-                    _a.trys.push([0, 4, , 5]);
+                    _c.trys.push([0, 4, , 5]);
                     console.log("[Indishare] 🔍 Starting extraction from:", url);
                     return [4 /*yield*/, axios_1.default.get(url, {
                             headers: {
@@ -105,8 +106,10 @@ function indishareExtractor(url) {
                             validateStatus: function (status) { return status < 400; },
                         })];
                 case 1:
-                    step1Response = _a.sent();
-                    downPageUrl = step1Response.request.res.responseUrl || url;
+                    step1Response = _c.sent();
+                    downPageUrl = ((_a = step1Response.request) === null || _a === void 0 ? void 0 : _a.responseURL) ||
+                        ((_b = step1Response.config) === null || _b === void 0 ? void 0 : _b.url) ||
+                        url;
                     console.log("[Indishare] 📍 Redirected to:", downPageUrl);
                     fileCodeMatch = downPageUrl.match(/\/([a-z0-9]+)$/i);
                     fileCode = fileCodeMatch ? fileCodeMatch[1] : "";
@@ -141,7 +144,7 @@ function indishareExtractor(url) {
                             maxRedirects: 5,
                         })];
                 case 2:
-                    step2Response = _a.sent();
+                    step2Response = _c.sent();
                     newCookies = step2Response.headers["set-cookie"] || [];
                     if (newCookies.length > 0) {
                         additionalCookies = newCookies
@@ -191,7 +194,7 @@ function indishareExtractor(url) {
                             maxRedirects: 5,
                         })];
                 case 3:
-                    step3Response = _a.sent();
+                    step3Response = _c.sent();
                     $final = cheerio.load(step3Response.data);
                     directLink = $final('a[href*="indiworlds.com"]').attr("href");
                     if (directLink) {
@@ -204,7 +207,7 @@ function indishareExtractor(url) {
                     console.log("[Indishare] ❌ Could not find direct download link in response");
                     return [2 /*return*/, null];
                 case 4:
-                    error_1 = _a.sent();
+                    error_1 = _c.sent();
                     console.log("[Indishare] ❌ Extraction failed:", (error_1 === null || error_1 === void 0 ? void 0 : error_1.message) || error_1);
                     return [2 /*return*/, null];
                 case 5: return [2 /*return*/];

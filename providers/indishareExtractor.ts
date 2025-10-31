@@ -33,7 +33,10 @@ export async function indishareExtractor(
       validateStatus: (status) => status < 400,
     });
 
-    const downPageUrl = step1Response.request.res.responseUrl || url;
+    // Get the final URL after redirects (React Native compatible)
+    const downPageUrl = step1Response.request?.responseURL || 
+                       step1Response.config?.url || 
+                       url;
     console.log("[Indishare] 📍 Redirected to:", downPageUrl);
 
     // Extract file code from the URL (e.g., https://indi-down4.org/rej4u838hxcl)
