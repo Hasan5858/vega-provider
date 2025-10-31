@@ -120,10 +120,9 @@ var getMeta = function (_a) {
                     $_1("a[href]")
                         .filter(function (_, a) {
                         var text = ($_1(a).text() || "").trim().toLowerCase();
+                        // Only extract WATCH ONLINE and SERVER 01
                         return (text.includes("watch online") ||
-                            text.includes("server") ||
-                            text.includes("google drive") ||
-                            text.includes("direct link"));
+                            text === "server 01");
                     })
                         .each(function (_, a) {
                         var href = ($_1(a).attr("href") || "").trim();

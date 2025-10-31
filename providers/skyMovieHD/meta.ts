@@ -90,16 +90,15 @@ export const getMeta = async function ({
     const episodeList: Episode[] = [];
     const links: Link[] = [];
 
-    // New site: buttons/links are plain anchors with texts like WATCH ONLINE, SERVER 01..06, Google Drive Direct Links
+    // New site: Extract only WATCH ONLINE and SERVER 01 (others are duplicates)
     const directLinks: DirectLink[] = [];
     $("a[href]")
       .filter((_, a) => {
         const text = ($(a).text() || "").trim().toLowerCase();
+        // Only extract WATCH ONLINE and SERVER 01
         return (
           text.includes("watch online") ||
-          text.includes("server") ||
-          text.includes("google drive") ||
-          text.includes("direct link")
+          text === "server 01"
         );
       })
       .each((_, a) => {

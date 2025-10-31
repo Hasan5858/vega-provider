@@ -25,15 +25,6 @@ const DEFAULT_STREAM_HEADERS = {
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
 };
 
-const SUPPORTED_AGGREGATE_SERVERS = [
-  /gofile\.io/i,
-  /gdflix/i,
-  /hubcloud/i,
-  /filepress\./i,
-];
-
-const UNSUPPORTED_SERVERS = /media\.cm|dgdrive|hubdrive|gdtot|new28\.gdtot|new6\.filepress/i;
-
 const preferHostScore = (url: string) => {
   if (/googleusercontent\.com|googlevideo\.com|googleapis\.com/i.test(url)) {
     return 60;
@@ -174,221 +165,112 @@ export async function getStream({
       } catch {}
     }
 
-    // howblogs aggregator with multiple hosts
+    // howblogs aggregator - extract only supported servers (gofile, streamtape, voe)
     if (/howblogs\.xyz\//i.test(target)) {
-      console.log("[skyMovieHD] 📥 Loading howblogs aggregator:", target);
-      const res = await axios.get(target, { signal, headers: REQUEST_HEADERS });
-      const $ = cheerio.load(res.data || "");
-      const anchors = $("a[href]").toArray();
-      
-      // Log all detected server links for debugging
-      const allLinks = anchors
-        .map(a => ($(a).attr("href") || "").trim())
-        .filter(href => href && /^https?:\/\//i.test(href.startsWith("//") ? `https:${href}` : href));
-      console.log("[skyMovieHD] 📋 Detected server links:", allLinks.length, "total");
-      
-      const collected: Stream[] = [];
-
-      for (const anchor of anchors) {
-        const hrefRaw = ($(anchor).attr("href") || "").trim();
-        if (!hrefRaw) continue;
-
-        const href = hrefRaw.startsWith("//") ? `https:${hrefRaw}` : hrefRaw;
+      console.log("[skyMovieHD] 📥 Loading howblogs aggregator (SERVER 01):", target);
+      try {
+        const res = await axios.get(target, { signal, headers: REQUEST_HEADERS });
+        const $ = cheerio.load(res.data || "");
+        const anchors = $("a[href]").toArray();
         
-        // Skip if not a valid URL
-        if (!/^https?:\/\//i.test(href)) continue;
-
-        // Skip known unsupported servers first
-        if (UNSUPPORTED_SERVERS.test(href)) {
-          console.log("[skyMovieHD] ⏭️ Skipping unsupported server:", href);
-          continue;
-        }
-
-        // Only process servers we have extractors for
-        if (!SUPPORTED_AGGREGATE_SERVERS.some((regex) => regex.test(href))) {
-          console.log("[skyMovieHD] ⏭️ Skipping server (no extractor):", href);
-          continue;
-        }
-
-        if (/gofile\.io/i.test(href)) {
-          // Extract ID from gofile.io/d/XXXXX format
-          const idMatch = href.match(/gofile\.io\/d\/([A-Za-z0-9_-]+)/i);
-          const id = idMatch?.[1];
-          if (!id) {
-            console.log("[skyMovieHD] ⚠️ Unable to extract GoFile id from:", href);
-            continue;
-          }
-          try {
-            console.log("[skyMovieHD] 🔗 Resolving GoFile:", id);
-            const gofile = await gofileExtracter(id);
-            const stream = normaliseStream(
-              {
-                server: "GoFile",
-                link: gofile?.link,
-                type: inferTypeFromUrl(gofile?.link || ""),
-                headers: {
-                  ...DEFAULT_STREAM_HEADERS,
-                  Referer: "https://gofile.io/",
-                  Authorization: gofile?.token
-                    ? `Bearer ${gofile.token}`
-                    : undefined,
-                },
-              },
-              "GoFile",
-            );
-            if (stream) {
-              collected.push(stream);
-            }
-          } catch (error) {
-            console.log("[skyMovieHD] ❌ GoFile extraction failed:", error);
-          }
-          continue;
-        }
-
-        if (/gdflix/i.test(href)) {
-          try {
-            console.log("[skyMovieHD] 🔗 Resolving GDFlix:", href);
-            const streams = await gdFlixExtracter(href, signal);
-            streams
-              .filter((item: Stream) => {
-                const link = item?.link || "";
-                if (!link) return false;
-                // Skip PixelDrain wrappers – they trigger download UI instead of streaming.
-                if (/pixeldrain|hubcdn|fastcdn-dl|pages\.dev/i.test(link)) {
-                  return false;
-                }
-                return true;
-              })
-              .forEach((item: Stream) => {
-                const stream = normaliseStream(
-                  {
-                    ...item,
-                    server: item.server || "GDFlix",
-                  },
-                  "GDFlix",
-                  href,
-                );
-                if (stream) {
-                  collected.push(stream);
-                }
-              });
-          } catch (error) {
-            console.log("[skyMovieHD] ❌ GDFlix extraction failed:", error);
-          }
-          continue;
-        }
-
-        if (/hubcloud/i.test(href)) {
-          try {
-            console.log("[skyMovieHD] 🔗 Resolving HubCloud:", href);
-            const streams = await hubcloudExtracter(href, signal);
-            streams
-              .filter((item: Stream) => {
-                const link = item?.link || "";
-                if (!link) return false;
-                // Skip known slow CDN mirrors – we prefer direct hubcloud or google links.
-                if (/pixeldrain|hubcdn|pages\.dev|fastcdn/i.test(link)) {
-                  return false;
-                }
-                return true;
-              })
-              .forEach((item: Stream) => {
-                const stream = normaliseStream(
-                  {
-                    ...item,
-                    server: item.server || "HubCloud",
-                  },
-                  "HubCloud",
-                  href,
-                );
-                if (stream) {
-                  collected.push(stream);
-                }
-              });
-          } catch (error) {
-            console.log("[skyMovieHD] ❌ HubCloud extraction failed:", error);
-          }
-          continue;
-        }
-
-        if (/filepress\./i.test(href)) {
-          try {
-            console.log("[skyMovieHD] 🔗 Resolving FilePress:", href);
-            const streams = await filepresExtractor(href, signal);
-            streams.forEach((item: Stream) => {
+        const collected: Stream[] = [];
+        
+        for (const anchor of anchors) {
+          const hrefRaw = ($(anchor).attr("href") || "").trim();
+          if (!hrefRaw) continue;
+          
+          const href = hrefRaw.startsWith("//") ? `https:${hrefRaw}` : hrefRaw;
+          if (!/^https?:\/\//i.test(href)) continue;
+          
+          // GoFile extraction
+          if (/gofile\.io/i.test(href)) {
+            const idMatch = href.match(/gofile\.io\/d\/([A-Za-z0-9_-]+)/i);
+            const id = idMatch?.[1];
+            if (!id) continue;
+            
+            try {
+              console.log("[skyMovieHD] 🔗 Resolving GoFile:", id);
+              const gofile = await gofileExtracter(id);
               const stream = normaliseStream(
                 {
-                  ...item,
-                  server: item.server || "FilePress",
+                  server: "GoFile",
+                  link: gofile?.link,
+                  type: inferTypeFromUrl(gofile?.link || ""),
+                  headers: {
+                    ...DEFAULT_STREAM_HEADERS,
+                    Referer: "https://gofile.io/",
+                    Authorization: gofile?.token ? `Bearer ${gofile.token}` : undefined,
+                  },
                 },
-                "FilePress",
-                "https://new5.filepress.today/",
+                "GoFile",
               );
-              if (stream) {
-                collected.push(stream);
+              if (stream) collected.push(stream);
+            } catch (error) {
+              console.log("[skyMovieHD] ❌ GoFile extraction failed:", error);
+            }
+            continue;
+          }
+          
+          // StreamTape extraction
+          if (/streamtape/i.test(href)) {
+            try {
+              console.log("[skyMovieHD] 🔗 Resolving StreamTape:", href);
+              const st = await streamtapeExtractor(href, axios, signal);
+              if (st) {
+                const stream = normaliseStream(
+                  {
+                    server: "StreamTape",
+                    link: st.link,
+                    type: st.type || "mp4",
+                    headers: st.headers,
+                  },
+                  "StreamTape",
+                );
+                if (stream) collected.push(stream);
               }
-            });
-          } catch (error) {
-            console.log("[skyMovieHD] ❌ FilePress extraction failed:", error);
+            } catch (error) {
+              console.log("[skyMovieHD] ❌ StreamTape extraction failed:", error);
+            }
+            continue;
           }
-          continue;
-        }
-      }
-
-      const validated: Stream[] = [];
-      for (const stream of collected) {
-        try {
-          const head = await axios.head(stream.link, {
-            headers: stream.headers,
-            signal,
-            timeout: 8000,
-            maxRedirects: 5,
-            validateStatus: (status) =>
-              (status >= 200 && status < 400) || status === 403,
-          });
-          const contentType = head.headers?.["content-type"] || "";
-          if (
-            (head.status === 200 || head.status === 206) &&
-            /video|octet-stream/i.test(contentType)
-          ) {
-            validated.push(stream);
-          } else if (head.status === 302 || head.status === 301) {
-            // allow redirect chains for hosts like gofile
-            validated.push(stream);
-          } else {
-            console.log(
-              "[skyMovieHD] ⚠️ Dropping non-video stream:",
-              stream.server,
-              head.status,
-              contentType,
-            );
+          
+          // VOE extraction
+          if (/voe\.sx|voe\./i.test(href)) {
+            try {
+              console.log("[skyMovieHD] 🔗 Resolving VOE:", href);
+              const voeExtractor = (extractors as any).voeExtractor as (
+                u: string,
+                s?: AbortSignal,
+              ) => Promise<{ link: string; type?: string } | null>;
+              
+              if (typeof voeExtractor === "function") {
+                const voe = await voeExtractor(href, signal);
+                if (voe) {
+                  const stream = normaliseStream(
+                    {
+                      server: "VOE",
+                      link: voe.link,
+                      type: voe.type || "m3u8",
+                    },
+                    "VOE",
+                  );
+                  if (stream) collected.push(stream);
+                }
+              }
+            } catch (error) {
+              console.log("[skyMovieHD] ❌ VOE extraction failed:", error);
+            }
+            continue;
           }
-        } catch (error: any) {
-          console.log(
-            "[skyMovieHD] ⚠️ Stream validation failed:",
-            stream.server,
-            error?.message || error,
-          );
         }
+        
+        const cleaned = dedupeStreams(collected);
+        console.log("[skyMovieHD] ✅ Extracted streams:", cleaned.map(s => s.server));
+        return cleaned;
+      } catch (error) {
+        console.log("[skyMovieHD] ❌ Howblogs aggregator failed:", error);
+        return [];
       }
-
-      const cleaned = dedupeStreams(
-        validated.map((stream) => ({
-          ...stream,
-          type: stream.type || inferTypeFromUrl(stream.link),
-        })),
-      ).sort((a, b) => preferHostScore(b.link) - preferHostScore(a.link));
-
-      console.log(
-        "[skyMovieHD] ✅ Aggregator resolved streams:",
-        cleaned.map((item) => ({
-          server: item.server,
-          type: item.type,
-          link: item.link?.slice(0, 120),
-        })),
-      );
-
-      return cleaned;
     }
 
     // Prefer StreamHG
