@@ -255,8 +255,13 @@ export async function getStream({
                 a: any,
               ) => Promise<{ link: string; type?: string } | null>;
               
+              console.log("[skyMovieHD] Indishare extractor exists?", typeof indishareExtractor);
+              
               if (typeof indishareExtractor === "function") {
+                console.log("[skyMovieHD] Calling Indishare extractor...");
                 const indishareResult = await indishareExtractor(href, axios);
+                console.log("[skyMovieHD] Indishare result:", indishareResult);
+                
                 if (indishareResult && indishareResult.link) {
                   const stream: Stream = {
                     server: "Indishare",
@@ -269,9 +274,12 @@ export async function getStream({
                 } else {
                   console.log("[skyMovieHD] ⚠️ Indishare returned no stream");
                 }
+              } else {
+                console.log("[skyMovieHD] ❌ Indishare extractor is not a function!");
               }
-            } catch (error) {
-              console.log("[skyMovieHD] ❌ Indishare extraction failed:", error);
+            } catch (error: any) {
+              console.log("[skyMovieHD] ❌ Indishare extraction failed:", error?.message || error);
+              console.log("[skyMovieHD] ❌ Error stack:", error?.stack);
             }
             continue;
           }
