@@ -404,10 +404,44 @@ export async function getStream({
                       collected.push(stream);
                       console.log(`[skyMovieHD] ✅ ${serverName} stream added:`, stream.link.slice(0, 100));
                       successCount++;
+                    } else {
+                      // If normalization failed, add as lazy-load for retry
+                      console.log(`[skyMovieHD] 💤 Normalization failed for ${serverName}, adding as lazy-load`);
+                      collected.push({
+                        server: serverName,
+                        link: JSON.stringify({
+                          type: "skymovie-lazy",
+                          serverName: serverName,
+                          href: href,
+                        }),
+                        type: "lazy",
+                      });
                     }
+                  } else {
+                    // If extraction returned null, add as lazy-load for retry
+                    console.log(`[skyMovieHD] 💤 Extraction returned null for ${serverName}, adding as lazy-load`);
+                    collected.push({
+                      server: serverName,
+                      link: JSON.stringify({
+                        type: "skymovie-lazy",
+                        serverName: serverName,
+                        href: href,
+                      }),
+                      type: "lazy",
+                    });
                   }
                 } catch (error) {
-                  console.log(`[skyMovieHD] ❌ ${serverName} extraction failed:`, error);
+                  // If extraction failed with error, add as lazy-load for retry
+                  console.log(`[skyMovieHD] ❌ ${serverName} extraction failed, adding as lazy-load:`, error);
+                  collected.push({
+                    server: serverName,
+                    link: JSON.stringify({
+                      type: "skymovie-lazy",
+                      serverName: serverName,
+                      href: href,
+                    }),
+                    type: "lazy",
+                  });
                 }
               } else {
                 // Add remaining servers as lazy-load

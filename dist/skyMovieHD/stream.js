@@ -418,11 +418,47 @@ function getStream(_a) {
                             console.log("[skyMovieHD] \u2705 ".concat(serverName, " stream added:"), stream.link.slice(0, 100));
                             successCount++;
                         }
+                        else {
+                            // If normalization failed, add as lazy-load for retry
+                            console.log("[skyMovieHD] \uD83D\uDCA4 Normalization failed for ".concat(serverName, ", adding as lazy-load"));
+                            collected.push({
+                                server: serverName,
+                                link: JSON.stringify({
+                                    type: "skymovie-lazy",
+                                    serverName: serverName,
+                                    href: href,
+                                }),
+                                type: "lazy",
+                            });
+                        }
+                    }
+                    else {
+                        // If extraction returned null, add as lazy-load for retry
+                        console.log("[skyMovieHD] \uD83D\uDCA4 Extraction returned null for ".concat(serverName, ", adding as lazy-load"));
+                        collected.push({
+                            server: serverName,
+                            link: JSON.stringify({
+                                type: "skymovie-lazy",
+                                serverName: serverName,
+                                href: href,
+                            }),
+                            type: "lazy",
+                        });
                     }
                     return [3 /*break*/, 17];
                 case 16:
                     error_3 = _f.sent();
-                    console.log("[skyMovieHD] \u274C ".concat(serverName, " extraction failed:"), error_3);
+                    // If extraction failed with error, add as lazy-load for retry
+                    console.log("[skyMovieHD] \u274C ".concat(serverName, " extraction failed, adding as lazy-load:"), error_3);
+                    collected.push({
+                        server: serverName,
+                        link: JSON.stringify({
+                            type: "skymovie-lazy",
+                            serverName: serverName,
+                            href: href,
+                        }),
+                        type: "lazy",
+                    });
                     return [3 /*break*/, 17];
                 case 17: return [3 /*break*/, 19];
                 case 18:
