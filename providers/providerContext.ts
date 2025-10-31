@@ -22,6 +22,7 @@ import { luluvdooExtractor } from "./luluvdooExtractor";
 import { bigwarpExtractor } from "./bigwarpExtractor";
 import { streamhgExtractor } from "./streamhgExtractor";
 import { indishareExtractor } from "./indishareExtractor";
+import { uptomegaExtractor } from "./uptomegaExtractor";
 import { ProviderContext } from "./types";
 import Aes from "react-native-aes-crypto";
 
@@ -51,6 +52,7 @@ const extractors = {
   bigwarpExtractor,
   streamhgExtractor,
   indishareExtractor,
+  uptomegaExtractor,
 };
 
 export const providerContext: ProviderContext = {

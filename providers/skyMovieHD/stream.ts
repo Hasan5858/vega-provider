@@ -283,6 +283,41 @@ export async function getStream({
             }
             continue;
           }
+          
+          // Uptomega extraction
+          if (/uptomega\.net/i.test(href)) {
+            try {
+              console.log("[skyMovieHD] 🔗 Resolving Uptomega:", href);
+              const uptomegaExtractor = (extractors as any).uptomegaExtractor as (
+                u: string,
+                a: any,
+              ) => Promise<{ link: string; type?: string } | null>;
+              
+              if (typeof uptomegaExtractor === "function") {
+                console.log("[skyMovieHD] Calling Uptomega extractor...");
+                const uptomegaResult = await uptomegaExtractor(href, axios);
+                console.log("[skyMovieHD] Uptomega result:", uptomegaResult);
+                
+                if (uptomegaResult && uptomegaResult.link) {
+                  const stream: Stream = {
+                    server: "Uptomega",
+                    link: uptomegaResult.link,
+                    type: uptomegaResult.type || inferTypeFromUrl(uptomegaResult.link) || "mkv",
+                    headers: DEFAULT_STREAM_HEADERS,
+                  };
+                  collected.push(stream);
+                  console.log("[skyMovieHD] ✅ Uptomega stream added:", stream.link.slice(0, 100));
+                } else {
+                  console.log("[skyMovieHD] ⚠️ Uptomega returned no stream");
+                }
+              } else {
+                console.log("[skyMovieHD] ❌ Uptomega extractor is not a function!");
+              }
+            } catch (error: any) {
+              console.log("[skyMovieHD] ❌ Uptomega extraction failed:", error?.message || error);
+            }
+            continue;
+          }
         }
         
         const cleaned = dedupeStreams(collected);
