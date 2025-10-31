@@ -60,6 +60,7 @@ var savefilesExtractor_1 = require("./savefilesExtractor");
 var luluvdooExtractor_1 = require("./luluvdooExtractor");
 var bigwarpExtractor_1 = require("./bigwarpExtractor");
 var streamhgExtractor_1 = require("./streamhgExtractor");
+var indishareExtractor_1 = require("./indishareExtractor");
 var react_native_aes_crypto_1 = __importDefault(require("react-native-aes-crypto"));
 /**
  * Context for provider functions.
@@ -85,6 +86,7 @@ var extractors = {
     luluvdooExtractor: luluvdooExtractor_1.luluvdooExtractor,
     bigwarpExtractor: bigwarpExtractor_1.bigwarpExtractor,
     streamhgExtractor: streamhgExtractor_1.streamhgExtractor,
+    indishareExtractor: indishareExtractor_1.indishareExtractor,
 };
 exports.providerContext = {
     axios: axios_1.default,
