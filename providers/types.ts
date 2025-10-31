@@ -203,5 +203,9 @@ export type ProviderContext = {
       link: string;
       type?: string;
     } | null>;
+    uploadhubExtractor: (url: string, axios: AxiosStatic) => Promise<{
+      link: string;
+      type?: string;
+    } | null>;
   };
 };
