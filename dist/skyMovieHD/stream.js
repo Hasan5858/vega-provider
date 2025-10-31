@@ -258,7 +258,7 @@ var extractStreamForHost = function (href, axios, providerContext, signal) { ret
 var extractLazyServer = function (_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
         var axios, metadata, extracted, error_2;
-        var link = _b.link, providerContext = _b.providerContext;
+        var link = _b.link, signal = _b.signal, providerContext = _b.providerContext;
         return __generator(this, function (_c) {
             switch (_c.label) {
                 case 0:
@@ -268,11 +268,11 @@ var extractLazyServer = function (_a) {
                     _c.trys.push([1, 3, , 4]);
                     metadata = JSON.parse(link);
                     if (metadata.type !== "skymovie-lazy") {
-                        console.error("[skyMovieHD] Invalid lazy-load metadata");
+                        console.error("[skyMovieHD] ❌ Invalid lazy-load metadata, expected type 'skymovie-lazy'");
                         return [2 /*return*/, []];
                     }
-                    console.log("[skyMovieHD] On-demand extraction for ".concat(metadata.serverName));
-                    return [4 /*yield*/, extractStreamForHost(metadata.href, axios, providerContext)];
+                    console.log("[skyMovieHD] \uD83D\uDD04 On-demand extraction for ".concat(metadata.serverName, ": ").concat(metadata.href));
+                    return [4 /*yield*/, extractStreamForHost(metadata.href, axios, providerContext, signal)];
                 case 2:
                     extracted = _c.sent();
                     if (extracted) {
@@ -284,11 +284,11 @@ var extractLazyServer = function (_a) {
                                     headers: extracted.headers,
                                 }]];
                     }
-                    console.error("[skyMovieHD] \u274C Extraction failed for ".concat(metadata.serverName));
+                    console.error("[skyMovieHD] \u274C Extraction failed for ".concat(metadata.serverName, " - No stream returned"));
                     return [2 /*return*/, []];
                 case 3:
                     error_2 = _c.sent();
-                    console.error("[skyMovieHD] Lazy-load extraction error:", error_2);
+                    console.error("[skyMovieHD] \u274C Lazy-load extraction error for ".concat(JSON.parse(link).serverName, ":"), (error_2 === null || error_2 === void 0 ? void 0 : error_2.message) || error_2);
                     return [2 /*return*/, []];
                 case 4: return [2 /*return*/];
             }

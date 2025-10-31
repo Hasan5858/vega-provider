@@ -141,16 +141,25 @@ export async function uptomegaExtractor(
 
     const step3Response = await Promise.race([requestPromise, timeoutPromise]);
 
+    console.log("[Uptomega] 📊 Final response status:", step3Response.status);
+    
     // Extract the direct download link from Location header
     let directLink = step3Response.headers.location;
 
     // If no redirect, check for link in page (status 200)
     if (!directLink && step3Response.status === 200) {
+      console.log("[Uptomega] ℹ️ Status 200 - checking page for download link");
       const $final = cheerio.load(step3Response.data);
       // Look for download link in the page
       const downloadBtn = $final('a.btn:contains("Download")').attr("href");
       const directLinkInPage = $final('a[href*="uptodown"]').attr("href");
       directLink = downloadBtn || directLinkInPage;
+      
+      if (directLink) {
+        console.log("[Uptomega] 📄 Found link in page");
+      }
+    } else if (directLink) {
+      console.log("[Uptomega] 🔀 Got redirect to:", directLink.slice(0, 100));
     }
 
     if (directLink) {
@@ -164,10 +173,20 @@ export async function uptomegaExtractor(
       };
     }
 
-    console.log("[Uptomega] ❌ Could not find download link in response");
+    console.log("[Uptomega] ❌ Could not find download link in response (status:", step3Response.status, ")");
     return null;
   } catch (error: any) {
-    console.log("[Uptomega] ❌ Extraction failed:", error?.message || error);
+    const errorMsg = error?.message || error?.code || "Unknown error";
+    console.log("[Uptomega] ❌ Extraction failed:", errorMsg);
+    
+    // Log more details for debugging
+    if (error?.config?.url) {
+      console.log("[Uptomega] Failed URL:", error.config.url);
+    }
+    if (error?.response) {
+      console.log("[Uptomega] Response status:", error.response.status);
+    }
+    
     return null;
   }
 }

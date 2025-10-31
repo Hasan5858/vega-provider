@@ -238,9 +238,11 @@ const extractStreamForHost = async (
  */
 export const extractLazyServer = async function ({
   link,
+  signal,
   providerContext,
 }: {
   link: string;
+  signal?: AbortSignal;
   providerContext: ProviderContext;
 }): Promise<Stream[]> {
   const { axios } = providerContext;
@@ -250,13 +252,13 @@ export const extractLazyServer = async function ({
     const metadata = JSON.parse(link);
     
     if (metadata.type !== "skymovie-lazy") {
-      console.error("[skyMovieHD] Invalid lazy-load metadata");
+      console.error("[skyMovieHD] ❌ Invalid lazy-load metadata, expected type 'skymovie-lazy'");
       return [];
     }
 
-    console.log(`[skyMovieHD] On-demand extraction for ${metadata.serverName}`);
+    console.log(`[skyMovieHD] 🔄 On-demand extraction for ${metadata.serverName}: ${metadata.href}`);
     
-    const extracted = await extractStreamForHost(metadata.href, axios, providerContext);
+    const extracted = await extractStreamForHost(metadata.href, axios, providerContext, signal);
     
     if (extracted) {
       console.log(`[skyMovieHD] ✅ Successfully extracted ${metadata.serverName}`);
@@ -268,10 +270,10 @@ export const extractLazyServer = async function ({
       }];
     }
     
-    console.error(`[skyMovieHD] ❌ Extraction failed for ${metadata.serverName}`);
+    console.error(`[skyMovieHD] ❌ Extraction failed for ${metadata.serverName} - No stream returned`);
     return [];
-  } catch (error) {
-    console.error("[skyMovieHD] Lazy-load extraction error:", error);
+  } catch (error: any) {
+    console.error(`[skyMovieHD] ❌ Lazy-load extraction error for ${JSON.parse(link).serverName}:`, error?.message || error);
     return [];
   }
 };
