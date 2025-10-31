@@ -329,14 +329,7 @@ export async function getStream({
     }
     
     let target = link;
-    // Normalize StreamHG hglink -> dumbalag embed
-    if (/hglink\.to\//i.test(target)) {
-      try {
-        const id = (target.match(/hglink\.to\/([A-Za-z0-9_-]{4,})/i) || [])[1];
-        if (id) target = `https://dumbalag.com/e/${id}`;
-      } catch {}
-    }
-
+    
     // Check if target contains both SERVER 01 and WATCH ONLINE URLs (merged format)
     let aggregatorUrls: string[] = [];
     
@@ -448,6 +441,14 @@ export async function getStream({
       }
     }
 
+    // Normalize StreamHG hglink -> dumbalag embed (for direct links only, not merged JSON)
+    if (/hglink\.to\//i.test(target)) {
+      try {
+        const id = (target.match(/hglink\.to\/([A-Za-z0-9_-]{4,})/i) || [])[1];
+        if (id) target = `https://dumbalag.com/e/${id}`;
+      } catch {}
+    }
+    
     // Prefer StreamHG
     if (/dumbalag\.com\//i.test(target) && typeof streamhgExtractor === "function") {
       const shg = await streamhgExtractor(target, axios, signal);

@@ -298,7 +298,7 @@ var extractLazyServer = function (_a) {
 exports.extractLazyServer = extractLazyServer;
 function getStream(_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var axios, cheerio, extractors, hubcloudExtracter, streamtapeExtractor, streamhgExtractor, gdFlixExtracter, filepresExtractor, gofileExtracter, parsed, _c, target_1, id, aggregatorUrls, parsed, pageType, collected, attemptedCount, successCount, MAX_EAGER_EXTRACTIONS, seenServers, aggregatorUrls_1, aggregatorUrls_1_1, aggUrl, res, $, anchors, anchors_1, anchors_1_1, anchor, hrefRaw, href, serverName, extracted, stream, error_3, e_1_1, error_4, e_2_1, lazyCount, error_5, shg, arr, st, arr, fallbackStreams, cleanedFallback, error_6;
+        var axios, cheerio, extractors, hubcloudExtracter, streamtapeExtractor, streamhgExtractor, gdFlixExtracter, filepresExtractor, gofileExtracter, parsed, _c, target_1, aggregatorUrls, parsed, pageType, collected, attemptedCount, successCount, MAX_EAGER_EXTRACTIONS, seenServers, aggregatorUrls_1, aggregatorUrls_1_1, aggUrl, res, $, anchors, anchors_1, anchors_1_1, anchor, hrefRaw, href, serverName, extracted, stream, error_3, e_1_1, error_4, e_2_1, lazyCount, error_5, id, shg, arr, st, arr, fallbackStreams, cleanedFallback, error_6;
         var e_2, _d, e_1, _e;
         var link = _b.link, type = _b.type, signal = _b.signal, providerContext = _b.providerContext;
         return __generator(this, function (_f) {
@@ -331,15 +331,6 @@ function getStream(_a) {
                     return [3 /*break*/, 6];
                 case 6:
                     target_1 = link;
-                    // Normalize StreamHG hglink -> dumbalag embed
-                    if (/hglink\.to\//i.test(target_1)) {
-                        try {
-                            id = (target_1.match(/hglink\.to\/([A-Za-z0-9_-]{4,})/i) || [])[1];
-                            if (id)
-                                target_1 = "https://dumbalag.com/e/".concat(id);
-                        }
-                        catch (_g) { }
-                    }
                     aggregatorUrls = [];
                     try {
                         parsed = JSON.parse(target_1);
@@ -348,7 +339,7 @@ function getStream(_a) {
                             console.log("[skyMovieHD] 📥 Loading merged aggregators (SERVER 01 + WATCH ONLINE)");
                         }
                     }
-                    catch (_h) {
+                    catch (_g) {
                         // Not JSON, check if it's a direct aggregator URL
                         if (/howblogs\.xyz\//i.test(target_1) || /skymovieshd\.(live|mba|bond|rest|red)\//i.test(target_1)) {
                             aggregatorUrls = [target_1];
@@ -493,6 +484,15 @@ function getStream(_a) {
                     console.log("[skyMovieHD] ❌ Aggregator processing failed:", error_5);
                     return [2 /*return*/, []];
                 case 31:
+                    // Normalize StreamHG hglink -> dumbalag embed (for direct links only, not merged JSON)
+                    if (/hglink\.to\//i.test(target_1)) {
+                        try {
+                            id = (target_1.match(/hglink\.to\/([A-Za-z0-9_-]{4,})/i) || [])[1];
+                            if (id)
+                                target_1 = "https://dumbalag.com/e/".concat(id);
+                        }
+                        catch (_h) { }
+                    }
                     if (!(/dumbalag\.com\//i.test(target_1) && typeof streamhgExtractor === "function")) return [3 /*break*/, 33];
                     return [4 /*yield*/, streamhgExtractor(target_1, axios, signal)];
                 case 32:
