@@ -1,5 +1,11 @@
 import { ProviderContext, Stream } from "../types";
 
+type ExtractedStream = {
+  link: string;
+  headers?: Record<string, string>;
+  type?: string;
+};
+
 const REQUEST_HEADERS = {
   Accept:
     "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -118,6 +124,157 @@ const dedupeStreams = (streams: Stream[]) => {
   });
 };
 
+/**
+ * Check if a host has a working extractor
+ */
+const hasExtractor = (href: string): boolean => {
+  if (/indishare\.info/i.test(href)) return true;
+  if (/uptomega\.net/i.test(href)) return true;
+  if (/uploadhub\.dad/i.test(href)) return true;
+  if (/streamtape/i.test(href)) return true;
+  if (/voe\.sx/i.test(href)) return true;
+  if (/gofile\.io/i.test(href)) return false; // Skip GoFile
+  return false;
+};
+
+/**
+ * Extract server name from URL
+ */
+const getServerName = (href: string): string => {
+  if (/indishare\.info/i.test(href)) return "Indishare";
+  if (/uptomega\.net/i.test(href)) return "Uptomega";
+  if (/uploadhub\.dad/i.test(href)) return "Uploadhub";
+  if (/streamtape/i.test(href)) return "StreamTape";
+  if (/voe\.sx/i.test(href)) return "VOE";
+  return "Unknown";
+};
+
+/**
+ * Extract stream for a specific host/server
+ * On-demand extraction routing
+ */
+const extractStreamForHost = async (
+  href: string,
+  axios: ProviderContext["axios"],
+  providerContext: ProviderContext,
+  signal?: AbortSignal
+): Promise<ExtractedStream | null> => {
+  const { extractors } = providerContext;
+  
+  try {
+    // Indishare
+    if (/indishare\.info/i.test(href)) {
+      const indishareExtractor = (extractors as any).indishareExtractor as (
+        url: string,
+        axios: any
+      ) => Promise<ExtractedStream | null>;
+      if (typeof indishareExtractor === "function") {
+        return await indishareExtractor(href, axios);
+      }
+    }
+    
+    // Uptomega
+    if (/uptomega\.net/i.test(href)) {
+      const uptomegaExtractor = (extractors as any).uptomegaExtractor as (
+        url: string,
+        axios: any
+      ) => Promise<ExtractedStream | null>;
+      if (typeof uptomegaExtractor === "function") {
+        return await uptomegaExtractor(href, axios);
+      }
+    }
+    
+    // Uploadhub
+    if (/uploadhub\.dad/i.test(href)) {
+      const uploadhubExtractor = (extractors as any).uploadhubExtractor as (
+        url: string,
+        axios: any
+      ) => Promise<ExtractedStream | null>;
+      if (typeof uploadhubExtractor === "function") {
+        return await uploadhubExtractor(href, axios);
+      }
+    }
+    
+    // StreamTape
+    if (/streamtape/i.test(href)) {
+      const streamtapeExtractor = (extractors as any).streamtapeExtractor as (
+        url: string,
+        axios: any,
+        signal?: AbortSignal
+      ) => Promise<ExtractedStream | null>;
+      if (typeof streamtapeExtractor === "function") {
+        return await streamtapeExtractor(href, axios, signal);
+      }
+    }
+    
+    // VOE
+    if (/voe\.sx/i.test(href)) {
+      const voeExtractor = (extractors as any).voeExtractor as (
+        url: string
+      ) => Promise<Stream[]>;
+      if (typeof voeExtractor === "function") {
+        const streams = await voeExtractor(href);
+        if (streams && streams.length > 0) {
+          return {
+            link: streams[0].link,
+            type: streams[0].type,
+            headers: streams[0].headers,
+          };
+        }
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error(`[skyMovieHD] Extraction error for ${getServerName(href)}:`, error);
+    return null;
+  }
+};
+
+/**
+ * Extract a single skyMovieHD server on-demand (lazy extraction)
+ * Used when user selects a lazy-loaded server from the player
+ */
+export const extractLazyServer = async function ({
+  link,
+  providerContext,
+}: {
+  link: string;
+  providerContext: ProviderContext;
+}): Promise<Stream[]> {
+  const { axios } = providerContext;
+
+  try {
+    // Parse lazy-load metadata
+    const metadata = JSON.parse(link);
+    
+    if (metadata.type !== "skymovie-lazy") {
+      console.error("[skyMovieHD] Invalid lazy-load metadata");
+      return [];
+    }
+
+    console.log(`[skyMovieHD] On-demand extraction for ${metadata.serverName}`);
+    
+    const extracted = await extractStreamForHost(metadata.href, axios, providerContext);
+    
+    if (extracted) {
+      console.log(`[skyMovieHD] ✅ Successfully extracted ${metadata.serverName}`);
+      return [{
+        server: metadata.serverName,
+        link: extracted.link,
+        type: extracted.type || "mkv",
+        headers: extracted.headers,
+      }];
+    }
+    
+    console.error(`[skyMovieHD] ❌ Extraction failed for ${metadata.serverName}`);
+    return [];
+  } catch (error) {
+    console.error("[skyMovieHD] Lazy-load extraction error:", error);
+    return [];
+  }
+};
+
 export async function getStream({
   link,
   type,
@@ -165,7 +322,7 @@ export async function getStream({
       } catch {}
     }
 
-    // howblogs aggregator - extract only supported servers (gofile, streamtape, voe)
+    // howblogs aggregator - lazy load servers for on-demand extraction
     if (/howblogs\.xyz\//i.test(target)) {
       console.log("[skyMovieHD] 📥 Loading howblogs aggregator (SERVER 01):", target);
       try {
@@ -174,6 +331,8 @@ export async function getStream({
         const anchors = $("a[href]").toArray();
         
         const collected: Stream[] = [];
+        let extractedCount = 0;
+        const MAX_EAGER_EXTRACTIONS = 2; // Extract first 2 servers immediately
         
         for (const anchor of anchors) {
           const hrefRaw = ($(anchor).attr("href") || "").trim();
@@ -188,142 +347,59 @@ export async function getStream({
             continue;
           }
           
-          // StreamTape extraction
-          if (/streamtape/i.test(href)) {
+          // Check if host has extractor
+          if (!hasExtractor(href)) {
+            continue;
+          }
+          
+          const serverName = getServerName(href);
+          
+          // Extract first MAX_EAGER_EXTRACTIONS servers immediately
+          if (extractedCount < MAX_EAGER_EXTRACTIONS) {
             try {
-              console.log("[skyMovieHD] 🔗 Resolving StreamTape:", href);
-              const st = await streamtapeExtractor(href, axios, signal);
-              if (st) {
+              console.log(`[skyMovieHD] 🔗 Resolving ${serverName}:`, href);
+              const extracted = await extractStreamForHost(href, axios, providerContext, signal);
+              
+              if (extracted) {
                 const stream = normaliseStream(
                   {
-                    server: "StreamTape",
-                    link: st.link,
-                    type: st.type || "mp4",
-                    headers: st.headers,
+                    server: serverName,
+                    link: extracted.link,
+                    type: extracted.type || "mkv",
+                    headers: extracted.headers,
                   },
-                  "StreamTape",
+                  serverName,
                 );
-                if (stream) collected.push(stream);
-              }
-            } catch (error) {
-              console.log("[skyMovieHD] ❌ StreamTape extraction failed:", error);
-            }
-            continue;
-          }
-          
-          // VOE extraction
-          if (/voe\.sx|voe\./i.test(href)) {
-            try {
-              console.log("[skyMovieHD] 🔗 Resolving VOE:", href);
-              const voeExtractor = (extractors as any).voeExtractor as (
-                u: string,
-                s?: AbortSignal,
-              ) => Promise<Stream[]>;
-              
-              if (typeof voeExtractor === "function") {
-                const voeStreams = await voeExtractor(href, signal);
-                console.log("[skyMovieHD] VOE result:", voeStreams?.length || 0, "streams");
-                if (voeStreams && voeStreams.length > 0) {
-                  voeStreams.forEach((voeStream) => {
-                    if (voeStream?.link) {
-                      const stream: Stream = {
-                        server: "VOE",
-                        link: voeStream.link,
-                        type: voeStream.type || inferTypeFromUrl(voeStream.link) || "mp4",
-                        headers: voeStream.headers || DEFAULT_STREAM_HEADERS,
-                      };
-                      collected.push(stream);
-                      console.log("[skyMovieHD] ✅ VOE stream added:", stream.link.slice(0, 100));
-                    }
-                  });
-                } else {
-                  console.log("[skyMovieHD] ⚠️ VOE returned no streams");
+                if (stream) {
+                  collected.push(stream);
+                  console.log(`[skyMovieHD] ✅ ${serverName} stream added:`, stream.link.slice(0, 100));
+                  extractedCount++;
                 }
               }
             } catch (error) {
-              console.log("[skyMovieHD] ❌ VOE extraction failed:", error);
+              console.log(`[skyMovieHD] ❌ ${serverName} extraction failed:`, error);
             }
-            continue;
-          }
-          
-          // Indishare extraction
-          if (/indishare\.info|indi-share\.com|indi-down/i.test(href)) {
-            try {
-              console.log("[skyMovieHD] 🔗 Resolving Indishare:", href);
-              const indishareExtractor = (extractors as any).indishareExtractor as (
-                u: string,
-                a: any,
-              ) => Promise<{ link: string; type?: string } | null>;
-              
-              console.log("[skyMovieHD] Indishare extractor exists?", typeof indishareExtractor);
-              
-              if (typeof indishareExtractor === "function") {
-                console.log("[skyMovieHD] Calling Indishare extractor...");
-                const indishareResult = await indishareExtractor(href, axios);
-                console.log("[skyMovieHD] Indishare result:", indishareResult);
-                
-                if (indishareResult && indishareResult.link) {
-                  const stream: Stream = {
-                    server: "Indishare",
-                    link: indishareResult.link,
-                    type: indishareResult.type || inferTypeFromUrl(indishareResult.link) || "mkv",
-                    headers: DEFAULT_STREAM_HEADERS,
-                  };
-                  collected.push(stream);
-                  console.log("[skyMovieHD] ✅ Indishare stream added:", stream.link.slice(0, 100));
-                } else {
-                  console.log("[skyMovieHD] ⚠️ Indishare returned no stream");
-                }
-              } else {
-                console.log("[skyMovieHD] ❌ Indishare extractor is not a function!");
-              }
-            } catch (error: any) {
-              console.log("[skyMovieHD] ❌ Indishare extraction failed:", error?.message || error);
-              console.log("[skyMovieHD] ❌ Error stack:", error?.stack);
-            }
-            continue;
-          }
-          
-          // Uptomega extraction
-          if (/uptomega\.net/i.test(href)) {
-            try {
-              console.log("[skyMovieHD] 🔗 Resolving Uptomega:", href);
-              const uptomegaExtractor = (extractors as any).uptomegaExtractor as (
-                u: string,
-                a: any,
-              ) => Promise<{ link: string; type?: string } | null>;
-              
-              if (typeof uptomegaExtractor === "function") {
-                console.log("[skyMovieHD] Calling Uptomega extractor...");
-                const uptomegaResult = await uptomegaExtractor(href, axios);
-                console.log("[skyMovieHD] Uptomega result:", uptomegaResult);
-                
-                if (uptomegaResult && uptomegaResult.link) {
-                  const stream: Stream = {
-                    server: "Uptomega",
-                    link: uptomegaResult.link,
-                    type: uptomegaResult.type || inferTypeFromUrl(uptomegaResult.link) || "mkv",
-                    headers: DEFAULT_STREAM_HEADERS,
-                  };
-                  collected.push(stream);
-                  console.log("[skyMovieHD] ✅ Uptomega stream added:", stream.link.slice(0, 100));
-                } else {
-                  console.log("[skyMovieHD] ⚠️ Uptomega returned no stream");
-                }
-              } else {
-                console.log("[skyMovieHD] ❌ Uptomega extractor is not a function!");
-              }
-            } catch (error: any) {
-              console.log("[skyMovieHD] ❌ Uptomega extraction failed:", error?.message || error);
-            }
-            continue;
+          } else {
+            // Add remaining servers as lazy-load
+            console.log(`[skyMovieHD] 💤 Adding ${serverName} as lazy-load`);
+            collected.push({
+              server: serverName,
+              link: JSON.stringify({
+                type: "skymovie-lazy",
+                serverName: serverName,
+                href: href,
+              }),
+              type: "lazy",
+            });
           }
         }
         
-        const cleaned = dedupeStreams(collected);
-        console.log("[skyMovieHD] ✅ Total streams extracted:", collected.length);
-        console.log("[skyMovieHD] 📋 Servers:", cleaned.map(s => `${s.server} (${s.type})`).join(", "));
-        return cleaned;
+        if (collected.length > 0) {
+          console.log(`[skyMovieHD] ✅ Total streams extracted: ${collected.length} (${extractedCount} eager, ${collected.length - extractedCount} lazy)`);
+          return dedupeStreams(collected);
+        }
+        
+        console.log("[skyMovieHD] ⚠️ No streams extracted from howblogs");
       } catch (error) {
         console.log("[skyMovieHD] ❌ Howblogs aggregator failed:", error);
         return [];
