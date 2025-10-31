@@ -171,6 +171,12 @@ var hasExtractor = function (href) {
         return true;
     if (/voe\.sx/i.test(href))
         return true;
+    if (/dumbalag\.com|hglink\.to/i.test(href))
+        return true; // StreamHG
+    if (/dood/i.test(href))
+        return true; // Dood
+    if (/mixdrop/i.test(href))
+        return true; // Mixdrop
     if (/gofile\.io/i.test(href))
         return false; // Skip GoFile
     return false;
@@ -189,6 +195,12 @@ var getServerName = function (href) {
         return "StreamTape";
     if (/voe\.sx/i.test(href))
         return "VOE";
+    if (/dumbalag\.com|hglink\.to/i.test(href))
+        return "StreamHG";
+    if (/dood/i.test(href))
+        return "Dood";
+    if (/mixdrop/i.test(href))
+        return "Mixdrop";
     return "Unknown";
 };
 /**
@@ -196,14 +208,14 @@ var getServerName = function (href) {
  * On-demand extraction routing
  */
 var extractStreamForHost = function (href, axios, providerContext, signal) { return __awaiter(void 0, void 0, void 0, function () {
-    var extractors, indishareExtractor, uptomegaExtractor, uploadhubExtractor, streamtapeExtractor, voeExtractor, streams, error_1;
+    var extractors, indishareExtractor, uptomegaExtractor, uploadhubExtractor, streamtapeExtractor, voeExtractor, streams, streamhgExtractor, doodExtractor, streams, mixdropExtractor, streams, error_1;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
                 extractors = providerContext.extractors;
                 _a.label = 1;
             case 1:
-                _a.trys.push([1, 12, , 13]);
+                _a.trys.push([1, 18, , 19]);
                 if (!/indishare\.info/i.test(href)) return [3 /*break*/, 3];
                 indishareExtractor = extractors.indishareExtractor;
                 if (!(typeof indishareExtractor === "function")) return [3 /*break*/, 3];
@@ -242,12 +254,48 @@ var extractStreamForHost = function (href, axios, providerContext, signal) { ret
                         }];
                 }
                 _a.label = 11;
-            case 11: return [2 /*return*/, null];
-            case 12:
+            case 11:
+                if (!/dumbalag\.com|hglink\.to/i.test(href)) return [3 /*break*/, 13];
+                streamhgExtractor = extractors.streamhgExtractor;
+                if (!(typeof streamhgExtractor === "function")) return [3 /*break*/, 13];
+                return [4 /*yield*/, streamhgExtractor(href, axios, signal)];
+            case 12: return [2 /*return*/, _a.sent()];
+            case 13:
+                if (!/dood/i.test(href)) return [3 /*break*/, 15];
+                doodExtractor = extractors.doodExtractor;
+                if (!(typeof doodExtractor === "function")) return [3 /*break*/, 15];
+                return [4 /*yield*/, doodExtractor(href, axios)];
+            case 14:
+                streams = _a.sent();
+                if (streams && streams.length > 0) {
+                    return [2 /*return*/, {
+                            link: streams[0].link,
+                            type: streams[0].type,
+                            headers: streams[0].headers,
+                        }];
+                }
+                _a.label = 15;
+            case 15:
+                if (!/mixdrop/i.test(href)) return [3 /*break*/, 17];
+                mixdropExtractor = extractors.mixdropExtractor;
+                if (!(typeof mixdropExtractor === "function")) return [3 /*break*/, 17];
+                return [4 /*yield*/, mixdropExtractor(href, axios)];
+            case 16:
+                streams = _a.sent();
+                if (streams && streams.length > 0) {
+                    return [2 /*return*/, {
+                            link: streams[0].link,
+                            type: streams[0].type,
+                            headers: streams[0].headers,
+                        }];
+                }
+                _a.label = 17;
+            case 17: return [2 /*return*/, null];
+            case 18:
                 error_1 = _a.sent();
                 console.error("[skyMovieHD] Extraction error for ".concat(getServerName(href), ":"), error_1);
                 return [2 /*return*/, null];
-            case 13: return [2 /*return*/];
+            case 19: return [2 /*return*/];
         }
     });
 }); };
@@ -298,7 +346,7 @@ var extractLazyServer = function (_a) {
 exports.extractLazyServer = extractLazyServer;
 function getStream(_a) {
     return __awaiter(this, arguments, void 0, function (_b) {
-        var axios, cheerio, extractors, hubcloudExtracter, streamtapeExtractor, streamhgExtractor, gdFlixExtracter, filepresExtractor, gofileExtracter, parsed, _c, target_1, aggregatorUrls, parsed, pageType, collected, attemptedCount, successCount, MAX_EAGER_EXTRACTIONS, seenServers, aggregatorUrls_1, aggregatorUrls_1_1, aggUrl, res, $, anchors, linksWithExtractor, linksProcessed, anchors_1, anchors_1_1, anchor, hrefRaw, href, serverName, extracted, stream, error_3, e_1_1, error_4, e_2_1, lazyCount, error_5, id, shg, arr, st, arr, fallbackStreams, cleanedFallback, error_6;
+        var axios, cheerio, extractors, hubcloudExtracter, streamtapeExtractor, streamhgExtractor, gdFlixExtracter, filepresExtractor, gofileExtracter, parsed, _c, target_1, aggregatorUrls, parsed, collected, attemptedCount, successCount, MAX_EAGER_EXTRACTIONS, seenServers, aggregatorUrls_1, aggregatorUrls_1_1, aggUrl, res, $, anchors, linksWithExtractor, linksProcessed, anchors_1, anchors_1_1, anchor, hrefRaw, href, serverName, extracted, stream, error_3, e_1_1, error_4, e_2_1, lazyCount, error_5, id, shg, arr, st, arr, fallbackStreams, cleanedFallback, error_6;
         var e_2, _d, e_1, _e;
         var link = _b.link, type = _b.type, signal = _b.signal, providerContext = _b.providerContext;
         return __generator(this, function (_f) {
@@ -334,17 +382,16 @@ function getStream(_a) {
                     aggregatorUrls = [];
                     try {
                         parsed = JSON.parse(target_1);
-                        if (parsed.server01 && parsed.watchOnline) {
-                            aggregatorUrls = [parsed.server01, parsed.watchOnline];
-                            console.log("[skyMovieHD] 📥 Loading merged aggregators (SERVER 01 + WATCH ONLINE)");
+                        if (parsed.server01) {
+                            aggregatorUrls = [parsed.server01];
+                            console.log("[skyMovieHD] 📥 Loading SERVER 01 aggregator (skipping WATCH ONLINE)");
                         }
                     }
                     catch (_g) {
                         // Not JSON, check if it's a direct aggregator URL
-                        if (/howblogs\.xyz\//i.test(target_1) || /skymovieshd\.(live|mba|bond|rest|red)\//i.test(target_1)) {
+                        if (/howblogs\.xyz\//i.test(target_1)) {
                             aggregatorUrls = [target_1];
-                            pageType = /howblogs\.xyz\//i.test(target_1) ? "SERVER 01" : "WATCH ONLINE";
-                            console.log("[skyMovieHD] \uD83D\uDCE5 Loading ".concat(pageType, " aggregator"));
+                            console.log("[skyMovieHD] \uD83D\uDCE5 Loading SERVER 01 aggregator");
                         }
                     }
                     if (!(aggregatorUrls.length > 0)) return [3 /*break*/, 31];
@@ -354,7 +401,7 @@ function getStream(_a) {
                     collected = [];
                     attemptedCount = 0;
                     successCount = 0;
-                    MAX_EAGER_EXTRACTIONS = 2;
+                    MAX_EAGER_EXTRACTIONS = 1;
                     seenServers = new Set();
                     _f.label = 8;
                 case 8:
@@ -367,7 +414,7 @@ function getStream(_a) {
                     _f.label = 10;
                 case 10:
                     _f.trys.push([10, 24, , 25]);
-                    console.log("[skyMovieHD] \uD83C\uDF10 Fetching aggregator page: ".concat(aggUrl));
+                    console.log("[skyMovieHD] \uFFFD Fetching SERVER 01 aggregator page: ".concat(aggUrl));
                     return [4 /*yield*/, axios.get(aggUrl, { signal: signal, headers: REQUEST_HEADERS })];
                 case 11:
                     res = _f.sent();

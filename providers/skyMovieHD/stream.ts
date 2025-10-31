@@ -133,6 +133,9 @@ const hasExtractor = (href: string): boolean => {
   if (/uploadhub\.dad/i.test(href)) return true;
   if (/streamtape/i.test(href)) return true;
   if (/voe\.sx/i.test(href)) return true;
+  if (/dumbalag\.com|hglink\.to/i.test(href)) return true; // StreamHG
+  if (/dood/i.test(href)) return true; // Dood
+  if (/mixdrop/i.test(href)) return true; // Mixdrop
   if (/gofile\.io/i.test(href)) return false; // Skip GoFile
   return false;
 };
@@ -146,6 +149,9 @@ const getServerName = (href: string): string => {
   if (/uploadhub\.dad/i.test(href)) return "Uploadhub";
   if (/streamtape/i.test(href)) return "StreamTape";
   if (/voe\.sx/i.test(href)) return "VOE";
+  if (/dumbalag\.com|hglink\.to/i.test(href)) return "StreamHG";
+  if (/dood/i.test(href)) return "Dood";
+  if (/mixdrop/i.test(href)) return "Mixdrop";
   return "Unknown";
 };
 
@@ -215,6 +221,54 @@ const extractStreamForHost = async (
       ) => Promise<Stream[]>;
       if (typeof voeExtractor === "function") {
         const streams = await voeExtractor(href);
+        if (streams && streams.length > 0) {
+          return {
+            link: streams[0].link,
+            type: streams[0].type,
+            headers: streams[0].headers,
+          };
+        }
+      }
+    }
+    
+    // StreamHG (dumbalag/hglink)
+    if (/dumbalag\.com|hglink\.to/i.test(href)) {
+      const streamhgExtractor = (extractors as any).streamhgExtractor as (
+        url: string,
+        axios: any,
+        signal?: AbortSignal
+      ) => Promise<ExtractedStream | null>;
+      if (typeof streamhgExtractor === "function") {
+        return await streamhgExtractor(href, axios, signal);
+      }
+    }
+    
+    // Dood
+    if (/dood/i.test(href)) {
+      const doodExtractor = (extractors as any).doodExtractor as (
+        url: string,
+        axios: any
+      ) => Promise<Stream[]>;
+      if (typeof doodExtractor === "function") {
+        const streams = await doodExtractor(href, axios);
+        if (streams && streams.length > 0) {
+          return {
+            link: streams[0].link,
+            type: streams[0].type,
+            headers: streams[0].headers,
+          };
+        }
+      }
+    }
+    
+    // Mixdrop
+    if (/mixdrop/i.test(href)) {
+      const mixdropExtractor = (extractors as any).mixdropExtractor as (
+        url: string,
+        axios: any
+      ) => Promise<Stream[]>;
+      if (typeof mixdropExtractor === "function") {
+        const streams = await mixdropExtractor(href, axios);
         if (streams && streams.length > 0) {
           return {
             link: streams[0].link,
@@ -330,21 +384,20 @@ export async function getStream({
     
     let target = link;
     
-    // Check if target contains both SERVER 01 and WATCH ONLINE URLs (merged format)
+    // Check if target contains SERVER 01 URL (we only extract from SERVER 01, skip WATCH ONLINE)
     let aggregatorUrls: string[] = [];
     
     try {
       const parsed = JSON.parse(target);
-      if (parsed.server01 && parsed.watchOnline) {
-        aggregatorUrls = [parsed.server01, parsed.watchOnline];
-        console.log("[skyMovieHD] 📥 Loading merged aggregators (SERVER 01 + WATCH ONLINE)");
+      if (parsed.server01) {
+        aggregatorUrls = [parsed.server01];
+        console.log("[skyMovieHD] 📥 Loading SERVER 01 aggregator (skipping WATCH ONLINE)");
       }
     } catch {
       // Not JSON, check if it's a direct aggregator URL
-      if (/howblogs\.xyz\//i.test(target) || /skymovieshd\.(live|mba|bond|rest|red)\//i.test(target)) {
+      if (/howblogs\.xyz\//i.test(target)) {
         aggregatorUrls = [target];
-        const pageType = /howblogs\.xyz\//i.test(target) ? "SERVER 01" : "WATCH ONLINE";
-        console.log(`[skyMovieHD] 📥 Loading ${pageType} aggregator`);
+        console.log(`[skyMovieHD] 📥 Loading SERVER 01 aggregator`);
       }
     }
     
@@ -354,13 +407,13 @@ export async function getStream({
         const collected: Stream[] = [];
         let attemptedCount = 0; // Count of extraction attempts, not successes
         let successCount = 0; // Count of successful extractions
-        const MAX_EAGER_EXTRACTIONS = 2; // Attempt first 2 servers immediately
+        const MAX_EAGER_EXTRACTIONS = 1; // Extract only 1 server immediately, rest as lazy-load
         const seenServers = new Set<string>(); // Dedupe across both pages
         
-        // Fetch and process all aggregator pages
+        // Fetch and process SERVER 01 aggregator page
         for (const aggUrl of aggregatorUrls) {
           try {
-            console.log(`[skyMovieHD] 🌐 Fetching aggregator page: ${aggUrl}`);
+            console.log(`[skyMovieHD] � Fetching SERVER 01 aggregator page: ${aggUrl}`);
             const res = await axios.get(aggUrl, { signal, headers: REQUEST_HEADERS });
             const $ = cheerio.load(res.data || "");
             const anchors = $("a[href]").toArray();
