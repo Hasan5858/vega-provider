@@ -134,9 +134,17 @@ export async function uptomegaExtractor(
         Origin: "https://uptomega.net",
       },
       maxRedirects: 0, // Don't follow redirect, we want the Location header
-      validateStatus: (status) => status === 302 || status === 301 || status === 200,
+      validateStatus: (status) => status >= 200 && status < 400, // Accept all success codes including redirects
       timeout: 10000,
       signal,
+    }).catch(error => {
+      // In React Native, axios throws on redirects even with maxRedirects: 0
+      // Check if this is a redirect "error" and extract the location
+      if (error?.response?.status === 302 || error?.response?.status === 301) {
+        console.log("[Uptomega] 📍 Caught redirect in error handler");
+        return error.response;
+      }
+      throw error;
     });
 
     const step3Response = await Promise.race([requestPromise, timeoutPromise]);
